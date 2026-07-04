@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin_V_Q</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+<body>
+    <div id="authPage" class="page active">
+        <div class="auth-box">
+            <h1>Coin_V_Q</h1>
+            <div id="loginForm">
+                <div class="form-group">
+                    <label>账号</label>
+                    <input type="text" id="loginUsername" placeholder="请输入账号">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码">
+                </div>
+                <button class="btn-primary" onclick="login()">登录</button>
+                <p class="link" onclick="showRegister()">注册账号</p>
+            </div>
+            <div id="registerForm" style="display:none">
+                <div class="form-group">
+                    <label>账号</label>
+                    <input type="text" id="regUsername" placeholder="请输入账号">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" placeholder="请输入密码">
+                </div>
+                <div class="form-group">
+                    <label>CN（专属标识）</label>
+                    <input type="text" id="regCn" placeholder="请输入CN">
+                </div>
+                <button class="btn-primary" onclick="register()">注册</button>
+                <p class="link" onclick="showLogin()">已有账号？去登录</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="homePage" class="page">
+        <nav class="navbar">
+            <span class="nav-title">Coin_V_Q</span>
+            <div class="nav-right">
+                <span id="navAdmin" class="nav-link" onclick="showAdmin()" style="display:none"><i class="ri-dashboard-3-line" style="font-size:20px;color:#3478f6"></i></span>
+                <span class="nav-link" onclick="switchAccount()" style="color:#e74c3c"><i class="ri-logout-box-r-line" style="font-size:20px"></i></span>
+            </div>
+        </nav>
+        <div class="user-card" id="userCard">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div>
+                    <div class="user-name" id="userName">未设置</div>
+                    <div class="user-cn" id="userCn">CN: 未设置</div>
+                </div>
+            </div>
+            <div class="user-coins">
+                <div><span class="coins-value" id="userCoins">0</span> <span class="coins-label">币</span></div>
+                <div style="font-size:12px;opacity:0.8">待结算: <span id="pendingCoins">0</span></div>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;padding:12px 16px">
+            <div onclick="showRules()" style="flex:1;background:#fff;border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer">
+                <i class="ri-file-list-3-line" style="font-size:22px;color:#3478f6"></i>
+                <div style="font-size:12px;color:#1a1a1a;margin-top:4px;font-weight:500">竞猜规则</div>
+            </div>
+            <div onclick="showPrizes()" style="flex:1;background:#fff;border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer">
+                <i class="ri-gift-line" style="font-size:22px;color:#f57c00"></i>
+                <div style="font-size:12px;color:#1a1a1a;margin-top:4px;font-weight:500">竞猜奖品</div>
+            </div>
+            <div onclick="showLivestream()" style="flex:1;background:#fff;border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer">
+                <i class="ri-live-line" style="font-size:22px;color:#e74c3c"></i>
+                <div style="font-size:12px;color:#1a1a1a;margin-top:4px;font-weight:500">推荐直播</div>
+            </div>
+        </div>
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>近期赛程</span>
+            <span style="font-size:13px;color:#3478f6;cursor:pointer;font-weight:normal" onclick="showFullSchedule()">全部赛程 →</span>
+        </div>
+        <div id="recentSchedule"></div>
+        <div style="text-align:center;padding:24px 16px;color:#86868b;font-size:13px;cursor:pointer" onclick="showAbout()"><i class="ri-information-line" style="margin-right:4px"></i>作者有话说</div>
+        <div style="height:60px"></div>
+    </div>
+
+    <div id="bottomBar" style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:0.5px solid rgba(0,0,0,0.06);display:none;z-index:100;padding-bottom:env(safe-area-inset-bottom)">
+        <div class="bottom-bar-item" onclick="bottomTabClick('home',this)"><i class="ri-home-5-line"></i><span>首页</span></div>
+        <div class="bottom-bar-item" onclick="bottomTabClick('leaderboard',this)"><i class="ri-trophy-line"></i><span>排行榜</span></div>
+        <div class="bottom-bar-item" onclick="bottomTabClick('profile',this)"><i class="ri-user-3-line"></i><span>个人中心</span></div>
+    </div>
+    </div>
+
+    <div id="matchPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title" id="matchTitle">比赛详情</span>
+            <span></span>
+        </nav>
+        <div id="questionList"></div>
+    </div>
+
+    <div id="betPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBackFromBet()">← 返回</span>
+            <span class="nav-title">竞猜</span>
+            <span></span>
+        </nav>
+        <div id="betMatchInfo"></div>
+        <div class="section-title" id="betQuestionText" style="font-size:16px;padding:8px 16px 12px"></div>
+        <div id="optionList"></div>
+        <div class="bet-balance">当前余额: <span id="betBalance">0</span> 币</div>
+    </div>
+
+    <div id="leaderboardPage" class="page">
+        <nav class="navbar">
+            <span class="nav-title">排行榜</span>
+            <span></span>
+        </nav>
+        <div style="height:10px"></div>
+        <div id="leaderboardList"></div>
+        <div style="height:60px"></div>
+    </div>
+
+    <div id="profilePage" class="page">
+        <nav class="navbar">
+            <span class="nav-title">个人中心</span>
+            <span></span>
+        </nav>
+        <div class="profile-card" onclick="uploadAvatar()" style="cursor:pointer">
+            <div class="profile-avatar" id="profileAvatar">?</div>
+            <div class="profile-info">
+                <div class="profile-name" id="profileName">未设置</div>
+                <div class="profile-cn">CN: <span id="profileCn">未设置</span></div>
+                <div style="font-size:12px;opacity:0.7;margin-top:4px">点击修改头像</div>
+            </div>
+            <div class="profile-coins">
+                <span class="coins-value" id="profileCoins">0</span>
+                <span class="coins-label">币</span>
+            </div>
+        </div>
+        <div class="section-title">编辑资料</div>
+        <div class="edit-form">
+            <div class="form-group">
+                <label>昵称</label>
+                <input type="text" id="editNickname" placeholder="请输入昵称">
+            </div>
+            <div class="form-group">
+                <label>CN</label>
+                <input type="text" id="editCn" placeholder="请输入CN">
+            </div>
+            <button class="btn-primary" onclick="saveProfile()">保存</button>
+        </div>
+        <div class="section-title">修改密码</div>
+        <div class="edit-form">
+            <div class="form-group">
+                <label>原密码</label>
+                <input type="password" id="oldPassword" placeholder="请输入原密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="newPassword" placeholder="请输入新密码">
+            </div>
+            <div class="form-group">
+                <label>确认新密码</label>
+                <input type="password" id="confirmPassword" placeholder="请再次输入新密码">
+            </div>
+            <button class="btn-primary" onclick="changePassword()">修改密码</button>
+        </div>
+        <div style="height:60px"></div>
+    </div>
+
+    <div id="adminPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">出题组工作台</span>
+            <span></span>
+        </nav>
+        <div class="admin-tabs">
+            <span class="tab active" onclick="switchAdminTab('users', event)">用户</span>
+            <span class="tab" onclick="switchAdminTab('teams', event)">队伍</span>
+            <span class="tab" onclick="switchAdminTab('matches', event)">赛程</span>
+            <span class="tab" onclick="switchAdminTab('questions', event)">竞猜</span>
+        </div>
+        <div id="adminContent"></div>
+    </div>
+
+    <div id="aboutPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">作者有话说</span>
+            <span></span>
+        </nav>
+        <div style="padding:24px 20px">
+            <div style="text-align:center;margin-bottom:32px">
+                <div style="font-size:28px;font-weight:700;color:#1a1a1a;margin-bottom:4px">Coin_V_Q</div>
+                <div style="font-size:12px;color:#c7c7cc;margin-bottom:8px">v0.2.4</div>
+                <div style="font-size:14px;color:#86868b;line-height:1.6">本竞猜由雾清制作，致力于让水友们获得更愉快的观赛体验</div>
+            </div>
+            <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px">
+                <div style="font-size:13px;color:#86868b;margin-bottom:12px">感谢以下项目的开发者</div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:0.5px solid #f2f3f5;cursor:pointer" onclick="window.open('https://mimo.xiaomi.com/coder','_blank')">
+                    <i class="ri-code-s-slash-line" style="font-size:20px;color:#3478f6"></i>
+                    <div><div style="font-size:15px;font-weight:500;color:#1a1a1a">MiMo Code</div><div style="font-size:12px;color:#86868b">mimo.xiaomi.com/coder</div></div>
+                    <i class="ri-arrow-right-s-line" style="margin-left:auto;color:#c7c7cc"></i>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 0;cursor:pointer" onclick="window.open('https://github.com/compose-miuix-ui/miuix','_blank')">
+                    <i class="ri-smartphone-line" style="font-size:20px;color:#34a853"></i>
+                    <div><div style="font-size:15px;font-weight:500;color:#1a1a1a">MIUIX</div><div style="font-size:12px;color:#86868b">Design System</div></div>
+                    <i class="ri-arrow-right-s-line" style="margin-left:auto;color:#c7c7cc"></i>
+                </div>
+            </div>
+            <div style="background:#fff;border-radius:14px;padding:16px">
+                <div style="font-size:13px;color:#86868b;margin-bottom:12px">辅助测试人员</div>
+                <div id="testersList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="schedulePage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">全部赛程</span>
+            <span></span>
+        </nav>
+        <div id="scheduleFilterArea"></div>
+        <div id="scheduleContent"></div>
+    </div>
+
+    <div id="prizesPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">竞猜奖品</span>
+            <span></span>
+        </nav>
+        <div id="prizesPageContent"></div>
+    </div>
+
+    <div id="livestreamPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">推荐直播</span>
+            <span></span>
+        </nav>
+        <div id="livestreamContent"></div>
+    </div>
+
+    <div id="rulesPage" class="page">
+        <nav class="navbar">
+            <span class="back-btn" onclick="goBack()">← 返回</span>
+            <span class="nav-title">规则说明</span>
+            <span></span>
+        </nav>
+        <div id="rulesContent"></div>
+    </div>
+
+    <script src="js/xlsx.full.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

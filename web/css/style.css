@@ -1,0 +1,166 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sans-serif; background: #f7f8fa; color: #1a1a1a; -webkit-font-smoothing: antialiased; }
+.page { display: none; min-height: 100vh; background: #f7f8fa; }
+.page.active { display: block; }
+
+/* 导航栏 - MIUIX毛玻璃风格 */
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid rgba(0,0,0,0.06); color: #1a1a1a; position: sticky; top: 0; z-index: 100; }
+.nav-title { font-size: 17px; font-weight: 600; color: #1a1a1a; }
+.nav-right { display: flex; gap: 16px; font-size: 14px; }
+.nav-link { cursor: pointer; color: #3478f6; font-weight: 400; }
+.nav-link:hover { opacity: 0.7; }
+.back-btn { cursor: pointer; font-size: 17px; color: #3478f6; font-weight: 400; }
+
+/* 登录/注册 */
+.auth-box { max-width: 380px; margin: 100px auto; padding: 32px 24px; background: #fff; border-radius: 20px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); }
+.auth-box h1 { text-align: center; margin-bottom: 32px; font-size: 24px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.5px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #86868b; font-weight: 500; }
+.form-group input { width: 100%; padding: 13px 14px; border: none; border-radius: 12px; font-size: 16px; background: #f2f3f5; color: #1a1a1a; transition: background 0.2s; }
+.form-group input:focus { background: #edf0f5; outline: none; }
+.btn-primary { width: 100%; padding: 14px; background: #3478f6; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.3px; }
+.btn-primary:active { opacity: 0.8; }
+.btn-full { margin-top: 20px; }
+.link { text-align: center; margin-top: 16px; color: #3478f6; cursor: pointer; font-size: 14px; }
+
+/* 用户卡片 - MIUIX卡片风格 */
+.user-card { margin: 12px 16px; padding: 20px; background: linear-gradient(135deg, #3478f6 0%, #5b6abf 100%); border-radius: 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.user-info { display: flex; align-items: center; gap: 14px; }
+.user-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; }
+.user-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.user-name { font-size: 17px; font-weight: 600; }
+.user-cn { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+.user-coins { text-align: right; }
+.coins-value { font-size: 28px; font-weight: 700; }
+.coins-label { font-size: 11px; opacity: 0.75; }
+
+/* 列表 */
+.section-title { font-size: 15px; font-weight: 600; padding: 16px 16px 8px; color: #1a1a1a; }
+.list-item { display: flex; justify-content: space-between; align-items: center; margin: 0 16px 8px; padding: 14px 16px; background: #fff; border-radius: 14px; cursor: pointer; transition: transform 0.15s; }
+.list-item:active { transform: scale(0.98); }
+.item-name { font-size: 16px; font-weight: 500; color: #1a1a1a; }
+.item-sub { font-size: 13px; color: #86868b; margin-top: 3px; }
+.item-right { text-align: right; }
+.status-badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
+.status-active { background: #e8f7ed; color: #34a853; }
+.status-completed { background: #f2f3f5; color: #86868b; }
+
+/* 问题 */
+.question-card { margin: 0 16px 8px; padding: 14px 16px; background: #fff; border-radius: 14px; cursor: pointer; transition: transform 0.15s; }
+.question-card:active { transform: scale(0.98); }
+.question-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.question-label { width: 28px; height: 28px; line-height: 28px; text-align: center; background: #3478f6; color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.question-text { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+.bet-stats { font-size: 12px; color: #3478f6; margin-bottom: 8px; font-weight: 500; }
+.option-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.option-tag { font-size: 12px; padding: 4px 10px; background: #f2f3f5; border-radius: 8px; color: #1a1a1a; font-weight: 400; }
+.option-rate { color: #3478f6; font-weight: 600; }
+
+/* 投注页 */
+.question-code { font-size: 12px; color: #86868b; margin-bottom: 6px; font-weight: 400; }
+.question-text { font-size: 17px; font-weight: 600; }
+.option-item { display: flex; justify-content: space-between; align-items: center; margin: 0 16px 8px; padding: 12px 14px; background: #fff; border-radius: 14px; transition: transform 0.15s; }
+.option-item:active { transform: scale(0.98); }
+.option-text { font-size: 15px; color: #1a1a1a; }
+.option-rate { font-size: 13px; color: #3478f6; font-weight: 600; }
+.option-bet-area { display: flex; align-items: center; gap: 6px; }
+.bet-input-sm { width: 72px; padding: 7px 8px; border: none; border-radius: 8px; font-size: 15px; text-align: center; background: #f2f3f5; color: #1a1a1a; font-weight: 500; }
+.bet-input-sm:focus { background: #edf0f5; outline: none; }
+.bet-unit { font-size: 11px; color: #86868b; }
+.bet-done { font-size: 11px; color: #ff6b35; font-weight: 600; }
+.bet-balance { font-size: 12px; color: #86868b; margin: 8px 16px; }
+
+/* 排行榜 */
+.rank-item { display: flex; align-items: center; margin: 0 16px 6px; padding: 12px 14px; background: #fff; border-radius: 14px; }
+.rank-num { width: 36px; height: 36px; line-height: 32px; text-align: center; border-radius: 50%; font-size: 13px; font-weight: 600; margin-right: 12px; background: #f2f3f5; color: #86868b; overflow: hidden; flex-shrink: 0; }
+.rank-num.top1 { background: linear-gradient(135deg, #ffd700, #ffb300); color: #fff; }
+.rank-num.top2 { background: linear-gradient(135deg, #e0e0e0, #bdbdbd); color: #fff; }
+.rank-num.top3 { background: linear-gradient(135deg, #cd8032, #b8690e); color: #fff; }
+.rank-info { flex: 1; }
+.rank-name { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+.rank-cn { font-size: 11px; color: #86868b; }
+.rank-coins { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+
+/* 个人中心 */
+.profile-card { display: flex; align-items: center; margin: 12px 16px; padding: 20px; background: linear-gradient(135deg, #3478f6 0%, #5b6abf 100%); border-radius: 16px; color: #fff; }
+.profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; margin-right: 14px; overflow: hidden; }
+.profile-info { flex: 1; }
+.profile-name { font-size: 18px; font-weight: 600; margin-bottom: 3px; }
+.profile-cn { font-size: 12px; opacity: 0.75; }
+.edit-form { margin: 0 16px; padding: 16px; background: #fff; border-radius: 14px; }
+
+/* 管理后台 */
+.admin-tabs { display: flex; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid rgba(0,0,0,0.06); position: sticky; top: 48px; z-index: 101; }
+.tab { flex: 1; padding: 12px; text-align: center; font-size: 14px; color: #86868b; cursor: pointer; font-weight: 500; transition: color 0.2s; }
+.tab.active { color: #3478f6; font-weight: 600; position: relative; }
+.tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2.5px; background: #3478f6; border-radius: 2px; }
+.admin-section { padding: 12px 16px; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat-card { background: #fff; border-radius: 14px; padding: 16px; text-align: center; }
+.stat-value { font-size: 26px; font-weight: 700; color: #3478f6; }
+.stat-label { font-size: 11px; color: #86868b; margin-top: 4px; }
+.admin-btn { padding: 6px 12px; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; margin-left: 4px; font-weight: 500; transition: opacity 0.2s; }
+.admin-btn:active { opacity: 0.7; }
+.btn-sm { background: #f2f3f5; color: #1a1a1a; }
+.btn-danger { background: #fff0ed; color: #e74c3c; }
+.btn-warning { background: #fff8e1; color: #f57c00; }
+.btn-success { background: #e8f7ed; color: #34a853; }
+.admin-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; }
+.admin-table th { background: #f7f8fa; padding: 10px 12px; text-align: left; font-size: 12px; color: #86868b; font-weight: 500; }
+.admin-table td { padding: 10px 12px; border-top: 0.5px solid #f2f3f5; font-size: 13px; color: #1a1a1a; }
+
+/* 内联编辑 */
+.inline-input { border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-size: 14px; background: transparent; transition: all 0.2s; }
+.inline-input:focus { border-color: #3478f6; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(52,120,246,0.1); }
+.inline-input-sm { border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; font-size: 12px; background: transparent; transition: all 0.2s; }
+.inline-input-sm:focus { border-color: #3478f6; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(52,120,246,0.1); }
+.inline-input-num { border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; font-size: 12px; background: transparent; text-align: center; transition: all 0.2s; }
+.inline-input-num:focus { border-color: #3478f6; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(52,120,246,0.1); }
+
+/* 结算弹窗选项 */
+.answer-option { transition: all 0.2s; }
+.answer-option:hover { background: #e8f7ed !important; border-color: #34a853 !important; }
+
+/* 问题选项颜色 */
+.q-option-default { background: #fff8e1; border-left: 3px solid #ffc107; }
+.q-option-active { background: #e3f2fd; border-left: 3px solid #42a5f5; }
+.q-option-correct { background: #e8f7ed; border-left: 3px solid #34a853; }
+.q-option-wrong { background: #fff0ed; border-left: 3px solid #e74c3c; }
+
+/* 提示 */
+.toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: rgba(26,26,26,0.88); color: #fff; border-radius: 10px; font-size: 14px; z-index: 9999; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; }
+.toast.success { background: rgba(52,168,83,0.9); }
+.toast.error { background: rgba(234,67,53,0.9); }
+
+/* 筛选栏 */
+.filter-bar { display: flex; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid rgba(0,0,0,0.06); }
+.filter-bar.fixed { position: fixed; top: 48px; left: 0; right: 0; z-index: 99; }
+
+/* MIUIX自定义下拉框 */
+.miui-select { position: relative; flex: 1; }
+.miui-select-trigger { padding: 9px 12px; background: #f2f3f5; border-radius: 10px; font-size: 13px; color: #1a1a1a; font-weight: 500; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; user-select: none; -webkit-user-select: none; }
+.miui-select-trigger::after { content: ''; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #86868b; margin-left: 6px; flex-shrink: 0; transition: transform 0.2s; }
+.miui-select.open .miui-select-trigger { background: #e8edf5; }
+.miui-select.open .miui-select-trigger::after { transform: rotate(180deg); }
+.miui-select-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.12); z-index: 200; max-height: 260px; overflow-y: auto; display: none; padding: 4px; }
+.miui-select.open .miui-select-dropdown { display: block; }
+.miui-select-option { padding: 10px 12px; font-size: 14px; color: #1a1a1a; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+.miui-select-option:active { background: #f2f3f5; }
+.miui-select-option.selected { background: #3478f6; color: #fff; font-weight: 500; }
+
+/* 弹窗动画 */
+@keyframes miuiFadeIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
+/* 底部导航栏 */
+.bottom-bar-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 0 4px; color:#86868b; font-size:10px; cursor:pointer; transition:color 0.2s; -webkit-tap-highlight-color:transparent; }
+.bottom-bar-item i { font-size:22px; margin-bottom:2px; }
+.bottom-bar-item.active { color:#3478f6; }
+
+/* 后台管理下拉框 */
+.admin-select-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: 90px; z-index: 98; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 10px 0; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+
+/* 比赛分隔 */
+.match-divider { padding: 8px 16px; font-size: 13px; color: #3478f6; font-weight: 600; background: #f7f8fa; border-left: 3px solid #3478f6; margin: 8px 16px 4px; border-radius: 0 8px 8px 0; }
+
+/* 投注页option */
+.option-item { display: flex; justify-content: space-between; align-items: center; margin: 0 16px 8px; padding: 12px 14px; background: #fff; border-radius: 14px; }
