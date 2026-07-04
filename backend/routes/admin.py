@@ -207,7 +207,7 @@ def upload_team_logo(team_id):
     file.save(filepath)
 
     url = '/uploads/teams/' + filename
-    team.logo_url = url
+    team.logo_url = 'https://106.53.67.7' + url
     db.session.commit()
 
     return jsonify({'url': url})

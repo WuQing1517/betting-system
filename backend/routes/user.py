@@ -105,7 +105,7 @@ def upload_avatar():
     file.save(filepath)
 
     url = '/uploads/avatars/' + filename
-    user.avatar_url = url
+    user.avatar_url = 'https://106.53.67.7' + url
     db.session.commit()
 
     response = jsonify({'url': url})
