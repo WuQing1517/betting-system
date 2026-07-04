@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify, current_app
+from config import Config
 from models import db, User
 import os
 import uuid
@@ -16,7 +17,7 @@ def get_profile():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    avatar_url = user.avatar_url if user.avatar_url and user.avatar_url.startswith('http') else ('http://106.53.67.7' + user.avatar_url if user.avatar_url else '')
+    avatar_url = user.avatar_url if user.avatar_url and user.avatar_url.startswith('http') else (Config.SERVER_URL + user.avatar_url if user.avatar_url else '')
 
     return jsonify({
         'user_id': user.id,
@@ -105,7 +106,7 @@ def upload_avatar():
     file.save(filepath)
 
     url = '/uploads/avatars/' + filename
-    user.avatar_url = 'https://106.53.67.7' + url
+    user.avatar_url = Config.SERVER_URL + url
     db.session.commit()
 
     response = jsonify({'url': url})

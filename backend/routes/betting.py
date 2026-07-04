@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
+from config import Config
 from models import db, User, Team, Competition, Match, Question, Option, Bet
 from datetime import date, timedelta
 
@@ -19,8 +20,8 @@ def get_competition_matches(competition_id):
         'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id,
         'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number,
         'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status,
-        'home_logo': ('http://106.53.67.7' + team_logos.get(m.home_team) if team_logos.get(m.home_team) and not team_logos.get(m.home_team, '').startswith('http') else (team_logos.get(m.home_team) or '')),
-        'away_logo': ('http://106.53.67.7' + team_logos.get(m.away_team) if team_logos.get(m.away_team) and not team_logos.get(m.away_team, '').startswith('http') else (team_logos.get(m.away_team) or ''))
+        'home_logo': (Config.SERVER_URL + team_logos.get(m.home_team) if team_logos.get(m.home_team) and not team_logos.get(m.home_team, '').startswith('http') else (team_logos.get(m.home_team) or '')),
+        'away_logo': (Config.SERVER_URL + team_logos.get(m.away_team) if team_logos.get(m.away_team) and not team_logos.get(m.away_team, '').startswith('http') else (team_logos.get(m.away_team) or ''))
     } for m in matches])
 
 @betting_bp.route('/competitions/<int:competition_id>/full', methods=['GET'])
@@ -34,7 +35,7 @@ def get_competition_full(competition_id):
     team_logos = {t.name: t.logo_url for t in teams}
     def make_logo(url):
         if url and not url.startswith('http'):
-            return 'http://106.53.67.7' + url
+            return Config.SERVER_URL + url
         return url or ''
     weekday_names = ['\u5468\u4E00', '\u5468\u4E8C', '\u5468\u4E09', '\u5468\u56DB', '\u5468\u4E94', '\u5468\u516D', '\u5468\u65E5']
     match_ids = [m.id for m in matches]
@@ -215,7 +216,7 @@ def get_pending_coins():
 @betting_bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
     users = User.query.order_by(User.coins.desc()).limit(100).all()
-    return jsonify([{'rank': i + 1, 'user_id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'avatar_url': ('http://106.53.67.7' + u.avatar_url if u.avatar_url and not u.avatar_url.startswith('http') else (u.avatar_url or ''))} for i, u in enumerate(users)])
+    return jsonify([{'rank': i + 1, 'user_id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'avatar_url': (Config.SERVER_URL + u.avatar_url if u.avatar_url and not u.avatar_url.startswith('http') else (u.avatar_url or ''))} for i, u in enumerate(users)])
 
 @betting_bp.route('/prizes', methods=['GET'])
 def get_prizes():

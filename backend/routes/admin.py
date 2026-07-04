@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from models import db, User, Team, Competition, Match, Question, Option, Bet
+from config import Config
 from functools import wraps
 import os
 import uuid
@@ -207,7 +208,7 @@ def upload_team_logo(team_id):
     file.save(filepath)
 
     url = '/uploads/teams/' + filename
-    team.logo_url = 'https://106.53.67.7' + url
+    team.logo_url = Config.SERVER_URL + url
     db.session.commit()
 
     return jsonify({'url': url})

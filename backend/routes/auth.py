@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
 from models import db, User
-from services.wechat import WechatService
 from config import Config
 
 auth_bp = Blueprint('auth', __name__)
@@ -10,49 +9,6 @@ MAIN_ADMIN = {
     'username': 'wuqing',
     'password': 'adminwq'
 }
-
-@auth_bp.route('/login', methods=['POST'])
-def login():
-    """微信登录"""
-    data = request.get_json()
-    code = data.get('code')
-
-    if not code:
-        return jsonify({'error': 'Missing code'}), 400
-
-    is_dev_mode = Config.WECHAT_APP_ID == 'your-app-id'
-
-    if is_dev_mode:
-        openid = 'dev_user_' + code
-    else:
-        wechat_service = WechatService()
-        openid = wechat_service.get_openid(code)
-        if not openid:
-            return jsonify({'error': '获取用户户信息失败'}), 400
-
-    user = User.query.filter_by(openid=openid).first()
-    if not user:
-        user = User(
-            openid=openid,
-            nickname='user' + code[:6],
-            coins=Config.INITIAL_COINS
-        )
-        db.session.add(user)
-        db.session.commit()
-
-    avatar_url = ('http://106.53.67.7' + user.avatar_url if user.avatar_url and not user.avatar_url.startswith('http') else (user.avatar_url or ''))
-
-    return jsonify({
-        'user_id': user.id,
-        'openid': user.openid,
-        'nickname': user.nickname,
-        'avatar_url': avatar_url,
-        'cn': user.cn,
-        'coins': user.coins,
-        'is_admin': user.is_admin,
-        'is_superadmin': user.openid == 'dev_wuqing',
-        'rules_viewed': user.rules_viewed
-    })
 
 @auth_bp.route('/dev-login', methods=['POST'])
 def dev_login():
@@ -76,7 +32,7 @@ def dev_login():
     if user.password != password:
         return jsonify({'error': '密码码错误误'}), 401
 
-    avatar_url = ('http://106.53.67.7' + user.avatar_url if user.avatar_url and not user.avatar_url.startswith('http') else (user.avatar_url or ''))
+    avatar_url = (Config.SERVER_URL + user.avatar_url if user.avatar_url and not user.avatar_url.startswith('http') else (user.avatar_url or ''))
 
     return jsonify({
         'user_id': user.id,
@@ -117,7 +73,7 @@ def dev_register():
     db.session.add(user)
     db.session.commit()
 
-    avatar_url = ('http://106.53.67.7' + user.avatar_url if user.avatar_url and not user.avatar_url.startswith('http') else (user.avatar_url or ''))
+    avatar_url = (Config.SERVER_URL + user.avatar_url if user.avatar_url and not user.avatar_url.startswith('http') else (user.avatar_url or ''))
 
     return jsonify({
         'user_id': user.id,

@@ -1,158 +1,144 @@
-# 竞猜系统
+# Coin_V_Q 竞猜系统
 
-一个基于微信小程序的竞猜系统，支持比赛竞猜、倍率计算、排行榜等功能。
+一个基于Flask + Web的IVL竞猜系统，支持赛事竞猜、实时投币、自动结算、排行榜等功能。采用MIUIX设计风格，适配移动端和桌面端。
+
+## 功能特性
+
+### 用户端
+- **账号系统** - 注册/登录，新用户获5000初始币
+- **近期赛程** - 首页自动显示最近两天的比赛，直接点击投币
+- **全部赛程** - 按周数筛选查看所有比赛
+- **竞猜投币** - 每个选项独立投币，封盘前可随时修改（覆盖式）
+- **结算公式** - 投币数 × 基础倍率 × (总币池 / 正确选项币池)
+- **排行榜** - 按币数排名，显示用户头像
+- **竞猜奖品** - 查看和提供赛事奖品
+- **推荐直播** - B站/Huya直播间快捷入口
+
+### 管理端（出题组工作台）
+- **用户管理** - 查看/调整币数、设置管理员（三级权限）
+- **队伍管理** - 管理战队信息和Logo
+- **赛程管理** - Excel导入、手动添加、编辑比赛（周数/星期几/场次）
+- **竞猜管理** - 问题编辑、封盘/开盘、结算、重置退币
+- **投注详情** - 查看每个问题的投注明细
+
+### 权限体系
+| 角色 | 权限 |
+|------|------|
+| 超级管理员 | 全部操作 + 设置/取消管理员 + 删除账号 |
+| 管理员 | 调币、队伍/赛程/竞猜管理 |
+| 普通用户 | 投币、查看排行榜、提供奖品 |
+
+## 技术栈
+
+- **后端**: Python Flask + SQLAlchemy + SQLite
+- **前端**: 原生HTML/CSS/JS + MIUIX设计风格
+- **图标**: Remix Icon
+- **UI框架**: 自定义MIUIX组件（下拉框、弹窗、毛玻璃导航栏）
 
 ## 项目结构
 
 ```
 betting-system/
-├── backend/              # Flask后端
-│   ├── app.py           # 应用入口
-│   ├── config.py        # 配置文件
-│   ├── models.py        # 数据库模型
-│   ├── routes/          # API路由
-│   ├── services/        # 业务服务
-│   └── requirements.txt # 依赖包
-├── miniprogram/         # 微信小程序
-│   ├── app.js           # 小程序入口
-│   ├── app.json         # 小程序配置
-│   ├── pages/           # 页面文件
-│   └── utils/           # 工具函数
-└── admin-web/           # 管理员后台
-    ├── index.html       # 后台主页
-    ├── css/             # 样式文件
-    ├── js/              # 脚本文件
-    └── pages/           # 页面文件
+├── backend/
+│   ├── app.py              # Flask应用入口
+│   ├── config.py           # 配置文件（支持环境变量）
+│   ├── models.py           # 数据模型
+│   ├── routes/
+│   │   ├── betting.py      # 公开API
+│   │   ├── admin.py        # 管理API
+│   │   ├── auth.py         # 登录注册
+│   │   └── user.py         # 用户资料
+│   ├── uploads/            # 上传文件
+│   └── requirements.txt
+└── web/
+    ├── index.html          # 主页面
+    ├── css/style.css       # MIUIX风格样式
+    └── js/
+        ├── app.js          # 前端逻辑
+        └── xlsx.full.min.js
 ```
 
-## 功能特性
+## 环境变量
 
-### 管理端（Web后台）
-1. **数据统计** - 查看总用户数、比赛数、投注额等
-2. **用户管理** - 查看用户列表、调整币数、设置管理员
-3. **比赛管理** - 创建大比赛和比赛、管理比赛状态
-4. **问题管理** - 创建问题、设置选项和倍率、设置正确答案
-
-## 核心功能
-
-### 倍率计算
-```
-实际倍率 = 基础倍率 × (总投注额 / 该选项投注额)
-```
-
-**示例**：
-- 基础倍率: A=2.0, B=3.0
-- 总投注额: 1000币（A: 600, B: 400）
-- 如果A正确: 实际倍率 = 2.0 × (1000/600) = 3.33
-- 如果B正确: 实际倍率 = 3.0 × (1000/400) = 7.5
-
-### 比赛ID格式
-```
-{年份}{比赛名称}Week{周数}Day{天数}Match{比赛数}
-```
-示例: `2026IVL秋季赛Week1Day1Match1`
-
-### 问题ID格式
-```
-{比赛ID}Q{问题序号}
-```
-示例: `2026IVL秋季赛Week1Day1Match1Q1`
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `SECRET_KEY` | Flask密钥 | dev-secret-key |
+| `SERVER_URL` | 服务器地址（生成图片URL） | https://106.53.67.7 |
 
 ## 安装部署
 
-### 1. 后端部署
-
+### 本地开发
 ```bash
-# 进入后端目录
 cd backend
-
-# 创建虚拟环境
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 安装依赖
 pip install -r requirements.txt
-
-# 配置环境变量
-export WECHAT_APP_ID=your-app-id
-export WECHAT_APP_SECRET=your-app-secret
-
-# 启动服务
 python app.py
+# 访问 http://localhost:5000
 ```
 
-### 2. 微信小程序
+### 服务器部署
+```bash
+cd /var/www/betting-system
+git pull origin main
+cd backend
+pip3 install -r requirements.txt gunicorn
 
-1. 下载并安装微信开发者工具
-2. 导入miniprogram目录
-3. 配置AppID
-4. 修改`app.js`中的`baseUrl`为后端地址
-5. 编译运行
+# 数据库迁移
+python3 -c "
+from app import create_app
+from sqlalchemy import text
+app = create_app()
+with app.app_context():
+    from models import db
+    db.create_all()
+    with db.engine.connect() as conn:
+        try: conn.execute(text('ALTER TABLE competitions ADD COLUMN start_date DATE')); conn.commit()
+        except: pass
+        try: conn.execute(text('ALTER TABLE prizes ADD COLUMN competition_id INTEGER REFERENCES competitions(id)')); conn.commit()
+        except: pass
+print('Done')
+"
 
-### 3. 管理后台
+# 启动
+pkill -f gunicorn
+nohup gunicorn -w 4 -b 0.0.0.0:5000 app:app > /dev/null 2>&1 &
+```
 
-1. 将admin-web目录部署到Web服务器
-2. 或者直接用浏览器打开`admin-web/pages/login.html`
-3. 输入管理员用户ID登录
+### Nginx配置
+```nginx
+server {
+    listen 443 ssl;
+    server_name your-domain;
+    client_max_body_size 50m;
+    location /uploads/ {
+        alias /var/www/betting-system/backend/uploads/;
+    }
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
 
-## 使用说明
+## 赛程日期系统
 
-### 新用户
-1. 扫码进入小程序
-2. 点击"微信登录"
-3. 首次登录会显示规则介绍
-4. 获得5000初始币
+赛事设置起始日期后，每场比赛日期自动推算：
+```
+比赛日期 = 赛事起始日期 + (周数-1) × 7 + (天数-1)
+```
 
-### 参与竞猜
-1. 选择一个进行中的比赛
-2. 查看比赛下的问题
-3. 选择您认为正确的选项
-4. 输入投注金额
-5. 确认投注
+赛程输入使用"星期几"，系统自动推算day_number：
+- 同一周内第一个有比赛的天 = day1
+- 第二个有比赛的天 = day2，依此类推
 
-### 管理员操作
-1. 登录管理后台
-2. 创建大比赛（如：2026IVL秋季赛）
-3. 创建比赛（设置周数、天数、比赛数）
-4. 创建问题（设置选项和倍率）
-5. 比赛结束后设置正确答案
-6. 系统自动结算投注
+## 版本
 
-## 配置说明
+当前版本: **v0.2.5**
 
-### 环境变量
-- `SECRET_KEY`: Flask密钥
-- `DATABASE_URL`: 数据库连接地址
-- `WECHAT_APP_ID`: 微信小程序AppID
-- `WECHAT_APP_SECRET`: 微信小程序AppSecret
+## 致谢
 
-### 初始配置
-- 新用户初始币数: 5000
-- 问题选项数量: 2-3个
-- 每用户每问题只能投注一次
-
-## 注意事项
-
-1. **微信登录**需要先在微信公众平台注册小程序账号
-2. **服务器部署**需要配置HTTPS（微信小程序要求）
-3. **管理员设置**需要先在数据库中将用户`is_admin`设为`true`
-4. **比赛结算**需要管理员手动设置正确答案后自动进行
-
-## 开发说明
-
-### 数据库
-使用SQLite，数据库文件为`betting.db`，首次运行自动创建。
-
-### API接口
-- 用户相关: `/api/login`, `/api/user/profile`
-- 竞猜相关: `/api/competitions`, `/api/matches`, `/api/bets`
-- 管理相关: `/api/admin/*`
-
-### 错误处理
-- 400: 请求参数错误
-- 401: 未登录
-- 403: 无权限
-- 404: 资源不存在
+- [MiMo Code](https://mimo.xiaomi.com/coder) - AI编程助手
+- [MIUIX](https://github.com/compose-miuix-ui/miuix) - 设计系统灵感
 
 ## 许可证
 
