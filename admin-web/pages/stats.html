@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">竞猜管理后台</div>
+            <nav class="nav-menu">
+                <a href="../index.html" class="nav-item active">数据统计</a>
+                <a href="users.html" class="nav-item">用户管理</a>
+                <a href="matches.html" class="nav-item">比赛管理</a>
+                <a href="questions.html" class="nav-item">问题管理</a>
+            </nav>
+            <div class="logout" onclick="logout()">退出登录</div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="header">
+                <h1>数据统计</h1>
+            </div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMatches">0</div>
+                    <div class="stat-label">总比赛数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQuestions">0</div>
+                    <div class="stat-label">总问题数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalBets">0</div>
+                    <div class="stat-label">总投注数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalCoinsBet">0</div>
+                    <div class="stat-label">总投注额</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 检查登录状态
+        if (!checkLogin()) {
+            // 会自动跳转到登录页
+        } else {
+            // 加载统计数据
+            document.addEventListener('DOMContentLoaded', function() {
+                loadStats();
+            });
+        }
+
+        function loadStats() {
+            fetch('http://localhost:5000/api/admin/stats', {
+                headers: {
+                    'X-User-Id': localStorage.getItem('adminUserId')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalUsers').textContent = data.total_users;
+                document.getElementById('totalMatches').textContent = data.total_matches;
+                document.getElementById('totalQuestions').textContent = data.total_questions;
+                document.getElementById('totalBets').textContent = data.total_bets;
+                document.getElementById('totalCoinsBet').textContent = data.total_coins_bet;
+            })
+            .catch(err => {
+                console.error('Failed to load stats:', err);
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('adminUserId');
+            window.location.href = 'pages/login.html';
+        }
+    </script>
+</body>
+</html>
