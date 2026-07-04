@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞猜系统管理后台</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="loginPage" class="login-container">
+        <div class="login-box">
+            <h1 class="login-title">竞猜系统管理后台</h1>
+            <div class="form-group">
+                <label for="adminId">管理员ID</label>
+                <input type="text" id="adminId" placeholder="请输入管理员用户ID">
+            </div>
+            <button class="login-btn" onclick="adminLogin()">登录</button>
+            <div class="login-tip">提示：需要先在小程序中将用户设为管理员</div>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="mainPage" class="container" style="display: none;">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="logo">竞猜管理后台</div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" onclick="showPage('stats')">数据统计</a>
+                <a href="#" class="nav-item" onclick="showPage('users')">用户管理</a>
+                <a href="#" class="nav-item" onclick="showPage('teams')">队伍管理</a>
+                <a href="#" class="nav-item" onclick="showPage('matches')">比赛管理</a>
+                <a href="#" class="nav-item" onclick="showPage('questions')">问题管理</a>
+            </nav>
+            <div class="logout" onclick="logout()">退出登录</div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 数据统计页面 -->
+            <div id="statsPage" class="page">
+                <div class="header"><h1>数据统计</h1></div>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalUsers">0</div>
+                        <div class="stat-label">总用户数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalMatches">0</div>
+                        <div class="stat-label">总比赛数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalQuestions">0</div>
+                        <div class="stat-label">总问题数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalBets">0</div>
+                        <div class="stat-label">总投注数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCoinsBet">0</div>
+                        <div class="stat-label">总投注额</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理页面 -->
+            <div id="usersPage" class="page" style="display: none;">
+                <div class="header"><h1>用户管理</h1></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>昵称</th>
+                                <th>CN</th>
+                                <th>币数</th>
+                                <th>管理员</th>
+                                <th>注册时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 队伍管理页面 -->
+            <div id="teamsPage" class="page" style="display: none;">
+                <div class="header">
+                    <h1>队伍管理</h1>
+                    <button class="btn btn-primary" onclick="createTeam()">添加队伍</button>
+                </div>
+                <div id="teamGrid" class="team-grid">
+                    <!-- 动态生成队伍卡片 -->
+                </div>
+            </div>
+
+            <!-- 比赛管理页面 -->
+            <div id="matchesPage" class="page" style="display: none;">
+                <div class="header">
+                    <h1>比赛管理</h1>
+                    <button class="btn btn-primary" onclick="createCompetition()">创建大比赛</button>
+                </div>
+                
+                <!-- 批量生成表单 -->
+                <div class="batch-form">
+                    <h3>批量生成比赛</h3>
+                    <div class="form-row">
+                        <div class="form-item">
+                            <label>选择大比赛</label>
+                            <select id="batchCompetition"></select>
+                        </div>
+                        <div class="form-item">
+                            <label>周数范围</label>
+                            <input type="text" id="batchWeeks" placeholder="如: 1-10 或 1,2,3">
+                        </div>
+                        <div class="form-item">
+                            <label>每周天数</label>
+                            <input type="number" id="batchDaysPerWeek" value="1" min="1" max="7">
+                        </div>
+                        <div class="form-item">
+                            <label>每天比赛数</label>
+                            <input type="number" id="batchMatchesPerDay" value="3" min="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="batchGenerate()">批量生成</button>
+                </div>
+
+                <!-- Excel导入表单 -->
+                <div class="batch-form" style="border-left-color: #27ae60;">
+                    <h3>Excel导入比赛</h3>
+                    <div class="form-row">
+                        <div class="form-item">
+                            <label>选择大比赛</label>
+                            <select id="importCompetition"></select>
+                        </div>
+                        <div class="form-item" style="flex: 2;">
+                            <label>选择Excel文件</label>
+                            <input type="file" id="excelFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                    </div>
+                    <div class="form-hint">
+                        * Excel格式：周数 | 天数 | 比赛场次 | 主场队伍 | 客场队伍<br>
+                        * 示例：<br>
+                        &nbsp;&nbsp;1 | 1 | 1 | IG | RNG<br>
+                        &nbsp;&nbsp;1 | 1 | 2 | EDG | BLG<br>
+                        &nbsp;&nbsp;1 | 2 | 1 | TES | WBG
+                    </div>
+                    <div id="excelPreview" style="display: none; margin: 15px 0;">
+                        <h4>预览数据：</h4>
+                        <div id="previewContent" class="preview-table"></div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="previewExcel()">预览</button>
+                        <button class="btn btn-success" onclick="importExcel()">导入</button>
+                    </div>
+                </div>
+
+                <div id="matchTree" class="match-tree">
+                    <!-- 动态生成树形结构 -->
+                </div>
+            </div>
+
+            <!-- 问题管理页面 -->
+            <div id="questionsPage" class="page" style="display: none;">
+                <div class="header">
+                    <h1>问题管理</h1>
+                </div>
+                <div id="questionTree" class="match-tree">
+                    <!-- 动态生成问题列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/xlsx.full.min.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const BASE_URL = 'http://localhost:5000';
+        let currentUserId = null;
+        let excelData = null;
+        let allTeams = [];
+
+        // 登录
+        function adminLogin() {
+            const adminId = document.getElementById('adminId').value.trim();
+            if (!adminId) {
+                alert('请输入管理员ID');
+                return;
+            }
+
+            fetch(`${API_BASE_URL}/admin/stats`, {
+                headers: { 'X-User-Id': adminId }
+            })
+            .then(response => {
+                if (response.ok) {
+                    currentUserId = adminId;
+                    localStorage.setItem('adminUserId', adminId);
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('mainPage').style.display = 'flex';
+                    loadStats();
+                } else {
+                    alert('管理员权限验证失败');
+                }
+            })
+            .catch(error => alert('登录失败: ' + error.message));
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('adminUserId');
+            currentUserId = null;
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('mainPage').style.display = 'none';
+        }
+
+        // 页面切换
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            document.getElementById(page + 'Page').style.display = 'block';
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (page === 'stats') loadStats();
+            else if (page === 'users') loadUsers();
+            else if (page === 'teams') loadTeams();
+            else if (page === 'matches') loadMatches();
+            else if (page === 'questions') loadQuestions();
+        }
+
+        // 通用请求
+        async function request(url, method = 'GET', data = null) {
+            const headers = { 'Content-Type': 'application/json', 'X-User-Id': currentUserId };
+            const options = { method, headers };
+            if (data) options.body = JSON.stringify(data);
+            const response = await fetch(`${API_BASE_URL}${url}`, options);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Request failed');
+            return result;
+        }
+
+        // 显示提示
+        function showAlert(message, type = 'success') {
+            const div = document.createElement('div');
+            div.style.cssText = `position:fixed;top:20px;right:20px;padding:15px 25px;border-radius:5px;color:#fff;z-index:10000;background-color:${type === 'success' ? '#2ecc71' : '#e74c3c'}`;
+            div.textContent = message;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('zh-CN');
+        }
+
+        // 数据统计
+        async function loadStats() {
+            try {
+                const data = await request('/admin/stats');
+                document.getElementById('totalUsers').textContent = data.total_users;
+                document.getElementById('totalMatches').textContent = data.total_matches;
+                document.getElementById('totalQuestions').textContent = data.total_questions;
+                document.getElementById('totalBets').textContent = data.total_bets;
+                document.getElementById('totalCoinsBet').textContent = data.total_coins_bet;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // 用户管理
+        async function loadUsers() {
+            try {
+                const users = await request('/admin/users');
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.nickname || '未设置'}</td>
+                        <td>${u.cn || '未设置'}</td>
+                        <td>${u.coins}</td>
+                        <td>${u.is_admin ? '是' : '否'}</td>
+                        <td>${formatDate(u.created_at)}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="editUserCoins(${u.id})">调整币数</button>
+                            <button class="btn ${u.is_admin ? 'btn-danger' : 'btn-success'}" onclick="toggleAdmin(${u.id}, ${!u.is_admin})">
+                                ${u.is_admin ? '取消管理员' : '设为管理员'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                showAlert('加载用户失败', 'error');
+            }
+        }
+
+        function editUserCoins(userId) {
+            const amount = prompt('请输入调整金额（正数增加，负数减少）:', '0');
+            if (amount === null) return;
+            const amountNum = parseInt(amount);
+            if (isNaN(amountNum) || amountNum === 0) return showAlert('请输入有效金额', 'error');
+            
+            request(`/admin/users/${userId}/coins`, 'PUT', {
+                amount: Math.abs(amountNum),
+                action: amountNum > 0 ? 'add' : 'subtract'
+            }).then(() => { showAlert('币数调整成功'); loadUsers(); })
+              .catch(error => showAlert('调整失败: ' + error.message, 'error'));
+        }
+
+        function toggleAdmin(userId, isAdmin) {
+            if (!confirm(isAdmin ? '确定设为管理员？' : '确定取消管理员？')) return;
+            request(`/admin/users/${userId}/admin`, 'PUT', { is_admin: isAdmin })
+                .then(() => { showAlert('操作成功'); loadUsers(); })
+                .catch(error => showAlert('操作失败', 'error'));
+        }
+
+        // 队伍管理
+        async function loadTeams() {
+            try {
+                const teams = await request('/admin/teams');
+                const grid = document.getElementById('teamGrid');
+
+                if (teams.length === 0) {
+                    grid.innerHTML = '<div class="empty-tip">暂无队伍，点击"添加队伍"创建</div>';
+                    return;
+                }
+
+                grid.innerHTML = teams.map(t => {
+                    const logoUrl = t.logo_url ? (t.logo_url.startsWith('http') ? t.logo_url : BASE_URL + t.logo_url) : null;
+                    return `
+                        <div class="team-card">
+                            <div class="team-logo" onclick="uploadTeamLogo(${t.id})" title="点击上传Logo">
+                                ${logoUrl ? `<img src="${logoUrl}" alt="${t.name}">` : `<span class="team-initial">${t.name.charAt(0)}</span>`}
+                            </div>
+                            <div class="team-name">${t.name}</div>
+                            <div class="team-actions">
+                                <button class="btn btn-sm btn-success" onclick="editTeam(${t.id}, '${t.name.replace(/'/g, "\\'")}')">编辑</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTeam(${t.id})">删除</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                showAlert('加载队伍失败', 'error');
+            }
+        }
+
+        function createTeam() {
+            const name = prompt('队伍名称:');
+            if (!name) return;
+
+            request('/admin/teams', 'POST', { name })
+                .then(() => {
+                    showAlert('创建成功，请点击Logo区域上传图标');
+                    loadTeams();
+                })
+                .catch(error => showAlert('创建失败: ' + error.message, 'error'));
+        }
+
+        function editTeam(id, currentName) {
+            const name = prompt('队伍名称:', currentName);
+            if (name === null) return;
+
+            request(`/admin/teams/${id}`, 'PUT', { name })
+                .then(() => { showAlert('更新成功'); loadTeams(); })
+                .catch(error => showAlert('更新失败', 'error'));
+        }
+
+        function deleteTeam(id) {
+            if (!confirm('确定要删除此队伍吗？')) return;
+            request(`/admin/teams/${id}`, 'DELETE')
+                .then(() => { showAlert('删除成功'); loadTeams(); })
+                .catch(error => showAlert('删除失败', 'error'));
+        }
+
+        function uploadTeamLogo(teamId) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const userId = localStorage.getItem('adminUserId');
+                    const response = await fetch(`${API_BASE_URL}/admin/upload`, {
+                        method: 'POST',
+                        headers: { 'X-User-Id': userId },
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        await request(`/admin/teams/${teamId}`, 'PUT', { logo_url: result.url });
+                        showAlert('Logo上传成功');
+                        loadTeams();
+                    } else {
+                        showAlert('上传失败: ' + result.error, 'error');
+                    }
+                } catch (err) {
+                    showAlert('上传失败', 'error');
+                }
+            };
+            input.click();
+        }
+
+        // 比赛管理 - 树形结构
+        async function loadMatches() {
+            try {
+                const competitions = await request('/competitions');
+
+                // 加载所有队伍列表
+                try {
+                    allTeams = await request('/admin/teams');
+                } catch (e) {
+                    allTeams = [];
+                }
+
+                // 加载大比赛下拉框
+                const select = document.getElementById('batchCompetition');
+                select.innerHTML = competitions.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                // 加载Excel导入下拉框
+                const importSelect = document.getElementById('importCompetition');
+                importSelect.innerHTML = competitions.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+                const matchTree = document.getElementById('matchTree');
+                let html = '';
+
+                for (const c of competitions) {
+                    const matches = await request(`/competitions/${c.id}/matches`);
+                    
+                    // 按周分组
+                    const weekGroups = {};
+                    matches.forEach(m => {
+                        if (!weekGroups[m.week_number]) weekGroups[m.week_number] = {};
+                        if (!weekGroups[m.week_number][m.day_number]) weekGroups[m.week_number][m.day_number] = [];
+                        weekGroups[m.week_number][m.day_number].push(m);
+                    });
+
+                    html += `
+                        <div class="tree-competition">
+                            <div class="tree-header" onclick="toggleNode(this)">
+                                <span class="tree-arrow">▶</span>
+                                <span class="tree-title">${c.name}</span>
+                                <span class="tree-badge">(${matches.length}场比赛)</span>
+                                <span class="tree-status status-${c.status}">${c.status === 'active' ? '进行中' : '已结束'}</span>
+                                <div class="tree-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); createMatch(${c.id})">+ 添加比赛</button>
+                                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); editCompetition(${c.id}, '${c.name.replace(/'/g, "\\'")}', ${c.year}, '${c.season}')">编辑</button>
+                                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteCompetition(${c.id})">删除</button>
+                                </div>
+                            </div>
+                            <div class="tree-children">
+                    `;
+
+                    // 按周展开
+                    for (const week of Object.keys(weekGroups).sort((a, b) => a - b)) {
+                        html += `
+                            <div class="tree-week">
+                                <div class="tree-header" onclick="toggleNode(this)">
+                                    <span class="tree-arrow">▶</span>
+                                    <span class="tree-title">Week ${week}</span>
+                                </div>
+                                <div class="tree-children">
+                        `;
+
+                        // 按天展开
+                        for (const day of Object.keys(weekGroups[week]).sort((a, b) => a - b)) {
+                            html += `
+                                <div class="tree-day">
+                                    <div class="tree-header" onclick="toggleNode(this)">
+                                        <span class="tree-arrow">▶</span>
+                                        <span class="tree-title">Day ${day}</span>
+                                    </div>
+                                    <div class="tree-children">
+                            `;
+
+                            // 比赛列表
+                            for (const m of weekGroups[week][day].sort((a, b) => a.match_number - b.match_number)) {
+                                const homeTeam = allTeams.find(t => t.name === m.home_team);
+                                const awayTeam = allTeams.find(t => t.name === m.away_team);
+                                const homeLogo = homeTeam && homeTeam.logo_url ? (homeTeam.logo_url.startsWith('http') ? homeTeam.logo_url : BASE_URL + homeTeam.logo_url) : null;
+                                const awayLogo = awayTeam && awayTeam.logo_url ? (awayTeam.logo_url.startsWith('http') ? awayTeam.logo_url : BASE_URL + awayTeam.logo_url) : null;
+
+                                html += `
+                                    <div class="tree-match">
+                                        <span class="match-icon">🏟️</span>
+                                        <span class="match-info">Match ${m.match_number}</span>
+                                        <div class="team-selector">
+                                            <span class="team-logo-small">${homeLogo ? `<img src="${homeLogo}">` : (m.home_team ? m.home_team.charAt(0) : '?')}</span>
+                                            <select class="inline-select" onchange="updateMatchTeam(${m.id}, 'home_team', this.value); loadMatches()">
+                                                <option value="">-- 主场 --</option>
+                                                ${allTeams.map(t => `<option value="${t.name}" ${m.home_team === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <span class="vs-text">vs</span>
+                                        <div class="team-selector">
+                                            <span class="team-logo-small">${awayLogo ? `<img src="${awayLogo}">` : (m.away_team ? m.away_team.charAt(0) : '?')}</span>
+                                            <select class="inline-select" onchange="updateMatchTeam(${m.id}, 'away_team', this.value); loadMatches()">
+                                                <option value="">-- 客场 --</option>
+                                                ${allTeams.map(t => `<option value="${t.name}" ${m.away_team === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <span class="match-code">${m.match_code}</span>
+                                        <span class="match-status status-${m.status}">${m.status === 'active' ? '进行中' : '已结束'}</span>
+                                        <div class="tree-actions">
+                                            <button class="btn btn-sm ${m.status === 'active' ? 'btn-warning' : 'btn-success'}"
+                                                onclick="toggleMatchStatus(${m.id}, '${m.status === 'active' ? 'completed' : 'active'}')">
+                                                ${m.status === 'active' ? '结束' : '开启'}
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" onclick="deleteMatch(${m.id})">删除</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            html += `</div></div>`;
+                        }
+
+                        html += `</div></div>`;
+                    }
+
+                    html += `</div></div>`;
+                }
+
+                matchTree.innerHTML = html || '<div class="empty-tip">暂无比赛数据</div>';
+            } catch (error) {
+                showAlert('加载比赛失败', 'error');
+            }
+        }
+
+        function toggleNode(element) {
+            const children = element.nextElementSibling;
+            const arrow = element.querySelector('.tree-arrow');
+            if (children && children.classList.contains('tree-children')) {
+                children.classList.toggle('collapsed');
+                arrow.textContent = children.classList.contains('collapsed') ? '▶' : '▼';
+            }
+        }
+
+        // 批量生成比赛
+        async function batchGenerate() {
+            const competitionId = document.getElementById('batchCompetition').value;
+            const weeksStr = document.getElementById('batchWeeks').value;
+            const daysPerWeek = parseInt(document.getElementById('batchDaysPerWeek').value) || 1;
+            const matchesPerDay = parseInt(document.getElementById('batchMatchesPerDay').value) || 3;
+
+            if (!competitionId) {
+                return showAlert('请选择大比赛', 'error');
+            }
+
+            if (!weeksStr) {
+                return showAlert('请输入周数范围', 'error');
+            }
+
+            // 解析周数范围
+            const weeks = parseRange(weeksStr);
+            if (weeks.length === 0) {
+                return showAlert('周数格式错误', 'error');
+            }
+
+            const totalMatches = weeks.length * daysPerWeek * matchesPerDay;
+
+            // 确认对话框
+            const confirmMsg = `将生成以下比赛：
+- 周数: Week ${weeks[0]} - Week ${weeks[weeks.length - 1]} (${weeks.length}周)
+- 每周 ${daysPerWeek} 天
+- 每天 ${matchesPerDay} 场比赛
+- 总计 ${totalMatches} 场比赛
+
+是否确认生成？`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            // 开始生成
+            let created = 0;
+            let errors = 0;
+
+            for (const week of weeks) {
+                for (let day = 1; day <= daysPerWeek; day++) {
+                    for (let match = 1; match <= matchesPerDay; match++) {
+                        try {
+                            await request('/admin/matches', 'POST', {
+                                competition_id: parseInt(competitionId),
+                                week_number: week,
+                                day_number: day,
+                                match_number: match
+                            });
+                            created++;
+                        } catch (e) {
+                            errors++;
+                            console.error(`创建失败: Week${week}Day${day}Match${match}`, e);
+                        }
+                    }
+                }
+            }
+
+            showAlert(`生成完成！成功 ${created} 场，失败 ${errors} 场`);
+            loadMatches();
+        }
+
+        function parseRange(str) {
+            // 支持格式: "1-10" 或 "1,2,3" 或 "1-5,8,10-12"
+            const result = [];
+            const parts = str.split(',');
+
+            for (const part of parts) {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(Number);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let i = start; i <= end; i++) {
+                            result.push(i);
+                        }
+                    }
+                } else {
+                    const num = parseInt(part);
+                    if (!isNaN(num)) {
+                        result.push(num);
+                    }
+                }
+            }
+
+            return [...new Set(result)].sort((a, b) => a - b);
+        }
+
+        // Excel导入功能
+        function previewExcel() {
+            const fileInput = document.getElementById('excelFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return showAlert('请选择Excel文件', 'error');
+            }
+
+            // 检查SheetJS是否加载
+            if (typeof XLSX === 'undefined') {
+                return showAlert('Excel解析库未加载，请刷新页面重试', 'error');
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    console.log('Excel原始数据:', jsonData);
+
+                    // 解析数据，智能识别表头
+                    excelData = [];
+                    for (let i = 0; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (row.length >= 5) {
+                            const week = parseInt(row[0]);
+                            const day = parseInt(row[1]);
+                            const match = parseInt(row[2]);
+                            const homeTeam = String(row[3] || '').trim();
+                            const awayTeam = String(row[4] || '').trim();
+
+                            // 检查是否是有效数据行（跳过表头）
+                            if (!isNaN(week) && !isNaN(day) && !isNaN(match) && homeTeam && awayTeam) {
+                                excelData.push({ week, day, match, homeTeam, awayTeam });
+                            }
+                        }
+                    }
+
+                    console.log('解析后的数据:', excelData);
+
+                    // 显示预览
+                    if (excelData.length === 0) {
+                        return showAlert('未找到有效数据，请确保Excel格式为：周数|天数|比赛数|主场|客场', 'error');
+                    }
+
+                    let previewHtml = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>周数</th>
+                                    <th>天数</th>
+                                    <th>比赛数</th>
+                                    <th>主场</th>
+                                    <th>客场</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    excelData.slice(0, 10).forEach(row => {
+                        previewHtml += `
+                            <tr>
+                                <td>${row.week}</td>
+                                <td>${row.day}</td>
+                                <td>${row.match}</td>
+                                <td>${row.homeTeam}</td>
+                                <td>${row.awayTeam}</td>
+                            </tr>
+                        `;
+                    });
+
+                    if (excelData.length > 10) {
+                        previewHtml += `<tr><td colspan="5" style="text-align:center;color:#999;">... 还有 ${excelData.length - 10} 条数据</td></tr>`;
+                    }
+
+                    previewHtml += `</tbody></table>`;
+
+                    document.getElementById('previewContent').innerHTML = previewHtml;
+                    document.getElementById('excelPreview').style.display = 'block';
+                    showAlert(`解析成功，共 ${excelData.length} 条比赛数据`);
+                } catch (err) {
+                    console.error('解析错误:', err);
+                    showAlert('文件解析失败: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function importExcel() {
+            console.log('开始导入，excelData:', excelData);
+
+            const competitionId = document.getElementById('importCompetition').value;
+            console.log('选择的大比赛ID:', competitionId);
+
+            if (!competitionId) {
+                return showAlert('请选择大比赛', 'error');
+            }
+
+            if (!excelData || excelData.length === 0) {
+                return showAlert('请先点击"预览"按钮加载数据', 'error');
+            }
+
+            if (!confirm(`确认导入 ${excelData.length} 场比赛？`)) {
+                return;
+            }
+
+            // 收集所有队伍并自动添加
+            const teamSet = new Set();
+            excelData.forEach(row => {
+                if (row.homeTeam) teamSet.add(row.homeTeam);
+                if (row.awayTeam) teamSet.add(row.awayTeam);
+            });
+
+            // 获取已有队伍
+            let existingTeams = [];
+            try {
+                existingTeams = await request('/admin/teams');
+            } catch (e) {}
+            const existingNames = new Set(existingTeams.map(t => t.name));
+
+            // 添加新队伍
+            let teamsAdded = 0;
+            for (const teamName of teamSet) {
+                if (!existingNames.has(teamName)) {
+                    try {
+                        await request('/admin/teams', 'POST', { name: teamName });
+                        teamsAdded++;
+                    } catch (e) {
+                        console.error('添加队伍失败:', teamName, e);
+                    }
+                }
+            }
+            if (teamsAdded > 0) {
+                showAlert(`已自动添加 ${teamsAdded} 支新队伍`);
+            }
+
+            let created = 0;
+            let errors = 0;
+            let errorMessages = [];
+
+            for (let i = 0; i < excelData.length; i++) {
+                const row = excelData[i];
+                try {
+                    await request('/admin/matches', 'POST', {
+                        competition_id: parseInt(competitionId),
+                        week_number: row.week,
+                        day_number: row.day,
+                        match_number: row.match,
+                        home_team: row.homeTeam,
+                        away_team: row.awayTeam
+                    });
+                    created++;
+                } catch (e) {
+                    errors++;
+                    const errMsg = `W${row.week}D${row.day}M${row.match}: ${e.message || e}`;
+                    errorMessages.push(errMsg);
+                    console.error('失败:', errMsg, e);
+                }
+            }
+
+            let resultMsg = `导入完成！成功${created}场`;
+            if (teamsAdded > 0) resultMsg += `，新增${teamsAdded}支队伍`;
+            if (errors > 0) {
+                resultMsg += `，失败${errors}场`;
+                if (errorMessages.length > 0) {
+                    resultMsg += '\n' + errorMessages.slice(0, 3).join('\n');
+                }
+            }
+
+            showAlert(resultMsg);
+            excelData = null;
+            document.getElementById('excelPreview').style.display = 'none';
+            document.getElementById('excelFile').value = '';
+            loadMatches();
+        }
+
+        function createCompetition() {
+            const name = prompt('比赛名称（如：2026IVL秋季赛）:');
+            if (!name) return;
+            const year = prompt('年份:');
+            if (!year) return;
+            const season = prompt('赛季（春季赛/秋季赛）:');
+            if (!season) return;
+            
+            request('/admin/competitions', 'POST', { name, year: parseInt(year), season })
+                .then(() => { showAlert('创建成功'); loadMatches(); })
+                .catch(error => showAlert('创建失败', 'error'));
+        }
+
+        function editCompetition(id, currentName, currentYear, currentSeason) {
+            const name = prompt('比赛名称:', currentName);
+            if (name === null) return;
+            const year = prompt('年份:', currentYear);
+            if (year === null) return;
+            const season = prompt('赛季:', currentSeason);
+            if (season === null) return;
+            
+            request(`/admin/competitions/${id}`, 'PUT', { 
+                name, 
+                year: parseInt(year), 
+                season 
+            }).then(() => { showAlert('更新成功'); loadMatches(); })
+              .catch(error => showAlert('更新失败', 'error'));
+        }
+
+        function deleteCompetition(id) {
+            if (!confirm('确定要删除此大比赛吗？')) return;
+            request(`/admin/competitions/${id}`, 'DELETE')
+                .then(() => { showAlert('删除成功'); loadMatches(); })
+                .catch(error => showAlert('删除失败: ' + error.message, 'error'));
+        }
+
+        function createMatch(competitionId) {
+            const week = prompt('周数:');
+            if (!week) return;
+            const day = prompt('天数:');
+            if (!day) return;
+            const match = prompt('比赛数:');
+            if (!match) return;
+            
+            request('/admin/matches', 'POST', {
+                competition_id: competitionId,
+                week_number: parseInt(week),
+                day_number: parseInt(day),
+                match_number: parseInt(match)
+            }).then(() => { showAlert('创建成功'); loadMatches(); })
+              .catch(error => showAlert('创建失败', 'error'));
+        }
+
+        function editMatch(id, currentWeek, currentDay, currentMatch, currentHome, currentAway) {
+            const week = prompt('周数:', currentWeek);
+            if (week === null) return;
+            const day = prompt('天数:', currentDay);
+            if (day === null) return;
+            const match = prompt('比赛数:', currentMatch);
+            if (match === null) return;
+            const homeTeam = prompt('主场队伍:', currentHome || '');
+            if (homeTeam === null) return;
+            const awayTeam = prompt('客场队伍:', currentAway || '');
+            if (awayTeam === null) return;
+
+            request(`/admin/matches/${id}`, 'PUT', {
+                week_number: parseInt(week),
+                day_number: parseInt(day),
+                match_number: parseInt(match),
+                home_team: homeTeam || null,
+                away_team: awayTeam || null
+            }).then(() => { showAlert('更新成功'); loadMatches(); })
+              .catch(error => showAlert('更新失败', 'error'));
+        }
+
+        function deleteMatch(id) {
+            if (!confirm('确定要删除此比赛吗？')) return;
+            request(`/admin/matches/${id}`, 'DELETE')
+                .then(() => { showAlert('删除成功'); loadMatches(); })
+                .catch(error => showAlert('删除失败: ' + error.message, 'error'));
+        }
+
+        function toggleMatchStatus(matchId, newStatus) {
+            if (!confirm(newStatus === 'completed' ? '确定结束比赛？' : '确定开启比赛？')) return;
+            request(`/admin/matches/${matchId}/status`, 'PUT', { status: newStatus })
+                .then(() => { showAlert('状态更新成功'); loadMatches(); })
+                .catch(error => showAlert('更新失败', 'error'));
+        }
+
+        async function updateMatchTeam(matchId, field, value) {
+            try {
+                const updateData = {};
+                updateData[field] = value || null;
+                await request(`/admin/matches/${matchId}`, 'PUT', updateData);
+            } catch (e) {
+                showAlert('更新失败', 'error');
+                loadMatches();
+            }
+        }
+
+        // 问题管理 - 上下结构
+        async function loadQuestions() {
+            try {
+                const competitions = await request('/competitions');
+                const questionTree = document.getElementById('questionTree');
+                let html = '';
+
+                for (const c of competitions) {
+                    const matches = await request(`/competitions/${c.id}/matches`);
+
+                    html += `<div class="competition-section">`;
+                    html += `<h2 class="section-title" onclick="this.nextElementSibling.classList.toggle('collapsed')" style="cursor:pointer;">▶ ${c.name} (${matches.length}场比赛)</h2>`;
+                    html += `<div class="section-children">`;
+
+                    for (const m of matches) {
+                        const detail = await request(`/matches/${m.match_code}`);
+                        const teams = m.home_team && m.away_team ? `${m.home_team} vs ${m.away_team}` : '待定';
+
+                        html += `
+                            <div class="match-section">
+                                <div class="match-header">
+                                    <span class="match-title">W${m.week_number}D${m.day_number}M${m.match_number} - ${teams}</span>
+                                    <span class="match-code">${m.match_code}</span>
+                                    <button class="btn btn-sm btn-primary" onclick="addQuestion(${m.id})">+ 添加问题</button>
+                                </div>
+                                <div class="questions-container">
+                                    ${detail.questions.map((q, idx) => `
+                                        <div class="question-card">
+                                            <div class="question-row">
+                                                <span class="question-label">Q${idx + 1}</span>
+                                                <input type="text" class="inline-input question-text-input" value="${q.question_text || ''}" onchange="updateQuestionText(${q.id}, this.value)" placeholder="输入问题题目">
+                                                <span class="question-status status-${q.status}">${q.status === 'active' ? '进行中' : '已结束'}</span>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteQuestion(${q.id})">删除</button>
+                                            </div>
+                                            <div class="options-row">
+                                                ${q.options.map((o, oi) => `
+                                                    <div class="option-chip ${q.correct_option_id === o.id ? 'correct-answer' : ''}">
+                                                        <input type="text" class="option-input" value="${o.option_text}" onchange="updateOption(${o.id}, 'option_text', this.value)" placeholder="选项${oi + 1}">
+                                                        <input type="number" class="rate-input" value="${o.base_rate}" onchange="updateOption(${o.id}, 'base_rate', this.value)" step="0.1" min="0.1">
+                                                        <span class="rate-label">倍</span>
+                                                        <button class="btn-icon ${q.correct_option_id === o.id ? 'correct' : ''}" onclick="setCorrectAnswer(${q.id}, ${o.id})">✓</button>
+                                                        ${q.options.length > 2 ? `<button class="btn-icon delete" onclick="deleteOption(${o.id})">×</button>` : ''}
+                                                    </div>
+                                                `).join('')}
+                                                <button class="btn-add-option" onclick="addOption(${q.id})">+</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    html += `</div></div>`;
+                }
+
+                questionTree.innerHTML = html || '<div class="empty-tip">暂无比赛数据</div>';
+            } catch (error) {
+                console.error('加载问题失败:', error);
+                showAlert('加载问题失败', 'error');
+            }
+        }
+
+        async function addQuestion(matchId) {
+            try {
+                // 通过比赛ID获取比赛详情
+                let matchData = null;
+                const competitions = await request('/competitions');
+                for (const c of competitions) {
+                    const matches = await request(`/competitions/${c.id}/matches`);
+                    matchData = matches.find(m => m.id === matchId);
+                    if (matchData) break;
+                }
+
+                if (!matchData) throw new Error('比赛不存在');
+
+                const detail = await request(`/matches/${matchData.match_code}`);
+                const questionNum = detail.questions.length + 1;
+
+                await request('/admin/questions', 'POST', {
+                    match_id: matchId,
+                    question_text: `第${questionNum}题`,
+                    options: [
+                        { option_text: '', base_rate: 2.0 },
+                        { option_text: '', base_rate: 2.0 }
+                    ]
+                });
+                showAlert('问题添加成功');
+                loadQuestions();
+            } catch (e) {
+                console.error('添加问题失败:', e);
+                showAlert('添加失败: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function updateQuestionText(questionId, text) {
+            try {
+                await request(`/admin/questions/${questionId}`, 'PUT', { question_text: text });
+            } catch (e) {
+                showAlert('更新失败', 'error');
+            }
+        }
+
+        async function updateOption(optionId, field, value) {
+            try {
+                await request(`/admin/options/${optionId}`, 'PUT', { [field]: field === 'base_rate' ? parseFloat(value) : value });
+            } catch (e) {
+                showAlert('更新失败', 'error');
+            }
+        }
+
+        async function addOption(questionId) {
+            try {
+                await request('/admin/options', 'POST', { question_id: questionId, option_text: '', base_rate: 2.0 });
+                loadQuestions();
+            } catch (e) {
+                showAlert('添加失败', 'error');
+            }
+        }
+
+        async function deleteOption(optionId) {
+            if (!confirm('确定删除此选项？')) return;
+            try {
+                await request(`/admin/options/${optionId}`, 'DELETE');
+                loadQuestions();
+            } catch (e) {
+                showAlert('删除失败: ' + e.message, 'error');
+            }
+        }
+
+        async function setCorrectAnswer(questionId, optionId) {
+            try {
+                await request(`/admin/questions/${questionId}/answer`, 'PUT', { option_id: optionId });
+                showAlert('设置成功');
+                loadQuestions();
+            } catch (e) {
+                showAlert('设置失败', 'error');
+            }
+        }
+
+        async function deleteQuestion(questionId) {
+            if (!confirm('确定删除此问题？')) return;
+            try {
+                await request(`/admin/questions/${questionId}`, 'DELETE');
+                loadQuestions();
+            } catch (e) {
+                showAlert('删除失败', 'error');
+            }
+        }
+
+        // 页面加载时检查登录状态
+        window.onload = function() {
+            const userId = localStorage.getItem('adminUserId');
+            if (userId) {
+                currentUserId = userId;
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('mainPage').style.display = 'flex';
+                loadStats();
+            }
+        };
+    </script>
+</body>
+</html>
