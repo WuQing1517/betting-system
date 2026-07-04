@@ -30,7 +30,7 @@ def superadmin_required(f):
             return jsonify({'error': '缺少用户ID'}), 400
         
         user = User.query.get(user_id)
-        if not user or not user.openid != 'dev_wuqing':
+        if not user or user.openid != 'dev_wuqing':
             return jsonify({'error': '需要超级管理员权限'}), 403
         
         return f(*args, **kwargs)
