@@ -51,6 +51,10 @@ def create_app():
     def js_file(filename):
         return send_from_directory(os.path.join(WEB_FOLDER, 'js'), filename)
 
+    @app.route('/images/<path:filename>')
+    def image_file(filename):
+        return send_from_directory(os.path.join(WEB_FOLDER, 'images'), filename)
+
     # 创建数据库表
     with app.app_context():
         db.create_all()
