@@ -259,7 +259,8 @@ def get_livestream_cover():
             req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             resp = urllib.request.urlopen(req, timeout=5)
             data = json_mod.loads(resp.read().decode())
-            cover = data.get('data', {}).get('cover', '')
+            d = data.get('data', {})
+            cover = d.get('cover') or d.get('user_cover') or d.get('keyframe') or ''
             return jsonify({'cover': cover})
         except Exception:
             return jsonify({'cover': ''})
