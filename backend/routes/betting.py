@@ -293,7 +293,7 @@ def proxy_livestream_image():
             'User-Agent': 'Mozilla/5.0',
             'Referer': 'https://www.bilibili.com/'
         })
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = urllib.request.urlopen(req, timeout=15)
         data = resp.read()
         content_type = resp.headers.get('Content-Type', 'image/jpeg')
         return data, 200, {'Content-Type': content_type, 'Cache-Control': 'public, max-age=3600'}

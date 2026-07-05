@@ -818,10 +818,14 @@ async function showLivestream() {
     }
     try {
         var livestreams = await api('/livestreams');
-        livestreams.forEach(function(ls) {
+        for (var i = 0; i < livestreams.length; i++) {
+            var ls = livestreams[i];
             var coverUrl = '';
             if (ls.platform === 'bilibili' || ls.platform === 'huya') {
-                coverUrl = '/api/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id;
+                try {
+                    var coverData = await api('/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id);
+                    coverUrl = coverData.cover || '';
+                } catch (e) {}
             }
             h += '<div class="livestream-card" data-id="' + ls.id + '" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
             h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
@@ -833,7 +837,7 @@ async function showLivestream() {
             h += '<div style="padding:10px 14px"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + ls.name + '</div>';
             if (ls.intro) h += '<div style="font-size:12px;color:#86868b;margin-top:4px;line-height:1.4">' + ls.intro + '</div>';
             h += '</div></div>';
-        });
+        }
         if (livestreams.length === 0) h += '<div style="padding:40px;text-align:center;color:#86868b">\u6682\u65E0\u63A8\u8350\u76F4\u64AD</div>';
     } catch (e) {}
     h += '</div>';
@@ -850,8 +854,8 @@ async function onLivestreamLongPress(e, id) {
     if (e) e.preventDefault();
     if (!currentUser || !currentUser.is_admin) return;
     var result = await new Promise(function(resolve) {
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center">';
+        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px">\u7F16\u8F91\u76F4\u64AD</div>';
         h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u540D\u79F0</div><input id="lsEditName" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
         h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u4ECB\u7ECD</div><input id="lsEditIntro" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
