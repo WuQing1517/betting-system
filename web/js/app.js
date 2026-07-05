@@ -824,7 +824,7 @@ async function showLivestream() {
         h += '<div onclick="window.open(\'' + ls.url + '\',\'_blank\')" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer">';
         h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
         if (coverUrl) {
-            h += '<img src="' + coverUrl + '" style="width:100%;height:100%;object-fit:cover">';
+            h += '<img src="/api/livestream/image?url=' + encodeURIComponent(coverUrl) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy">';
         } else {
             h += '<i class="ri-live-line" style="font-size:40px;color:#c7c7cc"></i>';
         }
