@@ -265,6 +265,24 @@ def get_livestream_cover():
         except Exception:
             return jsonify({'cover': ''})
 
+@betting_bp.route('/livestream/image', methods=['GET'])
+def proxy_livestream_image():
+    img_url = request.args.get('url', '')
+    if not img_url or not img_url.startswith('http'):
+        return '', 400
+    try:
+        import urllib.request
+        req = urllib.request.Request(img_url, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Referer': 'https://www.bilibili.com/'
+        })
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = resp.read()
+        content_type = resp.headers.get('Content-Type', 'image/jpeg')
+        return data, 200, {'Content-Type': content_type, 'Cache-Control': 'public, max-age=3600'}
+    except Exception:
+        return '', 404
+
 @betting_bp.route('/operation-logs', methods=['GET'])
 def get_operation_logs():
     page = request.args.get('page', 1, type=int)
