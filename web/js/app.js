@@ -1132,12 +1132,51 @@ async function editStartDate(cid, currentVal) {
 function downloadMatchTemplate() {
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.aoa_to_sheet([
-        ['\u5468\u6570', '\u5929\u6570', '\u573A\u6B21', '\u4E3B\u573A\u961F\u4F0D', '\u5BA2\u573A\u961F\u4F0D'],
-        [1, 1, 1, 'TE', 'MRC'],
-        [1, 1, 2, 'Team A', 'Team B']
+        ['\u5468\u6570', '\u661F\u671F\u51E0', '\u573A\u6B21', '\u4E3B\u573A\u961F\u4F0D', '\u5BA2\u573A\u961F\u4F0D'],
+        [1, '\u5468\u4E94', 1, 'TE', 'MRC'],
+        [1, '\u5468\u516D', 1, 'FPX.ZQ', 'GR']
     ]);
     XLSX.utils.book_append_sheet(wb, ws, '\u8D5B\u7A0B');
     XLSX.writeFile(wb, '\u8D5B\u7A0B\u683C\u5F0F.xlsx');
+}
+
+var WD_MAP = {'\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7,
+    '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'D1':1,'D2':2,'D3':3,'D4':4,'D5':5,'D6':6,'D7':7,
+    '\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7};
+
+async function handleMatchExcelImport(input) {
+    var file = input.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            var data = new Uint8Array(e.target.result);
+            var wb = XLSX.read(data, { type: 'array' });
+            var sheet = wb.Sheets[wb.SheetNames[0]];
+            var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            if (jsonData.length < 2) { showToast('\u6587\u4EF6\u65E0\u6548', 'error'); return; }
+            var cid = document.getElementById('matchCompSelect').value;
+            var count = 0;
+            var compData = await api('/competitions/' + cid + '/full');
+            for (var i = 1; i < jsonData.length; i++) {
+                var row = jsonData[i];
+                if (!row || row.length < 5) continue;
+                var week = parseInt(row[0]);
+                var wdVal = String(row[1]).trim();
+                var wd = WD_MAP[wdVal] || parseInt(wdVal) || 1;
+                var match = parseInt(row[2]);
+                var home = String(row[3] || '').trim(), away = String(row[4] || '').trim();
+                if (isNaN(week) || isNaN(match)) continue;
+                try {
+                    var dayNum = calcDayNumber(wd, week, compData.matches);
+                    await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: dayNum, match_number: match, home_team: home, away_team: away });
+                    count++;
+                } catch (e) {}
+            }
+            showToast('\u6210\u529F\u5BFC\u5165 ' + count + ' \u573A\u6BD4\u8D5B', 'success');
+            onMatchCompChange();
+        } catch (e) { showToast('\u5BFC\u5165\u5931\u8D25', 'error'); }
+    };
+    reader.readAsArrayBuffer(file);
 }
 
 async function handleMatchExcelImport(input) {
