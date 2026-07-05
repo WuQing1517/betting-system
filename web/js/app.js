@@ -815,9 +815,9 @@ async function showLivestream() {
     for (var i = 0; i < LIVESTREAMS.length; i++) {
         var ls = LIVESTREAMS[i];
         var coverUrl = '';
-        if (ls.platform === 'bilibili') {
+        if (ls.platform === 'bilibili' || ls.platform === 'huya') {
             try {
-                var coverData = await api('/livestream/cover?platform=bilibili&room_id=' + ls.room_id);
+                var coverData = await api('/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id);
                 coverUrl = coverData.cover || '';
             } catch (e) {}
         }
