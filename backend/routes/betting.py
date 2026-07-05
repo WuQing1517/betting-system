@@ -268,13 +268,19 @@ def get_livestream_cover():
         try:
             import urllib.request, re
             url = 'https://www.huya.com/' + str(room_id)
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)'})
-            resp = urllib.request.urlopen(req, timeout=5)
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+                'Accept': 'text/html',
+                'Accept-Language': 'zh-CN,zh;q=0.9'
+            })
+            resp = urllib.request.urlopen(req, timeout=10)
             html = resp.read().decode('utf-8', errors='ignore')
-            m = re.search(r'og:image" content="(https?://[^"]+)"', html)
+            # Try og:image
+            m = re.search(r'og:image["\s]+content="([^"]+)"', html)
             if m:
                 return jsonify({'cover': m.group(1)})
-            m2 = re.search(r'"sCover":"(https?://[^"]+)"', html)
+            # Try roomCover or sProfile in JSON
+            m2 = re.search(r'"(https?://[^"]+?(?:cover|profile|keyframe|room)[^"]*\.(?:jpg|jpeg|png|webp))"', html, re.I)
             if m2:
                 return jsonify({'cover': m2.group(1)})
             return jsonify({'cover': ''})
