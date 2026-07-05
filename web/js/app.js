@@ -1219,7 +1219,7 @@ async function deleteMatchWeb(mid) {
 
 async function createCompetitionWeb() {
     var result = await miuiPromptMulti([
-        {key:'type',label:'\u8D5B\u4E8B\u7C7B\u578B',placeholder:'\u9009\u62E9',type:'select',options:[{v:'IVL',l:'IVL'},{v:'IVS',l:'IVS'},{v:'COA',l:'COA'},{v:'',l:'\u81EA\u5B9A\u4E49'}],customKey:'customType',customPlaceholder:'\u8F93\u5165\u8D5B\u4E8B\u7C7B\u578B'},
+        {key:'type',label:'\u8D5B\u4E8B\u7C7B\u578B',placeholder:'\u9009\u62E9',type:'select',options:[{value:'IVL',label:'IVL'},{value:'IVS',label:'IVS'},{value:'COA',label:'COA'},{value:'',label:'\u81EA\u5B9A\u4E49'}],customKey:'customType',customPlaceholder:'\u8F93\u5165\u8D5B\u4E8B\u7C7B\u578B'},
         {key:'year',label:'\u5E74\u4EFD',placeholder:'\u5982 2026',type:'number'},
         {key:'suffix',label:'\u540E\u7F00',placeholder:'\u5982 \u590F\u5B63\u8D5B'},
         {key:'start_date',label:'\u8D77\u59CB\u65E5\u671F',placeholder:'\u5982 2026-07-04',type:'date'}
