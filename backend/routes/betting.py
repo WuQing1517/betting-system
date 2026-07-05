@@ -168,8 +168,8 @@ def place_bet():
             user.coins += existing_bet.coins
             option.total_coins -= existing_bet.coins
             db.session.delete(existing_bet)
+            log_operation(user_id, '\u6295\u5E01\u53D6\u6D88', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u9000\u56DE{existing_bet.coins}\u5E01')
             db.session.commit()
-            log_operation(user_id, '\u6295\u5E01\u53D6\u6D88', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u9000\u56DE{existing_bet.coins}\u5E01')
             return jsonify({'message': 'Bet cancelled', 'new_coins': user.coins})
         diff = coins - existing_bet.coins
         if diff > 0 and user.coins < diff:
@@ -177,8 +177,8 @@ def place_bet():
         existing_bet.coins = coins
         option.total_coins += diff
         user.coins -= diff
+        log_operation(user_id, '\u6295\u5E01\u4FEE\u6539', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6539\u4E3A{coins}\u5E01')
         db.session.commit()
-        log_operation(user_id, '\u6295\u5E01\u4FEE\u6539', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u6539\u4E3A{coins}\u5E01')
         return jsonify({'message': 'Bet updated', 'new_coins': user.coins})
     if user.coins < coins:
         return jsonify({'error': 'Insufficient coins'}), 400
@@ -186,8 +186,8 @@ def place_bet():
     user.coins -= coins
     option.total_coins += coins
     db.session.add(bet)
+    log_operation(user_id, '\u6295\u5E01', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6295{coins}\u5E01')
     db.session.commit()
-    log_operation(user_id, '\u6295\u5E01', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u6295{coins}\u5E01')
     return jsonify({'message': 'Bet placed'})
 
 @betting_bp.route('/questions/<int:question_id>/bets', methods=['GET'])
