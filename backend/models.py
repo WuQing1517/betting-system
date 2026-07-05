@@ -105,3 +105,13 @@ class Prize(db.Model):
     notes = db.Column(db.Text)
     creator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class OperationLog(db.Model):
+    __tablename__ = 'operation_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
+    nickname = db.Column(db.String(64))
+    action = db.Column(db.String(64))
+    detail = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

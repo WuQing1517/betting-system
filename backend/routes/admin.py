@@ -109,6 +109,10 @@ def update_user_coins(user_id):
         return jsonify({'error': '操作类型无效'}), 400
     
     db.session.commit()
+    admin_user = User.query.get(int(request.headers.get('X-User-Id')))
+    from routes.betting import log_operation
+    log_operation(admin_user.id, '\u8C03\u5E01', f'\u7528\u6237{user.nickname}({user_id}) {action} {amount}\u5E01 \u7ED3\u679C{user.coins}\u5E01')
+    db.session.commit()
     return jsonify({'message': 'Coins updated', 'new_coins': user.coins})
 
 @admin_bp.route('/users/<int:user_id>/admin', methods=['PUT'])
@@ -126,6 +130,10 @@ def toggle_admin(user_id):
         return jsonify({'error': '缺少is_admin参数'}), 400
 
     user.is_admin = is_admin
+    db.session.commit()
+    admin_user = User.query.get(int(request.headers.get('X-User-Id')))
+    from routes.betting import log_operation
+    log_operation(admin_user.id, '\u8BBE\u7F6E\u7BA1\u7406\u5458' if is_admin else '\u53D6\u6D88\u7BA1\u7406\u5458', f'\u7528\u6237{user.nickname}({user_id})')
     db.session.commit()
     return jsonify({'message': 'Admin status updated'})
 
@@ -738,6 +746,8 @@ def settle_bets(question_id, correct_option_id):
         user = User.query.get(bet.user_id)
         winnings = int(bet.coins * actual_rate)
         user.coins += winnings
+        from routes.betting import log_operation
+        log_operation(bet.user_id, '\u6295\u5E01\u80DC\u5229', f'\u95EE\u9898{question_id} \u6295{bet.coins}\u5E01 \u83B7\u5F97{winnings}\u5E01')
 
 # 数据统计
 @admin_bp.route('/stats', methods=['GET'])

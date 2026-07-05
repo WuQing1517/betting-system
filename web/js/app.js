@@ -868,28 +868,14 @@ function switchAdminTab(tab, event) {
     document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
     if (event && event.target) event.target.classList.add('active');
     else {
-        var names = { users: '\u7528\u6237', teams: '\u961F\u4F0D', matches: '\u8D5B\u7A0B', questions: '\u7ADE\u731C' };
+        var names = { users: '\u7528\u6237', teams: '\u961F\u4F0D', matches: '\u8D5B\u7A0B', questions: '\u7ADE\u731C', logs: '\u65E5\u5FD7' };
         document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { if (t.textContent.trim() === names[tab]) t.classList.add('active'); });
     }
     if (tab === 'users') loadAdminUsers();
     else if (tab === 'teams') loadAdminTeams();
     else if (tab === 'matches') loadAdminMatches();
     else if (tab === 'questions') loadAdminQuestions();
-}
-
-function switchAdminTab(tab, event) {
-    currentAdminTab = tab;
-    document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
-    if (event && event.target) event.target.classList.add('active');
-    else {
-        var names = { stats: '\u7EDF\u8BA1', users: '\u7528\u6237', teams: '\u961F\u4F0D', matches: '\u8D5B\u7A0B', questions: '\u7ADE\u731C' };
-        document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { if (t.textContent.trim() === names[tab]) t.classList.add('active'); });
-    }
-    if (tab === 'stats') loadAdminStats();
-    else if (tab === 'users') loadAdminUsers();
-    else if (tab === 'teams') loadAdminTeams();
-    else if (tab === 'matches') loadAdminMatches();
-    else if (tab === 'questions') loadAdminQuestions();
+    else if (tab === 'logs') loadAdminLogs();
 }
 
 async function loadAdminStats() {
@@ -1252,6 +1238,28 @@ async function deleteCompetitionWeb(cid) {
     if (!(await miuiConfirm('\u786E\u5B9A\u5220\u9664\u8D5B\u4E8B\uFF1F'))) return;
     try { await api('/admin/competitions/' + cid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); loadAdminMatches(); }
     catch (e) { showToast(e.message, 'error'); }
+}
+
+// ---- \u65E5\u5FD7 ----
+async function loadAdminLogs() {
+    try {
+        var res = await api('/operation-logs?per_page=100');
+        var h = '<div class="admin-section">';
+        if (res.length === 0) {
+            h += '<div style="padding:20px;text-align:center;color:#86868b">\u6682\u65E0\u64CD\u4F5C\u8BB0\u5F55</div>';
+        } else {
+            h += '<table class="admin-table"><thead><tr><th>\u65F6\u95F4</th><th>\u7528\u6237</th><th>\u64CD\u4F5C</th><th>\u8BE6\u60C5</th></tr></thead><tbody>';
+            res.forEach(function(l) {
+                h += '<tr><td style="font-size:11px;color:#86868b">' + l.created_at + '</td>';
+                h += '<td>' + l.nickname + '</td>';
+                h += '<td><span style="background:#e8f4fd;padding:2px 6px;border-radius:4px;font-size:12px;color:#3478f6">' + l.action + '</span></td>';
+                h += '<td style="font-size:12px">' + l.detail + '</td></tr>';
+            });
+            h += '</tbody></table>';
+        }
+        h += '</div>';
+        document.getElementById('adminContent').innerHTML = h;
+    } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
 }
 
 // ---- \u95EE\u9898 ----
