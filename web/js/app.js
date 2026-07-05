@@ -811,30 +811,101 @@ var LIVESTREAMS = [
 
 async function showLivestream() {
     showPage('livestream');
+    var isAdmin = currentUser && currentUser.is_admin;
     var h = '<div style="padding:12px 16px">';
-    for (var i = 0; i < LIVESTREAMS.length; i++) {
-        var ls = LIVESTREAMS[i];
-        var coverUrl = '';
-        if (ls.platform === 'bilibili' || ls.platform === 'huya') {
-            try {
-                var coverData = await api('/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id);
-                coverUrl = coverData.cover || '';
-            } catch (e) {}
-        }
-        h += '<div onclick="window.open(\'' + ls.url + '\',\'_blank\')" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer">';
-        h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
-        if (coverUrl) {
-            h += '<img src="/api/livestream/image?url=' + encodeURIComponent(coverUrl) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy">';
-        } else {
-            h += '<i class="ri-live-line" style="font-size:40px;color:#c7c7cc"></i>';
-        }
-        h += '</div>';
-        h += '<div style="padding:10px 14px"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + ls.name + '</div>';
-        h += '<div style="font-size:12px;color:#86868b;margin-top:2px">' + ls.platform + ' \u76F4\u64AD\u95F4</div></div>';
-        h += '</div>';
+    if (isAdmin) {
+        h += '<button class="admin-btn btn-success" style="display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;font-size:13px;margin-bottom:12px" onclick="addLivestream()"><i class="ri-add-circle-line"></i> \u6DFB\u52A0\u76F4\u64AD</button>';
     }
+    try {
+        var livestreams = await api('/livestreams');
+        livestreams.forEach(function(ls) {
+            var coverUrl = '';
+            if (ls.platform === 'bilibili' || ls.platform === 'huya') {
+                coverUrl = '/api/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id;
+            }
+            h += '<div class="livestream-card" data-id="' + ls.id + '" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
+            h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
+            if (coverUrl) {
+                h += '<img src="/api/livestream/image?url=' + encodeURIComponent(coverUrl) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'">';
+            }
+            h += '<div style="position:absolute;bottom:0;left:0;right:0;padding:4px 0;display:flex;align-items:center;justify-content:center"><span style="font-size:11px;color:#fff;background:rgba(231,76,60,0.9);padding:2px 8px;border-radius:4px">' + ls.platform + '</span></div>';
+            h += '</div>';
+            h += '<div style="padding:10px 14px"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + ls.name + '</div>';
+            if (ls.intro) h += '<div style="font-size:12px;color:#86868b;margin-top:4px;line-height:1.4">' + ls.intro + '</div>';
+            h += '</div></div>';
+        });
+        if (livestreams.length === 0) h += '<div style="padding:40px;text-align:center;color:#86868b">\u6682\u65E0\u63A8\u8350\u76F4\u64AD</div>';
+    } catch (e) {}
     h += '</div>';
     document.getElementById('livestreamContent').innerHTML = h;
+    document.querySelectorAll('.livestream-card').forEach(function(card) {
+        var timer = null;
+        card.addEventListener('touchstart', function(e) { timer = setTimeout(function() { onLivestreamLongPress(null, parseInt(card.dataset.id)); }, 500); });
+        card.addEventListener('touchend', function() { clearTimeout(timer); });
+        card.addEventListener('touchmove', function() { clearTimeout(timer); });
+    });
+}
+
+async function onLivestreamLongPress(e, id) {
+    if (e) e.preventDefault();
+    if (!currentUser || !currentUser.is_admin) return;
+    var result = await new Promise(function(resolve) {
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s">';
+        h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px">\u7F16\u8F91\u76F4\u64AD</div>';
+        h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u540D\u79F0</div><input id="lsEditName" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
+        h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u4ECB\u7ECD</div><input id="lsEditIntro" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
+        h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u5E73\u53F0</div><input id="lsEditPlatform" type="text" placeholder="bilibili/huya" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
+        h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u623F\u95F4ID</div><input id="lsEditRoom" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
+        h += '<div style="margin-bottom:16px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u94FE\u63A5</div><input id="lsEditUrl" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
+        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
+        h += '<button onclick="closeMiuiDialog(null)" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u5220\u9664</button>';
+        h += '<button id="miuiDialogOk" style="flex:1;color:#3478f6;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u4FDD\u5B58</button>';
+        h += '</div></div></div>';
+        document.body.insertAdjacentHTML('beforeend', h);
+        document.getElementById('miuiDialog')._resolve = resolve;
+        api('/livestreams').then(function(list) {
+            var item = list.find(function(x) { return x.id === id; });
+            if (item) {
+                document.getElementById('lsEditName').value = item.name || '';
+                document.getElementById('lsEditIntro').value = item.intro || '';
+                document.getElementById('lsEditPlatform').value = item.platform || '';
+                document.getElementById('lsEditRoom').value = item.room_id || '';
+                document.getElementById('lsEditUrl').value = item.url || '';
+            }
+        });
+        document.getElementById('miuiDialogOk').onclick = function() {
+            closeMiuiDialog({
+                name: document.getElementById('lsEditName').value,
+                intro: document.getElementById('lsEditIntro').value,
+                platform: document.getElementById('lsEditPlatform').value,
+                room_id: document.getElementById('lsEditRoom').value,
+                url: document.getElementById('lsEditUrl').value
+            });
+        };
+    });
+    if (result === null) {
+        if (await miuiConfirm('\u786E\u5B9A\u5220\u9664\u8BE5\u76F4\u64AD\uFF1F')) {
+            try { await api('/admin/livestreams/' + id, 'DELETE'); showToast('\u5DF2\u5220\u9664', 'success'); showLivestream(); }
+            catch (e) { showToast(e.message, 'error'); }
+        }
+    } else if (result) {
+        try { await api('/admin/livestreams/' + id, 'PUT', result); showToast('\u5DF2\u66F4\u65B0', 'success'); showLivestream(); }
+        catch (e) { showToast(e.message, 'error'); }
+    }
+}
+
+async function addLivestream() {
+    var result = await miuiPromptMulti([
+        {key:'name',label:'\u76F4\u64AD\u540D\u79F0',placeholder:'\u5982 \u5B98\u65B9-\u4E2D\u7B49\u538B\u529B'},
+        {key:'intro',label:'\u4ECB\u7ECD',placeholder:'\u53EF\u9009'},
+        {key:'platform',label:'\u5E73\u53F0',type:'select',options:[{value:'bilibili',label:'B\u7AD9'},{value:'huya',label:'\u864E\u7259'}]},
+        {key:'room_id',label:'\u623F\u95F4ID',placeholder:'\u5982 5555'},
+        {key:'url',label:'\u94FE\u63A5',placeholder:'\u5982 https://live.bilibili.com/5555'}
+    ]);
+    if (!result || !result.name) return;
+    try { await api('/admin/livestreams', 'POST', result); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); showLivestream(); }
+    catch (e) { showToast(e.message, 'error'); }
 }
 
 // ========== \u89C4\u5219 ==========
