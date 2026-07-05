@@ -1168,39 +1168,9 @@ async function handleMatchExcelImport(input) {
                 if (isNaN(week) || isNaN(match)) continue;
                 try {
                     var dayNum = calcDayNumber(wd, week, compData.matches);
-                    await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: dayNum, match_number: match, home_team: home, away_team: away });
+                    var resp = await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: dayNum, match_number: match, home_team: home, away_team: away });
                     count++;
-                } catch (e) {}
-            }
-            showToast('\u6210\u529F\u5BFC\u5165 ' + count + ' \u573A\u6BD4\u8D5B', 'success');
-            onMatchCompChange();
-        } catch (e) { showToast('\u5BFC\u5165\u5931\u8D25', 'error'); }
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-async function handleMatchExcelImport(input) {
-    var file = input.files[0]; if (!file) return;
-    var reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            var data = new Uint8Array(e.target.result);
-            var wb = XLSX.read(data, { type: 'array' });
-            var sheet = wb.Sheets[wb.SheetNames[0]];
-            var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            if (jsonData.length < 2) { showToast('\u6587\u4EF6\u65E0\u6548', 'error'); return; }
-            var cid = getMiuiSelectValue('matchCompSelect');
-            var count = 0;
-            for (var i = 1; i < jsonData.length; i++) {
-                var row = jsonData[i];
-                if (!row || row.length < 5) continue;
-                var week = parseInt(row[0]), day = parseInt(row[1]), match = parseInt(row[2]);
-                var home = String(row[3] || '').trim(), away = String(row[4] || '').trim();
-                if (isNaN(week) || isNaN(day) || isNaN(match)) continue;
-                try {
-                    await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: day, match_number: match, home_team: home, away_team: away });
-                    count++;
-                } catch (e) {}
+                } catch (e) { console.log('Import row error:', e.message, {week, wd, match, home, away, cid}); }
             }
             showToast('\u6210\u529F\u5BFC\u5165 ' + count + ' \u573A\u6BD4\u8D5B', 'success');
             onMatchCompChange();
