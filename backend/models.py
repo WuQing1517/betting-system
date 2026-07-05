@@ -115,3 +115,16 @@ class OperationLog(db.Model):
     action = db.Column(db.String(64))
     detail = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Livestream(db.Model):
+    __tablename__ = 'livestreams'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    intro = db.Column(db.String(256))
+    platform = db.Column(db.String(32))
+    room_id = db.Column(db.String(64))
+    url = db.Column(db.String(512))
+    creator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -310,4 +310,64 @@ def get_operation_logs():
         'action': l.action, 'detail': l.detail,
         'created_at': l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else ''
     } for l in logs.items])
-    return jsonify({'cover': ''})
+
+@betting_bp.route('/livestreams', methods=['GET'])
+def get_livestreams():
+    from models import Livestream
+    items = Livestream.query.order_by(Livestream.sort_order, Livestream.id).all()
+    return jsonify([{
+        'id': i.id, 'name': i.name, 'intro': i.intro or '',
+        'platform': i.platform or '', 'room_id': i.room_id or '',
+        'url': i.url or '', 'creator_id': i.creator_id
+    } for i in items])
+
+@betting_bp.route('/admin/livestreams', methods=['POST'])
+def create_livestream():
+    from models import Livestream, db
+    user_id = request.headers.get('X-User-Id')
+    user = User.query.get(int(user_id)) if user_id else None
+    if not user or not user.is_admin:
+        return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
+    data = request.get_json()
+    ls = Livestream(
+        name=data.get('name', ''),
+        intro=data.get('intro', ''),
+        platform=data.get('platform', ''),
+        room_id=data.get('room_id', ''),
+        url=data.get('url', ''),
+        creator_id=user.id
+    )
+    db.session.add(ls)
+    db.session.commit()
+    return jsonify({'message': 'OK', 'id': ls.id})
+
+@betting_bp.route('/admin/livestreams/<int:ls_id>', methods=['PUT'])
+def update_livestream(ls_id):
+    from models import Livestream, db
+    user_id = request.headers.get('X-User-Id')
+    user = User.query.get(int(user_id)) if user_id else None
+    if not user or not user.is_admin:
+        return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
+    ls = Livestream.query.get(ls_id)
+    if not ls:
+        return jsonify({'error': '\u672A\u627E\u5230'}), 404
+    data = request.get_json()
+    for field in ['name', 'intro', 'platform', 'room_id', 'url']:
+        if field in data:
+            setattr(ls, field, data[field])
+    db.session.commit()
+    return jsonify({'message': 'OK'})
+
+@betting_bp.route('/admin/livestreams/<int:ls_id>', methods=['DELETE'])
+def delete_livestream(ls_id):
+    from models import Livestream, db
+    user_id = request.headers.get('X-User-Id')
+    user = User.query.get(int(user_id)) if user_id else None
+    if not user or not user.is_admin:
+        return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
+    ls = Livestream.query.get(ls_id)
+    if not ls:
+        return jsonify({'error': '\u672A\u627E\u5230'}), 404
+    db.session.delete(ls)
+    db.session.commit()
+    return jsonify({'message': 'OK'})
