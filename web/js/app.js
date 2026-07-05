@@ -1154,7 +1154,7 @@ async function handleMatchExcelImport(input) {
             var sheet = wb.Sheets[wb.SheetNames[0]];
             var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
             if (jsonData.length < 2) { showToast('\u6587\u4EF6\u65E0\u6548', 'error'); return; }
-            var cid = document.getElementById('matchCompSelect').value;
+            var cid = getMiuiSelectValue('matchCompSelect');
             var count = 0;
             var compData = await api('/competitions/' + cid + '/full');
             for (var i = 1; i < jsonData.length; i++) {
@@ -1189,7 +1189,7 @@ async function handleMatchExcelImport(input) {
             var sheet = wb.Sheets[wb.SheetNames[0]];
             var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
             if (jsonData.length < 2) { showToast('\u6587\u4EF6\u65E0\u6548', 'error'); return; }
-            var cid = document.getElementById('matchCompSelect').value;
+            var cid = getMiuiSelectValue('matchCompSelect');
             var count = 0;
             for (var i = 1; i < jsonData.length; i++) {
                 var row = jsonData[i];
