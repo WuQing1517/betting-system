@@ -42,6 +42,9 @@ def update_profile():
         return jsonify({'error': 'User not found'}), 404
 
     data = request.get_json()
+    if 'nickname' in data and data['nickname'] != user.nickname:
+        from routes.betting import log_operation
+        log_operation(user_id, '\u66f4\u6539\u6635\u79f0', f'{user.nickname} \u6539\u4e3a {data["nickname"]}')
     if 'nickname' in data:
         user.nickname = data['nickname']
     if 'avatar_url' in data:

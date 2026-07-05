@@ -3,6 +3,13 @@ from flask import Blueprint, request, jsonify
 from config import Config
 from models import db, User, Team, Competition, Match, Question, Option, Bet
 from datetime import date, timedelta
+from models import OperationLog
+
+def log_operation(user_id, action, detail):
+    from models import User
+    u = User.query.get(user_id) if user_id else None
+    entry = OperationLog(user_id=user_id, nickname=u.nickname if u else '', action=action, detail=detail)
+    db.session.add(entry)
 
 betting_bp = Blueprint('betting', __name__)
 
@@ -162,6 +169,7 @@ def place_bet():
             option.total_coins -= existing_bet.coins
             db.session.delete(existing_bet)
             db.session.commit()
+            log_operation(user_id, '\u6295\u5E01\u53D6\u6D88', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u9000\u56DE{existing_bet.coins}\u5E01')
             return jsonify({'message': 'Bet cancelled', 'new_coins': user.coins})
         diff = coins - existing_bet.coins
         if diff > 0 and user.coins < diff:
@@ -170,6 +178,7 @@ def place_bet():
         option.total_coins += diff
         user.coins -= diff
         db.session.commit()
+        log_operation(user_id, '\u6295\u5E01\u4FEE\u6539', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u6539\u4E3A{coins}\u5E01')
         return jsonify({'message': 'Bet updated', 'new_coins': user.coins})
     if user.coins < coins:
         return jsonify({'error': 'Insufficient coins'}), 400
@@ -178,6 +187,7 @@ def place_bet():
     option.total_coins += coins
     db.session.add(bet)
     db.session.commit()
+    log_operation(user_id, '\u6295\u5E01', f'\u95EE\u9898{question_id} \u9009\u9879{option_id} \u6295{coins}\u5E01')
     return jsonify({'message': 'Bet placed'})
 
 @betting_bp.route('/questions/<int:question_id>/bets', methods=['GET'])
@@ -253,4 +263,15 @@ def get_livestream_cover():
             return jsonify({'cover': cover})
         except Exception:
             return jsonify({'cover': ''})
+
+@betting_bp.route('/operation-logs', methods=['GET'])
+def get_operation_logs():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    logs = OperationLog.query.order_by(OperationLog.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify([{
+        'id': l.id, 'user_id': l.user_id, 'nickname': l.nickname,
+        'action': l.action, 'detail': l.detail,
+        'created_at': l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else ''
+    } for l in logs.items])
     return jsonify({'cover': ''})
