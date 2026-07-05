@@ -1,0 +1,5 @@
+backend/betting.db
+backend/__pycache__/
+backend/uploads/
+.vscode/
+*.pyc
