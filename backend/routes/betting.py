@@ -264,6 +264,23 @@ def get_livestream_cover():
             return jsonify({'cover': cover})
         except Exception:
             return jsonify({'cover': ''})
+    elif platform == 'huya' and room_id:
+        try:
+            import urllib.request, re
+            url = 'https://www.huya.com/' + str(room_id)
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)'})
+            resp = urllib.request.urlopen(req, timeout=5)
+            html = resp.read().decode('utf-8', errors='ignore')
+            m = re.search(r'og:image" content="(https?://[^"]+)"', html)
+            if m:
+                return jsonify({'cover': m.group(1)})
+            m2 = re.search(r'"sCover":"(https?://[^"]+)"', html)
+            if m2:
+                return jsonify({'cover': m2.group(1)})
+            return jsonify({'cover': ''})
+        except Exception:
+            return jsonify({'cover': ''})
+    return jsonify({'cover': ''})
 
 @betting_bp.route('/livestream/image', methods=['GET'])
 def proxy_livestream_image():
