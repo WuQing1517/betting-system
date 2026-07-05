@@ -821,3 +821,23 @@ def delete_prize(prize_id):
     db.session.delete(prize)
     db.session.commit()
     return jsonify({'message': 'Prize deleted'})
+
+@admin_bp.route('/export', methods=['GET'])
+@superadmin_required
+def export_data():
+    """导出所有数据为JSON"""
+    from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog
+    data = {
+        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'openid': u.openid} for u in User.query.all()],
+        'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
+        'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
+        'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
+        'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id} for q in Question.query.all()],
+        'options': [{'id': o.id, 'question_id': o.question_id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins} for o in Option.query.all()],
+        'bets': [{'id': b.id, 'user_id': b.user_id, 'question_id': b.question_id, 'option_id': b.option_id, 'coins': b.coins} for b in Bet.query.all()],
+        'prizes': [{'id': p.id, 'competition_id': p.competition_id, 'name': p.name, 'quantity': p.quantity, 'condition': p.condition, 'provider': p.provider, 'notes': p.notes, 'creator_id': p.creator_id} for p in Prize.query.all()],
+        'logs': [{'id': l.id, 'user_id': l.user_id, 'nickname': l.nickname, 'action': l.action, 'detail': l.detail, 'created_at': str(l.created_at) if l.created_at else None} for l in OperationLog.query.order_by(OperationLog.id.desc()).limit(500).all()]
+    }
+    from flask import Response
+    import json
+    return Response(json.dumps(data, ensure_ascii=False, indent=2), mimetype='application/json', headers={'Content-Disposition': 'attachment; filename=backup.json'})
