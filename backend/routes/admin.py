@@ -336,7 +336,13 @@ def create_match():
         away_team=data.get('away_team')
     )
     db.session.add(match)
-    db.session.flush()  # 获取match.id
+    db.session.flush()
+    # Auto-add teams if not exist
+    for team_name in [data.get('home_team'), data.get('away_team')]:
+        if team_name and team_name.strip():
+            existing_team = Team.query.filter_by(name=team_name.strip()).first()
+            if not existing_team:
+                db.session.add(Team(name=team_name.strip()))  # 获取match.id
 
     # 自动生成3个问题
     for i in range(1, 4):

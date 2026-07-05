@@ -832,7 +832,6 @@ async function showLivestream() {
             if (coverUrl) {
                 h += '<img src="/api/livestream/image?url=' + encodeURIComponent(coverUrl) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'">';
             }
-            h += '<div style="position:absolute;bottom:0;left:0;right:0;padding:4px 0;display:flex;align-items:center;justify-content:center"><span style="font-size:11px;color:#fff;background:rgba(231,76,60,0.9);padding:2px 8px;border-radius:4px">' + ls.platform + '</span></div>';
             h += '</div>';
             h += '<div style="padding:10px 14px"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + ls.name + '</div>';
             if (ls.intro) h += '<div style="font-size:12px;color:#86868b;margin-top:4px;line-height:1.4">' + ls.intro + '</div>';
