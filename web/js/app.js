@@ -1155,6 +1155,9 @@ async function handleMatchExcelImport(input) {
             var jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
             if (jsonData.length < 2) { showToast('\u6587\u4EF6\u65E0\u6548', 'error'); return; }
             var cid = getMiuiSelectValue('matchCompSelect');
+            console.log('Import cid:', cid, 'type:', typeof cid);
+            showToast('\u8D5B\u4E8BID: ' + cid, 'success');
+            if (!cid) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
             var count = 0;
             var compData = await api('/competitions/' + cid + '/full');
             for (var i = 1; i < jsonData.length; i++) {
@@ -1170,7 +1173,7 @@ async function handleMatchExcelImport(input) {
                     var dayNum = calcDayNumber(wd, week, compData.matches);
                     var resp = await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: dayNum, match_number: match, home_team: home, away_team: away });
                     count++;
-                } catch (e) { console.log('Import row error:', e.message, {week, wd, match, home, away, cid}); }
+                } catch (e) { console.error('Import error row', i, e.message, {week, wd, match, home, away, cid}); showToast('\u5BFC\u5165\u5931\u8D25: ' + e.message, 'error'); }
             }
             showToast('\u6210\u529F\u5BFC\u5165 ' + count + ' \u573A\u6BD4\u8D5B', 'success');
             onMatchCompChange();
