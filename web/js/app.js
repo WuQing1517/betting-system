@@ -1142,7 +1142,7 @@ function downloadMatchTemplate() {
 
 var WD_MAP = {'\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7,
     '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'D1':1,'D2':2,'D3':3,'D4':4,'D5':5,'D6':6,'D7':7,
-    '\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7};
+    '\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7,'\u5468\u5929':7};
 
 async function handleMatchExcelImport(input) {
     var file = input.files[0]; if (!file) return;
