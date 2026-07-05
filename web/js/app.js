@@ -938,14 +938,14 @@ async function adjustCoins(uid) {
         h += '<button id="coinPlus" style="width:44px;height:44px;border-radius:50%;border:none;background:#f2f3f5;font-size:22px;color:#3478f6;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="var inp=document.getElementById(\'coinInput\');inp.value=parseInt(inp.value||0)+100">+</button>';
         h += '</div>';
         h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
-        h += '<button onclick="closeMiuiDialog({action:\'subtract\'})" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u51CF\u5C11</button>';
-        h += '<button onclick="closeMiuiDialog({action:\'add\'})" style="flex:1;color:#34a853;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u589E\u52A0</button>';
+        h += '<button onclick="var v=document.getElementById(\'coinInput\');closeMiuiDialog({action:\'subtract\',coins:v?parseInt(v.value):0})" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u51CF\u5C11</button>';
+        h += '<button onclick="var v=document.getElementById(\'coinInput\');closeMiuiDialog({action:\'add\',coins:v?parseInt(v.value):0})" style="flex:1;color:#34a853;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u589E\u52A0</button>';
         h += '</div></div></div>';
         document.body.insertAdjacentHTML('beforeend', h);
         document.getElementById('miuiDialog')._resolve = resolve;
     });
     if (!result) return;
-    var coins = parseInt(document.getElementById('coinInput') ? document.getElementById('coinInput').value : 0);
+    var coins = result.coins || 0;
     if (isNaN(coins) || coins <= 0) { showToast('\u8BF7\u8F93\u5165\u6709\u6548\u6570\u5B57', 'error'); return; }
     try { await api('/admin/users/' + uid + '/coins', 'PUT', { amount: coins, action: result.action }); showToast('\u6210\u529F', 'success'); loadAdminUsers(); }
     catch (e) { showToast(e.message, 'error'); }
