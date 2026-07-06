@@ -932,9 +932,57 @@ async function showAdmin() {
     try {
         var data = await api('/user/profile');
         if (!data.is_admin) { showToast('\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650', 'error'); return; }
+        currentUser = data;
     } catch (e) { showToast('\u9A8C\u8BC1\u5931\u8D25', 'error'); return; }
     showPage('admin');
+    // Super admin buttons
+    var navRight = document.getElementById('adminNavRight');
+    if (currentUser.is_superadmin) {
+        navRight.innerHTML = '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="exportData()" title="\u5BFC\u51FA\u6570\u636E"><i class="ri-download-line"></i></button>' +
+            '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="importData()" title="\u5BFC\u5165\u6570\u636E"><i class="ri-upload-line"></i></button>';
+    } else {
+        navRight.innerHTML = '';
+    }
     switchAdminTab('users');
+}
+
+async function exportData() {
+    try {
+        var resp = await fetch(API_BASE + '/admin/export', { headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) } });
+        if (!resp.ok) { var err = await resp.json(); throw new Error(err.error || '\u5BFC\u51FA\u5931\u8D25'); }
+        var blob = await resp.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'backup_' + new Date().toISOString().split('T')[0] + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('\u5907\u4EFD\u5DF2\u4E0B\u8F7D', 'success');
+    } catch (e) { showToast('\u5BFC\u51FA\u5931\u8D25: ' + e.message, 'error'); }
+}
+
+async function importData() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async function() {
+        var file = input.files[0];
+        if (!file) return;
+        if (!(await miuiConfirm('\u5BFC\u5165\u5C06\u8986\u76D6\u73B0\u6709\u6570\u636E\uFF0C\u786E\u5B9A\uFF1F'))) return;
+        try {
+            showToast('\u5BFC\u5165\u4E2D...', 'success');
+            var text = await file.text();
+            var resp = await fetch(API_BASE + '/admin/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+                body: text
+            });
+            var result = await resp.json();
+            if (!resp.ok) throw new Error(result.error || '\u5BFC\u5165\u5931\u8D25');
+            showToast('\u5BFC\u5165\u6210\u529F', 'success');
+        } catch (e) { showToast('\u5BFC\u5165\u5931\u8D25: ' + e.message, 'error'); }
+    };
+    input.click();
 }
 
 function switchAdminTab(tab, event) {
