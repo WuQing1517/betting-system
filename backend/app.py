@@ -1,5 +1,4 @@
 from flask import Flask, send_from_directory
-from flask_cors import CORS
 from config import Config
 from models import db
 import os
@@ -13,7 +12,6 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
     # 初始化扩展
-    CORS(app)
     db.init_app(app)
 
     # 上传目录
