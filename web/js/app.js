@@ -734,7 +734,7 @@ async function showPrizes() {
                 if (prizes.length === 0) continue;
                 h += '<div style="padding:8px 16px 4px;font-size:13px;font-weight:600;color:#86868b">' + comps[ci].name + '</div>';
                 prizes.forEach(function(p) {
-                    var canEdit = currentUser && p.creator_id === currentUser.user_id;
+                    var canEdit = currentUser && (p.creator_id === currentUser.user_id || currentUser.is_superadmin);
                     h += '<div style="background:#fff;border-radius:14px;padding:12px;margin:0 16px 6px">';
                     h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
                     h += '<div style="flex:1"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + p.name + '</div>';
@@ -820,13 +820,7 @@ async function showLivestream() {
         var livestreams = await api('/livestreams');
         for (var i = 0; i < livestreams.length; i++) {
             var ls = livestreams[i];
-            var coverUrl = '';
-            if (ls.platform === 'bilibili' || ls.platform === 'huya') {
-                try {
-                    var coverData = await api('/livestream/cover?platform=' + ls.platform + '&room_id=' + ls.room_id);
-                    coverUrl = coverData.cover || '';
-                } catch (e) {}
-            }
+            var coverUrl = ls.cover_url || '';
             h += '<div class="livestream-card" data-id="' + ls.id + '" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
             h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
             if (coverUrl) {
@@ -853,7 +847,7 @@ async function onLivestreamLongPress(e, id) {
     if (e) e.preventDefault();
     if (!currentUser || !currentUser.is_admin) return;
     var result = await new Promise(function(resolve) {
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog(false)">';
         h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px">\u7F16\u8F91\u76F4\u64AD</div>';
         h += '<div style="margin-bottom:12px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u540D\u79F0</div><input id="lsEditName" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
@@ -1470,6 +1464,7 @@ function renderQuestionContent(data) {
             if (q.options.length < 3 && q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
             h += '</div>';
         });
+        h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
     });
     h += '</div>';
     c.innerHTML = h;
@@ -1498,6 +1493,53 @@ async function closeQuestion(qid) { try { await api('/admin/questions/' + qid + 
 async function openQuestion(qid) { try { await api('/admin/questions/' + qid + '/close', 'PUT'); showToast('\u5F00\u76D8\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 async function deleteQuestionWeb(qid) { if (!(await miuiConfirm('\u786E\u5B9A\u5220\u9664\uFF1F'))) return; try { await api('/admin/questions/' + qid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 async function resetQuestionWeb(qid) { if (!(await miuiConfirm('\u91CD\u7F6E\u540E\u6240\u6709\u5E01\u6570\u5C06\u9000\u56DE\uFF0C\u786E\u5B9A\uFF1F'))) return; try { await api('/admin/questions/' + qid + '/reset', 'PUT'); showToast('\u91CD\u7F6E\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
+
+// ---- 添加问题弹窗 ----
+function showAddQuestionDialog(matchId) {
+    var h = '<div id="addQuestionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto">';
+    h += '<div style="font-size:16px;font-weight:bold;margin-bottom:14px">\u6DFB\u52A0\u95EE\u9898</div>';
+    h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u95EE\u9898\u5185\u5BB9</label>';
+    h += '<input id="addq_text" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px" placeholder="\u5982\uFF1A\u672C\u5C40MVP\u662F\u8C01\uFF1F"></div>';
+    h += '<div id="addq_options">';
+    h += '<div class="addq-opt" style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button></div>';
+    h += '<div class="addq-opt" style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button></div>';
+    h += '</div>';
+    h += '<div style="display:flex;gap:8px;margin-bottom:14px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addQuestionOptionRow()"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
+    h += '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="admin-btn btn-sm" onclick="document.getElementById(\'addQuestionOverlay\').remove()">\u53D6\u6D88</button>';
+    h += '<button class="admin-btn btn-sm" style="background:#667eea;color:#fff" onclick="submitAddQuestion(' + matchId + ')">\u786E\u5B9A</button></div>';
+    h += '</div></div>';
+    document.body.insertAdjacentHTML('beforeend', h);
+}
+
+function addQuestionOptionRow() {
+    var c = document.getElementById('addq_options');
+    if (c.children.length >= 3) { showToast('\u6700\u591A3\u4E2A\u9009\u9879', 'error'); return; }
+    var d = document.createElement('div');
+    d.className = 'addq-opt';
+    d.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;align-items:center';
+    d.innerHTML = '<input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button>';
+    c.appendChild(d);
+}
+
+async function submitAddQuestion(matchId) {
+    var text = document.getElementById('addq_text').value.trim();
+    if (!text) { showToast('\u8BF7\u8F93\u5165\u95EE\u9898\u5185\u5BB9', 'error'); return; }
+    var optRows = document.querySelectorAll('#addq_options .addq-opt');
+    var options = [];
+    for (var i = 0; i < optRows.length; i++) {
+        var t = optRows[i].querySelector('.addq-opt-text').value.trim();
+        var r = parseFloat(optRows[i].querySelector('.addq-opt-rate').value) || 2.0;
+        if (t) options.push({ option_text: t, base_rate: r });
+    }
+    if (options.length < 2) { showToast('\u81F3\u5C11\u9700\u89812\u4E2A\u9009\u9879', 'error'); return; }
+    try {
+        await api('/admin/questions', 'POST', { match_id: matchId, question_text: text, options: options });
+        document.getElementById('addQuestionOverlay').remove();
+        showToast('\u6DFB\u52A0\u6210\u529F', 'success');
+        onQuestionCompChange();
+    } catch (e) { showToast(e.message, 'error'); }
+}
 async function deleteOptionWeb(oid) { if (!(await miuiConfirm('\u5220\u9664\u9009\u9879\uFF1F'))) return; try { await api('/admin/options/' + oid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); onQuestionCompChange(); } catch (e) { showToast(e.message, 'error'); } }
 async function addOptionWeb(qid) { try { await api('/admin/options', 'POST', { question_id: qid, option_text: '', base_rate: 2.0 }); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 

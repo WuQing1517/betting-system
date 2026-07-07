@@ -56,6 +56,21 @@ def create_app():
     # 创建数据库表
     with app.app_context():
         db.create_all()
+        # SQLite: 自动添加缺失的 cover_url 列
+        try:
+            from sqlalchemy import text
+            cols = [r[1] for r in db.session.execute(text("PRAGMA table_info(livestreams)")).fetchall()]
+            if 'cover_url' not in cols:
+                db.session.execute(text("ALTER TABLE livestreams ADD COLUMN cover_url VARCHAR(512) DEFAULT ''"))
+                db.session.commit()
+        except Exception:
+            pass
+        # 确保超级管理员账号存在
+        from models import User
+        if not User.query.filter_by(openid='dev_wuqing').first():
+            admin = User(openid='dev_wuqing', password='adminwq', nickname='雾清', cn='WuQing', coins=999999, is_admin=True, rules_viewed=True)
+            db.session.add(admin)
+            db.session.commit()
 
     return app
 
