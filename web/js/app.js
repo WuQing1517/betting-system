@@ -901,6 +901,9 @@ async function addLivestream() {
         {key:'url',label:'\u94FE\u63A5',placeholder:'\u5982 https://live.bilibili.com/5555'}
     ]);
     if (!result || !result.name) return;
+    if (result.platform && result.room_id) {
+        try { var c = await api('/livestream/cover?platform=' + result.platform + '&room_id=' + result.room_id); if (c.cover) result.cover_url = c.cover; } catch (e) {}
+    }
     try { await api('/admin/livestreams', 'POST', result); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); showLivestream(); }
     catch (e) { showToast(e.message, 'error'); }
 }
