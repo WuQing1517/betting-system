@@ -297,6 +297,21 @@ def get_operation_logs():
         'created_at': l.created_at.strftime('%Y-%m-%d %H:%M:%S') if l.created_at else ''
     } for l in logs.items])
 
+def _fetch_cover(platform, room_id):
+    import json as json_mod
+    try:
+        import urllib.request
+        if platform == 'bilibili' and room_id:
+            url = 'https://api.live.bilibili.com/room/v1/Room/get_info?room_id=' + str(room_id)
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            resp = urllib.request.urlopen(req, timeout=5)
+            data = json_mod.loads(resp.read().decode())
+            d = data.get('data', {})
+            return d.get('cover') or d.get('user_cover') or d.get('keyframe') or ''
+    except Exception:
+        pass
+    return ''
+
 @betting_bp.route('/livestreams', methods=['GET'])
 def get_livestreams():
     from models import Livestream
@@ -304,7 +319,8 @@ def get_livestreams():
     return jsonify([{
         'id': i.id, 'name': i.name, 'intro': i.intro or '',
         'platform': i.platform or '', 'room_id': i.room_id or '',
-        'url': i.url or '', 'creator_id': i.creator_id
+        'url': i.url or '', 'cover_url': i.cover_url or '',
+        'creator_id': i.creator_id
     } for i in items])
 
 @betting_bp.route('/admin/livestreams', methods=['POST'])
@@ -315,12 +331,16 @@ def create_livestream():
     if not user or not user.is_admin:
         return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
     data = request.get_json()
+    platform = data.get('platform', '')
+    room_id = data.get('room_id', '')
+    cover = _fetch_cover(platform, room_id)
     ls = Livestream(
         name=data.get('name', ''),
         intro=data.get('intro', ''),
-        platform=data.get('platform', ''),
-        room_id=data.get('room_id', ''),
+        platform=platform,
+        room_id=room_id,
         url=data.get('url', ''),
+        cover_url=cover,
         creator_id=user.id
     )
     db.session.add(ls)
@@ -341,6 +361,8 @@ def update_livestream(ls_id):
     for field in ['name', 'intro', 'platform', 'room_id', 'url']:
         if field in data:
             setattr(ls, field, data[field])
+    if 'platform' in data or 'room_id' in data:
+        ls.cover_url = _fetch_cover(ls.platform, ls.room_id)
     db.session.commit()
     return jsonify({'message': 'OK'})
 
