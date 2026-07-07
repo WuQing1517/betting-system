@@ -894,15 +894,8 @@ async function onLivestreamLongPress(e, id) {
 }
 
 async function fetchCover(platform, roomId) {
-    if (platform === 'bilibili' && roomId) {
-        try {
-            var resp = await fetch('https://api.live.bilibili.com/room/v1/Room/get_info?room_id=' + roomId);
-            var data = await resp.json();
-            var d = data.data || {};
-            return d.cover || d.user_cover || d.keyframe || '';
-        } catch (e) {}
-    }
-    return '';
+    if (!platform || !roomId) return '';
+    try { var c = await api('/livestream/cover?platform=' + platform + '&room_id=' + roomId); return c.cover || ''; } catch (e) { return ''; }
 }
 
 async function addLivestream() {
