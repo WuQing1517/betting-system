@@ -887,9 +887,22 @@ async function onLivestreamLongPress(e, id) {
             catch (e) { showToast(e.message, 'error'); }
         }
     } else if (result) {
+        if (result.platform && result.room_id) result.cover_url = await fetchCover(result.platform, result.room_id);
         try { await api('/admin/livestreams/' + id, 'PUT', result); showToast('\u5DF2\u66F4\u65B0', 'success'); showLivestream(); }
         catch (e) { showToast(e.message, 'error'); }
     }
+}
+
+async function fetchCover(platform, roomId) {
+    if (platform === 'bilibili' && roomId) {
+        try {
+            var resp = await fetch('https://api.live.bilibili.com/room/v1/Room/get_info?room_id=' + roomId);
+            var data = await resp.json();
+            var d = data.data || {};
+            return d.cover || d.user_cover || d.keyframe || '';
+        } catch (e) {}
+    }
+    return '';
 }
 
 async function addLivestream() {
@@ -901,9 +914,7 @@ async function addLivestream() {
         {key:'url',label:'\u94FE\u63A5',placeholder:'\u5982 https://live.bilibili.com/5555'}
     ]);
     if (!result || !result.name) return;
-    if (result.platform && result.room_id) {
-        try { var c = await api('/livestream/cover?platform=' + result.platform + '&room_id=' + result.room_id); if (c.cover) result.cover_url = c.cover; } catch (e) {}
-    }
+    result.cover_url = await fetchCover(result.platform, result.room_id);
     try { await api('/admin/livestreams', 'POST', result); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); showLivestream(); }
     catch (e) { showToast(e.message, 'error'); }
 }
