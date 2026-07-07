@@ -824,7 +824,7 @@ async function showLivestream() {
             h += '<div class="livestream-card" data-id="' + ls.id + '" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
             h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
             if (coverUrl) {
-                h += '<img src="/api/livestream/image?url=' + encodeURIComponent(coverUrl) + '" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'">';
+                h += '<img src="' + coverUrl + '" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'">';
             }
             h += '</div>';
             h += '<div style="padding:10px 14px"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + ls.name + '</div>';
