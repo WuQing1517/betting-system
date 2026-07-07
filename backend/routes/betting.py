@@ -333,7 +333,7 @@ def create_livestream():
     data = request.get_json()
     platform = data.get('platform', '')
     room_id = data.get('room_id', '')
-    cover = _fetch_cover(platform, room_id)
+    cover = data.get('cover_url', '') or _fetch_cover(platform, room_id)
     ls = Livestream(
         name=data.get('name', ''),
         intro=data.get('intro', ''),
@@ -361,8 +361,10 @@ def update_livestream(ls_id):
     for field in ['name', 'intro', 'platform', 'room_id', 'url']:
         if field in data:
             setattr(ls, field, data[field])
-    if 'platform' in data or 'room_id' in data:
-        ls.cover_url = _fetch_cover(ls.platform, ls.room_id)
+    if 'cover_url' in data:
+        ls.cover_url = data['cover_url']
+    elif 'platform' in data or 'room_id' in data:
+        ls.cover_url = _fetch_cover(ls.platform, ls.room_id) or ls.cover_url or ''
     db.session.commit()
     return jsonify({'message': 'OK'})
 
