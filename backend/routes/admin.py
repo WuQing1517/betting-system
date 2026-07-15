@@ -883,6 +883,8 @@ def import_data():
         for t_data in data.get('teams', []):
             team = db.session.get(Team, t_data['id'])
             if not team:
+                team = Team.query.filter_by(name=t_data.get('name', '')).first()
+            if not team:
                 team = Team(id=t_data['id'])
                 db.session.add(team)
             team.name = t_data.get('name', '')
@@ -890,6 +892,8 @@ def import_data():
         db.session.commit()
         for c_data in data.get('competitions', []):
             comp = db.session.get(Competition, c_data['id'])
+            if not comp:
+                comp = Competition.query.filter_by(name=c_data.get('name', '')).first()
             if not comp:
                 comp = Competition(id=c_data['id'])
                 db.session.add(comp)
@@ -905,6 +909,8 @@ def import_data():
         for m_data in data.get('matches', []):
             match = db.session.get(Match, m_data['id'])
             if not match:
+                match = Match.query.filter_by(match_code=m_data.get('match_code', '')).first()
+            if not match:
                 match = Match(id=m_data['id'])
                 db.session.add(match)
             match.match_code = m_data.get('match_code', '')
@@ -918,6 +924,8 @@ def import_data():
         db.session.commit()
         for q_data in data.get('questions', []):
             q = db.session.get(Question, q_data['id'])
+            if not q:
+                q = Question.query.filter_by(question_code=q_data.get('question_code', '')).first()
             if not q:
                 q = Question(id=q_data['id'])
                 db.session.add(q)
