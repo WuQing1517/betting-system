@@ -418,7 +418,7 @@ async function loadFullSchedule() {
     try {
         var comps = await api('/competitions');
         var filterHtml = '<div id="scheduleFilterArea"><div class="filter-bar">';
-        filterHtml += '<div id="schWeekFilter"></div>';
+        filterHtml += '<div id="schWeekFilter"></div><div id="schDayFilter"></div>';
         filterHtml += '</div></div>';
         document.getElementById('scheduleFilterArea').innerHTML = filterHtml;
 
@@ -428,23 +428,31 @@ async function loadFullSchedule() {
             allData.push(data);
         }
 
-        var allWeeks = {};
-        allData.forEach(function(d) { d.matches.forEach(function(m) { allWeeks[m.week_number] = true; }); });
+        var allWeeks = {}, allDays = {};
+        allData.forEach(function(d) { d.matches.forEach(function(m) { allWeeks[m.week_number] = true; allDays[m.day_number] = true; }); });
         var weekOpts = [{value:'', label:'\u5168\u90E8\u5468'}];
         Object.keys(allWeeks).sort(function(a,b){return a-b;}).forEach(function(w) {
             weekOpts.push({value: String(w), label: w + '\u5468'});
         });
         miuiSelect('schWeekFilter', weekOpts, '', function() { renderFullSchedule(allData); });
+        var dayNames = ['','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D','\u5468\u65E5'];
+        var dayOpts = [{value:'', label:'\u5168\u90E8\u65E5'}];
+        Object.keys(allDays).sort(function(a,b){return a-b;}).forEach(function(d) {
+            dayOpts.push({value: String(d), label: dayNames[d] || ('D' + d)});
+        });
+        miuiSelect('schDayFilter', dayOpts, '', function() { renderFullSchedule(allData); });
         renderFullSchedule(allData);
     } catch (e) { document.getElementById('scheduleContent').innerHTML = '<div style="padding:40px;text-align:center;color:#e74c3c">\u52A0\u8F7D\u5931\u8D25</div>'; }
 }
 
 function renderFullSchedule(allData) {
     var wf = getMiuiSelectValue('schWeekFilter') || '';
+    var df = getMiuiSelectValue('schDayFilter') || '';
     var h = '';
     allData.forEach(function(data) {
         var filtered = data.matches;
         if (wf) filtered = filtered.filter(function(m) { return String(m.week_number) === wf; });
+        if (df) filtered = filtered.filter(function(m) { return String(m.day_number) === df; });
         if (filtered.length === 0) return;
         h += '<div style="padding:12px 16px 4px;font-size:15px;font-weight:600;color:#1a1a1a">' + data.name + '</div>';
         filtered.forEach(function(m) {
