@@ -1176,6 +1176,11 @@ async function onMatchCompChange() {
 }
 
 function calcDayNumber(weekday, weekNum, matches, startDate) {
+    if (startDate) {
+        var sd = new Date(startDate);
+        var sdWd = sd.getDay(); if (sdWd === 0) sdWd = 7;
+        return (weekday - sdWd + 7) % 7 + 1;
+    }
     var sameWeek = matches.filter(function(m) { return m.week_number === weekNum; });
     var dayWeekdays = {};
     sameWeek.forEach(function(m) {
@@ -1189,11 +1194,6 @@ function calcDayNumber(weekday, weekNum, matches, startDate) {
     var existingDays = Object.keys(dayWeekdays).map(Number).sort(function(a,b){return a-b;});
     for (var i = 0; i < existingDays.length; i++) {
         if (dayWeekdays[existingDays[i]] === weekday) return existingDays[i];
-    }
-    if (startDate) {
-        var sd = new Date(startDate);
-        var sdWd = sd.getDay(); if (sdWd === 0) sdWd = 7;
-        return (weekday - sdWd + 7) % 7 + 1;
     }
     var maxDay = existingDays.length > 0 ? Math.max.apply(null, existingDays) : 0;
     return maxDay + 1;
