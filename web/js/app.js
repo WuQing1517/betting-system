@@ -1162,25 +1162,45 @@ async function onMatchCompChange() {
         h += '<button class="admin-btn btn-sm" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="editStartDate(\'' + cid + '\', \'' + (data.start_date || '') + '\')" title="\u8D77\u59CB\u65E5\u671F"><i class="ri-calendar-line"></i></button>';
         h += '<button class="admin-btn btn-danger" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;margin-left:auto" onclick="deleteCompetitionWeb(' + cid + ')" title="\u5220\u9664\u8D5B\u4E8B"><i class="ri-delete-bin-line"></i></button>';
         h += '</div>';
-        data.matches.forEach(function(m) {
-            h += '<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:6px">';
-            h += '<div style="display:flex;justify-content:space-between;align-items:center">';
-            h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
-            h += '<div style="font-size:11px;color:#86868b;margin-top:2px">';
-            if (m.match_date) h += '<i class="ri-calendar-line" style="margin-right:2px"></i>' + m.match_date.substring(5) + ' ';
-            var wdNames = ['\u5468\u65E5','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D'];
-            var wdIdx = m.match_date ? new Date(m.match_date).getDay() : -1;
-            var wdName = wdIdx >= 0 ? wdNames[wdIdx] : 'D' + m.day_number;
-            h += 'W' + m.week_number + ' ' + wdName + ' M' + m.match_number + '</div></div>';
-            h += '<div style="display:flex;gap:4px;flex-shrink:0">';
-            h += '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="editMatchDialog(' + m.id + ',' + cid + ')" title="\u7F16\u8F91"><i class="ri-edit-line"></i></button>';
-            h += '<button class="admin-btn btn-danger" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteMatchWeb(' + m.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
-            h += '</div></div></div>';
-        });
+        h += '<div style="display:flex;gap:8px;margin-bottom:8px"><div id="matchWeekFilter"></div><div id="matchDayFilter"></div></div>';
+        h += '<div id="matchListContent"></div>';
         h += '<button class="admin-btn btn-success" onclick="addNewMatch(' + cid + ')" style="width:100%;margin-top:8px;padding:12px;border-radius:12px;font-size:15px">\u2795 \u624B\u52A8\u6DFB\u52A0\u6BD4\u8D5B</button>';
         h += '</div>';
         c.innerHTML = h;
+        var weeks = {}, days = {};
+        data.matches.forEach(function(m) { weeks[m.week_number] = true; days[m.day_number] = true; });
+        var weekOpts = [{value:'',label:'\u5168\u90E8\u5468'}];
+        Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w) { weekOpts.push({value:String(w),label:w+'\u5468'}); });
+        miuiSelect('matchWeekFilter', weekOpts, '', function() { renderMatchList(data, cid); });
+        var dayNames = ['','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D','\u5468\u65E5'];
+        var dayOpts = [{value:'',label:'\u5168\u90E8\u65E5'}];
+        Object.keys(days).sort(function(a,b){return a-b;}).forEach(function(d) { dayOpts.push({value:String(d),label:dayNames[d]||('D'+d)}); });
+        miuiSelect('matchDayFilter', dayOpts, '', function() { renderMatchList(data, cid); });
+        renderMatchList(data, cid);
     } catch (e) { c.innerHTML = '<div style="color:red;padding:20px">\u52A0\u8F7D\u5931\u8D25</div>'; }
+}
+
+function renderMatchList(data, cid) {
+    var wf = getMiuiSelectValue('matchWeekFilter') || '';
+    var df = getMiuiSelectValue('matchDayFilter') || '';
+    var h = '';
+    data.matches.forEach(function(m) {
+        if (wf && String(m.week_number) !== wf) return;
+        if (df && String(m.day_number) !== df) return;
+        h += '<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:6px">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center">';
+        h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
+        h += '<div style="font-size:11px;color:#86868b;margin-top:2px">';
+        if (m.match_date) h += '<i class="ri-calendar-line" style="margin-right:2px"></i>' + m.match_date.substring(5) + ' ';
+        var wdNames = ['','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D','\u5468\u65E5'];
+        h += 'W' + m.week_number + ' ' + (wdNames[m.day_number] || 'D' + m.day_number) + ' M' + m.match_number + '</div></div>';
+        h += '<div style="display:flex;gap:4px;flex-shrink:0">';
+        h += '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="editMatchDialog(' + m.id + ',' + cid + ')" title="\u7F16\u8F91"><i class="ri-edit-line"></i></button>';
+        h += '<button class="admin-btn btn-danger" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteMatchWeb(' + m.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+        h += '</div></div></div>';
+    });
+    if (!h) h = '<div style="padding:20px;text-align:center;color:#86868b">\u65E0\u5339\u914D\u6BD4\u8D5B</div>';
+    document.getElementById('matchListContent').innerHTML = h;
 }
 
 function calcDayNumber(weekday, weekNum, matches, startDate) {
