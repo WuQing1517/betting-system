@@ -1187,7 +1187,7 @@ function renderMatchList(data, cid) {
     data.matches.forEach(function(m) {
         if (wf && String(m.week_number) !== wf) return;
         if (df && String(m.day_number) !== df) return;
-        h += '<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:6px">';
+        h += '<div id="matchcard_' + m.id + '" style="background:#fff;border-radius:12px;padding:12px;margin-bottom:6px">';
         h += '<div style="display:flex;justify-content:space-between;align-items:center">';
         h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
         h += '<div style="font-size:11px;color:#86868b;margin-top:2px">';
@@ -1361,7 +1361,7 @@ async function saveNewMatch(btn, cid) {
 
 async function deleteMatchWeb(mid) {
     if (!(await miuiConfirm('\u786E\u5B9A\u5220\u9664\uFF1F'))) return;
-    try { await api('/admin/matches/' + mid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); onMatchCompChange(); }
+    try { await api('/admin/matches/' + mid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); var el = document.getElementById('matchcard_' + mid); if (el) el.remove(); }
     catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -1488,11 +1488,11 @@ function renderQuestionContent(data) {
                 if (q.status === 'active') ob = '#e8f4fd';
                 else if (q.correct_option_id && o.id === q.correct_option_id) ob = '#e8f7ed';
                 else if (q.correct_option_id) ob = '#fff0ed';
-                h += '<div style="display:flex;align-items:center;gap:6px;margin:4px 0;padding:4px 8px;border-radius:8px;background:' + ob + '">';
+                h += '<div id="optrow_' + o.id + '" style="display:flex;align-items:center;gap:6px;margin:4px 0;padding:4px 8px;border-radius:8px;background:' + ob + '">';
                 h += '<input class="inline-input-sm" value="' + (o.option_text || '').replace(/"/g, '&quot;') + '" data-oid="' + o.id + '" data-field="text" onblur="saveOptionField(this)" placeholder="\u9009\u9879\u5185\u5BB9" style="flex:2;background:#f2f3f5;border-radius:8px;padding:6px 8px">';
                 h += '<input class="inline-input-num" type="number" value="' + o.base_rate + '" data-oid="' + o.id + '" data-field="rate" onblur="saveOptionField(this)" style="width:56px;background:#fff8e1;border-radius:8px;padding:6px">';
                 h += '<span style="font-size:11px;color:#3478f6;font-weight:500">' + (o.total_coins || 0) + '</span>';
-                if (q.status !== 'completed') h += '<button class="admin-btn btn-danger" style="font-size:14px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px" onclick="deleteOptionWeb(' + o.id + ')"><i class="ri-close-line"></i></button>';
+                if (q.status !== 'completed') h += '<button class="admin-btn btn-danger" style="font-size:14px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px" onclick="deleteOptionWeb(' + o.id + ',' + q.id + ')"><i class="ri-close-line"></i></button>';
                 h += '</div>';
             });
             if (q.options.length < 3 && q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
@@ -1506,10 +1506,12 @@ function renderQuestionContent(data) {
 
 async function refreshQuestionRow(qid) {
     if (!questionDataCache) { onQuestionCompChange(); return; }
+    var scrollY = window.scrollY;
     var cid = getMiuiSelectValue('questionCompSelect') || questionDataCache.id;
     var data = await api('/competitions/' + cid + '/full');
     questionDataCache = data;
     renderQuestionContent(data);
+    window.scrollTo(0, scrollY);
 }
 
 async function updateQuestionText(qid, text) {
@@ -1574,7 +1576,7 @@ async function submitAddQuestion(matchId) {
         onQuestionCompChange();
     } catch (e) { showToast(e.message, 'error'); }
 }
-async function deleteOptionWeb(oid) { if (!(await miuiConfirm('\u5220\u9664\u9009\u9879\uFF1F'))) return; try { await api('/admin/options/' + oid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); onQuestionCompChange(); } catch (e) { showToast(e.message, 'error'); } }
+async function deleteOptionWeb(oid, qid) { if (!(await miuiConfirm('\u5220\u9664\u9009\u9879\uFF1F'))) return; try { await api('/admin/options/' + oid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); var el = document.getElementById('optrow_' + oid); if (el) el.remove(); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 async function addOptionWeb(qid) { try { await api('/admin/options', 'POST', { question_id: qid, option_text: '', base_rate: 2.0 }); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 
 // ---- \u7ED3\u7B97\u5F39\u7A97 ----
