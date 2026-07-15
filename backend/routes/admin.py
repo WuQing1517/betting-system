@@ -906,6 +906,13 @@ def import_data():
                 try: comp.start_date = date_type.fromisoformat(sd)
                 except: pass
         db.session.commit()
+        # 构建comp_id→start_date映射，用于转换旧格式day_number
+        comp_start_dates = {}
+        for c_data in data.get('competitions', []):
+            sd_str = c_data.get('start_date')
+            if sd_str:
+                try: comp_start_dates[c_data['id']] = date_type.fromisoformat(sd_str)
+                except: pass
         for m_data in data.get('matches', []):
             match = db.session.get(Match, m_data['id'])
             if not match:
@@ -916,11 +923,29 @@ def import_data():
             match.match_code = m_data.get('match_code', '')
             match.competition_id = m_data.get('competition_id')
             match.week_number = m_data.get('week_number')
-            match.day_number = m_data.get('day_number')
+            # 转换旧格式day_number(以start_date为偏移)到新格式(1=周一)
+            old_day = m_data.get('day_number')
+            sd = comp_start_dates.get(m_data.get('competition_id'))
+            if old_day and sd:
+                # 旧公式: day_number=1 = start_date的weekday
+                # 新公式: day_number = 星期几(1=周一)
+                start_wd = sd.weekday()  # 0=Mon...6=Sun
+                match.day_number = ((old_day - 1 + start_wd) % 7) + 1
+            else:
+                match.day_number = old_day
             match.match_number = m_data.get('match_number')
             match.home_team = m_data.get('home_team', '')
             match.away_team = m_data.get('away_team', '')
             match.status = m_data.get('status', 'active')
+            # 用转换后的day_number重新生成match_code
+            if sd:
+                comp_name = ''
+                for c_data in data.get('competitions', []):
+                    if c_data['id'] == m_data.get('competition_id'):
+                        comp_name = c_data.get('name', '')
+                        break
+                if comp_name:
+                    match.match_code = f"{comp_name}Week{match.week_number}Day{match.day_number}Match{match.match_number}"
         db.session.commit()
         for q_data in data.get('questions', []):
             q = db.session.get(Question, q_data['id'])
