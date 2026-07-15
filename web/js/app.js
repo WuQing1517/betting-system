@@ -1384,7 +1384,8 @@ async function loadAdminQuestions() {
         var h = '<div class="admin-section"><div class="admin-select-wrap">';
         h += '<span>\u9009\u62E9\u8D5B\u4E8B\uFF1A</span>';
         h += '<div id="questionCompSelect"></div>';
-        h += '</div><div id="questionContent"></div></div>';
+        h += '</div><div style="display:flex;gap:8px;padding:0 12px 4px"><div id="questionWeekFilter"></div><div id="questionDayFilter"></div></div>';
+        h += '<div id="questionContent"></div></div>';
         document.getElementById('adminContent').innerHTML = h;
         var opts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
         miuiSelect('questionCompSelect', opts, opts.length > 0 ? opts[0].value : '', function(val) { onQuestionCompChange(); });
@@ -1400,14 +1401,27 @@ async function onQuestionCompChange() {
     try {
         var data = await api('/competitions/' + cid + '/full');
         questionDataCache = data;
+        var weeks = {}, days = {};
+        data.matches.forEach(function(m) { weeks[m.week_number] = true; days[m.day_number] = true; });
+        var weekOpts = [{value:'',label:'\u5168\u90E8\u5468'}];
+        Object.keys(weeks).sort(function(a,b){return a-b;}).forEach(function(w) { weekOpts.push({value:String(w),label:w+'\u5468'}); });
+        miuiSelect('questionWeekFilter', weekOpts, '', function() { renderQuestionContent(questionDataCache); });
+        var dayOpts = [{value:'',label:'\u5168\u90E8\u65E5'}];
+        var dayNames = ['','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D','\u5468\u65E5'];
+        Object.keys(days).sort(function(a,b){return a-b;}).forEach(function(d) { dayOpts.push({value:String(d),label:dayNames[d]||('D'+d)}); });
+        miuiSelect('questionDayFilter', dayOpts, '', function() { renderQuestionContent(questionDataCache); });
         renderQuestionContent(data);
     } catch (e) { c.innerHTML = '<div style="color:red;padding:20px">\u52A0\u8F7D\u5931\u8D25</div>'; }
 }
 
 function renderQuestionContent(data) {
     var c = document.getElementById('questionContent');
+    var wf = getMiuiSelectValue('questionWeekFilter') || '';
+    var df = getMiuiSelectValue('questionDayFilter') || '';
     var h = '<div style="margin-top:10px">';
     data.matches.forEach(function(m) {
+        if (wf && String(m.week_number) !== wf) return;
+        if (df && String(m.day_number) !== df) return;
         h += '<div class="match-divider">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
         m.questions.forEach(function(q) {
             var sl = q.status === 'active' ? '\u5F00\u76D8\u4E2D' : q.status === 'closed' ? '\u5DF2\u5C01\u76D8' : '\u5DF2\u7ED3\u7B97';
