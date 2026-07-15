@@ -910,45 +910,55 @@ def import_data():
         # 构建comp_id→start_date映射，用于转换旧格式day_number
         backup_version = data.get('version', 1)
         comp_start_dates = {}
+        imported_comp_ids = set()
         for c_data in data.get('competitions', []):
             sd_str = c_data.get('start_date')
             if sd_str:
                 try: comp_start_dates[c_data['id']] = date_type.fromisoformat(sd_str)
                 except: pass
-        for m_data in data.get('matches', []):
-            match = db.session.get(Match, m_data['id'])
-            if not match:
-                match = Match.query.filter_by(match_code=m_data.get('match_code', '')).first()
-            if not match:
-                match = Match(id=m_data['id'])
-                db.session.add(match)
-            match.match_code = m_data.get('match_code', '')
-            match.competition_id = m_data.get('competition_id')
-            match.week_number = m_data.get('week_number')
-            # 旧格式(v1): day_number以start_date为偏移，需转换为v2格式(1=周一)
-            old_day = m_data.get('day_number')
-            sd = comp_start_dates.get(m_data.get('competition_id'))
-            if old_day and sd and backup_version < 2:
-                # 旧公式: day_number=1 = start_date的weekday
-                # 新公式: day_number = 星期几(1=周一)
-                start_wd = sd.weekday()  # 0=Mon...6=Sun
-                match.day_number = ((old_day - 1 + start_wd) % 7) + 1
-            else:
-                match.day_number = old_day
-            match.match_number = m_data.get('match_number')
-            match.home_team = m_data.get('home_team', '')
-            match.away_team = m_data.get('away_team', '')
-            match.status = m_data.get('status', 'active')
-            # 用转换后的day_number重新生成match_code（仅旧格式需要）
-            if sd and backup_version < 2:
-                comp_name = ''
-                for c_data in data.get('competitions', []):
-                    if c_data['id'] == m_data.get('competition_id'):
-                        comp_name = c_data.get('name', '')
-                        break
-                if comp_name:
-                    match.match_code = f"{comp_name}Week{match.week_number}Day{match.day_number}Match{match.match_number}"
-        db.session.commit()
+            imported_comp_ids.add(c_data['id'])
+        # 旧格式导入前清空已有比赛数据，避免match_code冲突
+        if backup_version < 2 and imported_comp_ids:
+            for cid in imported_comp_ids:
+                for m in Match.query.filter_by(competition_id=cid).all():
+                    for q in Question.query.filter_by(match_id=m.id).all():
+                        Option.query.filter_by(question_id=q.id).delete()
+                        Bet.query.filter_by(question_id=q.id).delete()
+                        db.session.delete(q)
+                    db.session.delete(m)
+            db.session.commit()
+        with db.session.no_autoflush:
+            for m_data in data.get('matches', []):
+                match = db.session.get(Match, m_data['id'])
+                if not match:
+                    match = Match.query.filter_by(match_code=m_data.get('match_code', '')).first()
+                if not match:
+                    match = Match(id=m_data['id'])
+                    db.session.add(match)
+                match.competition_id = m_data.get('competition_id')
+                match.week_number = m_data.get('week_number')
+                old_day = m_data.get('day_number')
+                sd = comp_start_dates.get(m_data.get('competition_id'))
+                if old_day and sd and backup_version < 2:
+                    start_wd = sd.weekday()
+                    match.day_number = ((old_day - 1 + start_wd) % 7) + 1
+                else:
+                    match.day_number = old_day
+                match.match_number = m_data.get('match_number')
+                match.home_team = m_data.get('home_team', '')
+                match.away_team = m_data.get('away_team', '')
+                match.status = m_data.get('status', 'active')
+                if sd and backup_version < 2:
+                    comp_name = ''
+                    for c_data in data.get('competitions', []):
+                        if c_data['id'] == m_data.get('competition_id'):
+                            comp_name = c_data.get('name', '')
+                            break
+                    if comp_name:
+                        match.match_code = f"{comp_name}Week{match.week_number}Day{match.day_number}Match{match.match_number}"
+                else:
+                    match.match_code = m_data.get('match_code', '')
+            db.session.commit()
         for q_data in data.get('questions', []):
             q = db.session.get(Question, q_data['id'])
             if not q:
