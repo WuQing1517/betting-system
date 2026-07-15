@@ -71,7 +71,8 @@ def get_competition_full(competition_id):
         match_date_str = None
         match_weekday = None
         if competition.start_date:
-            match_date = competition.start_date + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
+            first_monday = competition.start_date - timedelta(days=competition.start_date.weekday())
+            match_date = first_monday + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
             match_date_str = match_date.isoformat()
             match_weekday = weekday_names[match_date.weekday()]
         questions_data = []
