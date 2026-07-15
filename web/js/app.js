@@ -986,7 +986,8 @@ async function importData() {
                 headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
                 body: text
             });
-            var result = await resp.json();
+            var result;
+            try { result = await resp.json(); } catch (e) { throw new Error('\u670D\u52A1\u5668\u8FD4\u56DE\u9519\u8BEF (' + resp.status + ')\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u62C9\u53D6\u6700\u65B0\u4EE3\u7801\u5E76\u91CD\u52A0Web\u5E94\u7528'); }
             if (!resp.ok) throw new Error(result.error || '\u5BFC\u5165\u5931\u8D25');
             showToast('\u5BFC\u5165\u6210\u529F', 'success');
         } catch (e) { showToast('\u5BFC\u5165\u5931\u8D25: ' + e.message, 'error'); }
