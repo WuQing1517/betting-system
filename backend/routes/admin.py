@@ -29,11 +29,11 @@ def superadmin_required(f):
         user_id = request.headers.get('X-User-Id')
         if not user_id:
             return jsonify({'error': '缺少用户ID'}), 400
-        
-        user = User.query.get(user_id)
+
+        user = User.query.get(int(user_id))
         if not user or user.openid != 'dev_wuqing':
             return jsonify({'error': '需要超级管理员权限'}), 403
-        
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -445,6 +445,21 @@ def update_match(match_id):
 
     db.session.commit()
     return jsonify({'message': 'Match updated', 'match_code': match.match_code})
+
+@admin_bp.route('/competitions/<int:competition_id>/matches', methods=['DELETE'])
+@admin_required
+def delete_competition_matches(competition_id):
+    """删除赛事下所有比赛"""
+    matches = Match.query.filter_by(competition_id=competition_id).all()
+    for m in matches:
+        questions = Question.query.filter_by(match_id=m.id).all()
+        for q in questions:
+            Option.query.filter_by(question_id=q.id).delete()
+            Bet.query.filter_by(question_id=q.id).delete()
+            db.session.delete(q)
+        db.session.delete(m)
+    db.session.commit()
+    return jsonify({'message': 'All matches deleted', 'count': len(matches)})
 
 @admin_bp.route('/matches/<int:match_id>', methods=['DELETE'])
 @admin_required
