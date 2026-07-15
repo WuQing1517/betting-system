@@ -1175,7 +1175,7 @@ async function onMatchCompChange() {
     } catch (e) { c.innerHTML = '<div style="color:red;padding:20px">\u52A0\u8F7D\u5931\u8D25</div>'; }
 }
 
-function calcDayNumber(weekday, weekNum, matches) {
+function calcDayNumber(weekday, weekNum, matches, startDate) {
     var sameWeek = matches.filter(function(m) { return m.week_number === weekNum; });
     var dayWeekdays = {};
     sameWeek.forEach(function(m) {
@@ -1189,6 +1189,11 @@ function calcDayNumber(weekday, weekNum, matches) {
     var existingDays = Object.keys(dayWeekdays).map(Number).sort(function(a,b){return a-b;});
     for (var i = 0; i < existingDays.length; i++) {
         if (dayWeekdays[existingDays[i]] === weekday) return existingDays[i];
+    }
+    if (startDate) {
+        var sd = new Date(startDate);
+        var sdWd = sd.getDay(); if (sdWd === 0) sdWd = 7;
+        return (weekday - sdWd + 7) % 7 + 1;
     }
     var maxDay = existingDays.length > 0 ? Math.max.apply(null, existingDays) : 0;
     return maxDay + 1;
@@ -1226,7 +1231,7 @@ async function editMatchDialog(matchId, compId) {
     if (!result) return;
     var newWd = parseInt(result.weekday);
     var newWeek = parseInt(result.week_number);
-    var newDay = calcDayNumber(newWd, newWeek, data.matches);
+    var newDay = calcDayNumber(newWd, newWeek, data.matches, data.start_date);
     try {
         await api('/admin/matches/' + matchId, 'PUT', {
             home_team: result.home_team || null,
@@ -1293,7 +1298,7 @@ async function handleMatchExcelImport(input) {
                 var home = String(row[3] || '').trim(), away = String(row[4] || '').trim();
                 if (isNaN(week) || isNaN(match)) continue;
                 try {
-                    var dayNum = calcDayNumber(wd, week, compData.matches);
+                    var dayNum = calcDayNumber(wd, week, compData.matches, compData.start_date);
                     var resp = await api('/admin/matches', 'POST', { competition_id: parseInt(cid), week_number: week, day_number: dayNum, match_number: match, home_team: home, away_team: away });
                     count++;
                 } catch (e) { console.error('Import error row', i, e.message, {week, wd, match, home, away, cid}); showToast('\u5BFC\u5165\u5931\u8D25: ' + e.message, 'error'); }
@@ -1340,7 +1345,7 @@ async function saveNewMatch(btn, cid) {
     if (!w || !wd || !m) { showToast('\u8BF7\u586B\u5199\u5468\u6570/\u661F\u671F\u51E0/\u573A\u6B21', 'error'); return; }
     try {
         var data = await api('/competitions/' + cid + '/full');
-        var dayNum = calcDayNumber(wd, w, data.matches);
+        var dayNum = calcDayNumber(wd, w, data.matches, data.start_date);
         await api('/admin/matches', 'POST', { competition_id: cid, week_number: w, day_number: dayNum, match_number: m, home_team: home, away_team: away });
         showToast('\u6DFB\u52A0\u6210\u529F', 'success'); onMatchCompChange();
     } catch (e) { showToast(e.message, 'error'); }
