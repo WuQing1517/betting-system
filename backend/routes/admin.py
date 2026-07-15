@@ -849,6 +849,7 @@ def export_data():
     """导出所有数据为JSON"""
     from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog
     data = {
+        'version': 2,
         'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'openid': u.openid} for u in User.query.all()],
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
@@ -907,6 +908,7 @@ def import_data():
                 except: pass
         db.session.commit()
         # 构建comp_id→start_date映射，用于转换旧格式day_number
+        backup_version = data.get('version', 1)
         comp_start_dates = {}
         for c_data in data.get('competitions', []):
             sd_str = c_data.get('start_date')
@@ -923,10 +925,10 @@ def import_data():
             match.match_code = m_data.get('match_code', '')
             match.competition_id = m_data.get('competition_id')
             match.week_number = m_data.get('week_number')
-            # 转换旧格式day_number(以start_date为偏移)到新格式(1=周一)
+            # 旧格式(v1): day_number以start_date为偏移，需转换为v2格式(1=周一)
             old_day = m_data.get('day_number')
             sd = comp_start_dates.get(m_data.get('competition_id'))
-            if old_day and sd:
+            if old_day and sd and backup_version < 2:
                 # 旧公式: day_number=1 = start_date的weekday
                 # 新公式: day_number = 星期几(1=周一)
                 start_wd = sd.weekday()  # 0=Mon...6=Sun
@@ -937,8 +939,8 @@ def import_data():
             match.home_team = m_data.get('home_team', '')
             match.away_team = m_data.get('away_team', '')
             match.status = m_data.get('status', 'active')
-            # 用转换后的day_number重新生成match_code
-            if sd:
+            # 用转换后的day_number重新生成match_code（仅旧格式需要）
+            if sd and backup_version < 2:
                 comp_name = ''
                 for c_data in data.get('competitions', []):
                     if c_data['id'] == m_data.get('competition_id'):
