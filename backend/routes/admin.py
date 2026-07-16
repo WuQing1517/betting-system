@@ -936,6 +936,23 @@ def import_data():
                     db.session.delete(m)
             db.session.commit()
         with db.session.no_autoflush:
+            # 预计算每个赛事+周的day_number→序号映射
+            day_seq_map = {}
+            for m_data in data.get('matches', []):
+                cid = m_data.get('competition_id')
+                wk = m_data.get('week_number')
+                dn = m_data.get('day_number')
+                if backup_version < 2:
+                    sd = comp_start_dates.get(cid)
+                    if dn and sd:
+                        dn = ((dn - 1 + sd.weekday()) % 7) + 1
+                key = (cid, wk)
+                if key not in day_seq_map:
+                    day_seq_map[key] = []
+                if dn not in day_seq_map[key]:
+                    day_seq_map[key].append(dn)
+            for key in day_seq_map:
+                day_seq_map[key] = sorted(day_seq_map[key])
             for m_data in data.get('matches', []):
                 match = db.session.get(Match, m_data['id'])
                 if not match:
@@ -956,6 +973,9 @@ def import_data():
                 match.home_team = m_data.get('home_team', '')
                 match.away_team = m_data.get('away_team', '')
                 match.status = m_data.get('status', 'active')
+                key = (m_data.get('competition_id'), m.week_number)
+                day_list = day_seq_map.get(key, [])
+                day_seq = day_list.index(match.day_number) + 1 if match.day_number in day_list else 1
                 if sd and backup_version < 2:
                     comp_name = ''
                     for c_data in data.get('competitions', []):
@@ -963,7 +983,7 @@ def import_data():
                             comp_name = c_data.get('name', '')
                             break
                     if comp_name:
-                        match.match_code = f"{comp_name}Week{match.week_number}Day{match.day_number}Match{match.match_number}"
+                        match.match_code = f"{comp_name}Week{match.week_number}Day{day_seq}Match{match.match_number}"
                 else:
                     match.match_code = m_data.get('match_code', '')
             db.session.commit()
