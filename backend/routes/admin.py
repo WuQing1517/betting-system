@@ -311,8 +311,13 @@ def create_match():
     if not competition:
         return jsonify({'error': '比赛不存在在'}), 404
 
+    # 计算周内比赛日序号: 同周的day_number排序后映射为Day1,Day2...
+    same_week_days = sorted(set([m.day_number for m in Match.query.filter_by(
+        competition_id=competition_id, week_number=week_number).all()] + [day_number]))
+    day_seq = same_week_days.index(day_number) + 1
+
     # 生成比赛代码
-    match_code = f"{competition.name}Week{week_number}Day{day_number}Match{match_number}"
+    match_code = f"{competition.name}Week{week_number}Day{day_seq}Match{match_number}"
 
     # 检查是否已存在在，如果存在在则更新主客场信息
     existing = Match.query.filter_by(match_code=match_code).first()
@@ -440,8 +445,11 @@ def update_match(match_id):
     if 'away_team' in data:
         match.away_team = data['away_team']
 
-    # 重新生成比赛代码
-    match.match_code = f"{competition.name}Week{match.week_number}Day{match.day_number}Match{match.match_number}"
+    # 重新生成比赛代码（周内比赛日序号）
+    same_week_days = sorted(set([m.day_number for m in Match.query.filter_by(
+        competition_id=match.competition_id, week_number=match.week_number).all()]))
+    day_seq = same_week_days.index(match.day_number) + 1 if match.day_number in same_week_days else 1
+    match.match_code = f"{competition.name}Week{match.week_number}Day{day_seq}Match{match.match_number}"
 
     db.session.commit()
     return jsonify({'message': 'Match updated', 'match_code': match.match_code})
