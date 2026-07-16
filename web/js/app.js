@@ -377,7 +377,21 @@ async function loadRecentSchedule() {
     try {
         var comps = await api('/competitions');
         if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = ''; return; }
-        var targetDates = getTargetDates();
+        var today = new Date(); today.setHours(0,0,0,0);
+        var allMatches = [];
+        for (var ci = 0; ci < comps.length; ci++) {
+            var data = await api('/competitions/' + comps[ci].id + '/full');
+            data.matches.forEach(function(m) {
+                if (m.match_date) allMatches.push(m);
+            });
+        }
+        allMatches.sort(function(a, b) { return a.match_date > b.match_date ? 1 : -1; });
+        var todayStr = today.toISOString().split('T')[0];
+        var targetDates = [];
+        for (var i = 0; i < allMatches.length && targetDates.length < 2; i++) {
+            var d = allMatches[i].match_date;
+            if (d >= todayStr && targetDates.indexOf(d) === -1) targetDates.push(d);
+        }
         var allHtml = '';
         for (var ci = 0; ci < comps.length; ci++) {
             var data = await api('/competitions/' + comps[ci].id + '/full');
@@ -457,7 +471,7 @@ function renderFullSchedule(allData) {
         h += '<div style="padding:12px 16px 4px;font-size:15px;font-weight:600;color:#1a1a1a">' + data.name + '</div>';
         filtered.forEach(function(m) {
             h += '<div style="margin:0 16px 4px">';
-            h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="openCompetition(' + data.id + ')">';
+            h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="openCompetition(' + data.id + ',\'' + m.match_code + '\')">';
             var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
             var aLogo = m.away_logo ? '<img src="' + m.away_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
             h += hLogo + '<span style="font-size:14px;font-weight:500;color:#1a1a1a">' + (m.home_team||'?') + ' vs ' + (m.away_team||'?') + '</span>' + aLogo;
@@ -471,12 +485,20 @@ function renderFullSchedule(allData) {
     document.getElementById('scheduleContent').innerHTML = h;
 }
 
-async function openCompetition(id) {
+async function openCompetition(id, matchCode) {
     try {
         var data = await api('/competitions/' + id + '/full');
         currentCompetition = data;
         document.getElementById('matchTitle').textContent = data.name;
         showPage('match');
+        renderFilterBar(data);
+        if (matchCode) {
+            var m = data.matches.find(function(x) { return x.match_code === matchCode; });
+            if (m) {
+                renderQuestions([m]);
+                return;
+            }
+        }
         renderQuestions(data.matches);
     } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
 }
