@@ -378,19 +378,19 @@ async function loadRecentSchedule() {
         var comps = await api('/competitions');
         if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = ''; return; }
         var today = new Date(); today.setHours(0,0,0,0);
+        var todayStr = today.toISOString().split('T')[0];
         var allMatches = [];
         for (var ci = 0; ci < comps.length; ci++) {
             var data = await api('/competitions/' + comps[ci].id + '/full');
             data.matches.forEach(function(m) {
-                if (m.match_date) allMatches.push(m);
+                if (m.match_date && m.match_date >= todayStr) allMatches.push(m);
             });
         }
         allMatches.sort(function(a, b) { return a.match_date > b.match_date ? 1 : -1; });
-        var todayStr = today.toISOString().split('T')[0];
         var targetDates = [];
         for (var i = 0; i < allMatches.length && targetDates.length < 2; i++) {
             var d = allMatches[i].match_date;
-            if (d >= todayStr && targetDates.indexOf(d) === -1) targetDates.push(d);
+            if (targetDates.indexOf(d) === -1) targetDates.push(d);
         }
         var allHtml = '';
         for (var ci = 0; ci < comps.length; ci++) {
@@ -399,23 +399,40 @@ async function loadRecentSchedule() {
                 return m.match_date && targetDates.indexOf(m.match_date) !== -1;
             });
             if (filtered.length === 0) continue;
+            // 按日期分组
+            var byDate = {};
             filtered.forEach(function(m) {
-                allHtml += '<div style="margin:0 16px 8px">';
-                allHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
-                var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
-                var aLogo = m.away_logo ? '<img src="' + m.away_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
-                allHtml += hLogo + '<span style="font-size:13px;font-weight:500">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</span>' + aLogo;
-                allHtml += '<span style="font-size:11px;color:#86868b;margin-left:auto">' + m.match_weekday + ' ' + (m.match_date || '').substring(5) + '</span>';
-                allHtml += '</div>';
-                m.questions.forEach(function(q) {
-                    var sLabel = q.status === 'active' ? '\u5F00\u76D8\u4E2D' : q.status === 'closed' ? '\u5DF2\u5C01\u76D8' : '\u5DF2\u7ED3\u7B97';
-                    var sColor = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
-                    allHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'' + (m.home_team||'').replace(/'/g,"\\'") + '\',\'' + (m.away_team||'').replace(/'/g,"\\'") + '\',\'' + (m.home_logo||'') + '\',\'' + (m.away_logo||'') + '\',\'' + (q.question_text||'').replace(/'/g,"\\'") + '\')">';
-                    allHtml += '<div><span style="font-size:14px;font-weight:500;color:#1a1a1a">' + q.question_text + '</span></div>';
-                    allHtml += '<span style="font-size:12px;color:' + sColor + ';font-weight:500">' + sLabel + '</span>';
+                if (!byDate[m.match_date]) byDate[m.match_date] = [];
+                byDate[m.match_date].push(m);
+            });
+            targetDates.forEach(function(dateStr) {
+                var dayMatches = byDate[dateStr];
+                if (!dayMatches || dayMatches.length === 0) return;
+                var first = dayMatches[0];
+                var dateLabel = (first.match_weekday || '') + ' ' + dateStr.substring(5);
+                dayMatches.forEach(function(m, mi) {
+                    // 未结算的问题在前，已结算在后
+                    var unsettled = m.questions.filter(function(q) { return q.status !== 'completed'; });
+                    var settled = m.questions.filter(function(q) { return q.status === 'completed'; });
+                    var sortedQ = unsettled.concat(settled);
+                    if (sortedQ.length === 0) return;
+                    allHtml += '<div style="margin:0 16px 8px">';
+                    allHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+                    var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
+                    var aLogo = m.away_logo ? '<img src="' + m.away_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
+                    allHtml += hLogo + '<span style="font-size:13px;font-weight:500">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</span>' + aLogo;
+                    if (mi === 0) allHtml += '<span style="font-size:11px;color:#86868b;margin-left:auto">' + dateLabel + '</span>';
+                    allHtml += '</div>';
+                    sortedQ.forEach(function(q) {
+                        var sLabel = q.status === 'active' ? '\u5F00\u76D8\u4E2D' : q.status === 'closed' ? '\u5DF2\u5C01\u76D8' : '\u5DF2\u7ED3\u7B97';
+                        var sColor = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
+                        allHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'' + (m.home_team||'').replace(/'/g,"\\'") + '\',\'' + (m.away_team||'').replace(/'/g,"\\'") + '\',\'' + (m.home_logo||'') + '\',\'' + (m.away_logo||'') + '\',\'' + (q.question_text||'').replace(/'/g,"\\'") + '\')">';
+                        allHtml += '<div><span style="font-size:14px;font-weight:500;color:#1a1a1a">' + q.question_text + '</span></div>';
+                        allHtml += '<span style="font-size:12px;color:' + sColor + ';font-weight:500">' + sLabel + '</span>';
+                        allHtml += '</div>';
+                    });
                     allHtml += '</div>';
                 });
-                allHtml += '</div>';
             });
         }
         if (!allHtml) allHtml = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u8FD1\u671F\u6682\u65E0\u8D5B\u7A0B</div>';
@@ -692,6 +709,107 @@ async function showProfile() {
         document.getElementById('editNickname').value = u.nickname || '';
         document.getElementById('editCn').value = u.cn || '';
     } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
+}
+
+function openCoinTrend() {
+    document.getElementById('coinTrendOverlay').style.display = 'flex';
+    coinChartGroup = 'day';
+    var btnDay = document.getElementById('chartBtnDay');
+    var btnWeek = document.getElementById('chartBtnWeek');
+    if (btnDay) { btnDay.style.background = '#667eea'; btnDay.style.color = '#fff'; }
+    if (btnWeek) { btnWeek.style.background = '#f2f3f5'; btnWeek.style.color = '#333'; }
+    loadCoinHistory();
+}
+
+function closeCoinTrend() {
+    document.getElementById('coinTrendOverlay').style.display = 'none';
+}
+
+var coinChartGroup = 'day';
+
+async function loadCoinHistory() {
+    try {
+        var data = await api('/user/coin-history?group=' + coinChartGroup);
+        drawCoinChart(data);
+    } catch (e) {}
+}
+
+function switchCoinChart(group) {
+    coinChartGroup = group;
+    var btnDay = document.getElementById('chartBtnDay');
+    var btnWeek = document.getElementById('chartBtnWeek');
+    if (btnDay) { btnDay.style.background = group === 'day' ? '#667eea' : '#f2f3f5'; btnDay.style.color = group === 'day' ? '#fff' : '#333'; }
+    if (btnWeek) { btnWeek.style.background = group === 'week' ? '#667eea' : '#f2f3f5'; btnWeek.style.color = group === 'week' ? '#fff' : '#333'; }
+    loadCoinHistory();
+}
+
+function drawCoinChart(data) {
+    var canvas = document.getElementById('coinChart');
+    if (!canvas || !data || data.length < 2) {
+        if (canvas) { var ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('\u6682\u65E0\u7ED3\u7B97\u6570\u636E', canvas.width / 2, canvas.height / 2); }
+        return;
+    }
+    var pts = data.length > 7 ? data.slice(data.length - 7) : data;
+    var dpr = 2;
+    canvas.width = 720 * dpr;
+    canvas.height = 400 * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    var w = 720, h = 400;
+    var pad = {top: 50, right: 20, bottom: 50, left: 40};
+    ctx.clearRect(0, 0, w, h);
+
+    var balances = pts.map(function(d) { return d.balance; });
+    var minB = Math.min.apply(null, balances);
+    var maxB = Math.max.apply(null, balances);
+    var range = maxB - minB;
+    if (range < 100) { minB -= 50; maxB += 50; range = maxB - minB; }
+    minB -= range * 0.15;
+    maxB += range * 0.15;
+    // 数据区域从left+gap开始，给第一个点留出间距
+    var dataLeft = pad.left + 30;
+    var chartW = w - dataLeft - pad.right, chartH = h - pad.top - pad.bottom;
+    function xPos(i) { return dataLeft + (i / Math.max(pts.length - 1, 1)) * chartW; }
+    function yPos(v) { return pad.top + (1 - (v - minB) / (maxB - minB)) * chartH; }
+
+    // CN title
+    var cn = (currentUser && currentUser.cn) || (currentUser && currentUser.nickname) || '';
+    ctx.fillStyle = '#1a1a1a'; ctx.font = 'bold 20px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(cn, w / 2, 28);
+
+    // Y轴线（无刻度数字），向下延伸到X轴下方
+    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top - 10); ctx.lineTo(pad.left, h - pad.bottom + 15); ctx.stroke();
+
+    // X轴线，向左延伸到Y轴左侧
+    ctx.beginPath(); ctx.moveTo(pad.left - 15, h - pad.bottom); ctx.lineTo(w - pad.right, h - pad.bottom); ctx.stroke();
+
+    // 直线连接
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(pts[0].balance));
+    for (var i = 1; i < pts.length; i++) {
+        ctx.lineTo(xPos(i), yPos(pts[i].balance));
+    }
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+    // dots + value labels below
+    for (var i = 0; i < pts.length; i++) {
+        var px = xPos(i), py = yPos(pts[i].balance);
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#888';
+        ctx.fill();
+        // value below dot
+        ctx.fillStyle = '#333'; ctx.font = '14px -apple-system,sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(Math.round(pts[i].balance), px, py + 18);
+    }
+
+    // x labels below values
+    ctx.fillStyle = '#999'; ctx.font = '12px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    for (var i = 0; i < pts.length; i++) {
+        ctx.fillText(pts[i].date, xPos(i), h - pad.bottom + 20);
+    }
 }
 
 async function saveProfile() {

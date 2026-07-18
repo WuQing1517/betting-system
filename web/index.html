@@ -58,9 +58,12 @@
                     <div class="user-cn" id="userCn">CN: 未设置</div>
                 </div>
             </div>
-            <div class="user-coins">
-                <div><span class="coins-value" id="userCoins">0</span> <span class="coins-label">币</span></div>
-                <div style="font-size:12px;opacity:0.8">待结算: <span id="pendingCoins">0</span></div>
+            <div class="user-coins" style="display:flex;align-items:center;gap:10px">
+                <div onclick="openCoinTrend()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><i class="ri-line-chart-line" style="color:#fff;font-size:18px"></i></div>
+                <div>
+                    <div><span class="coins-value" id="userCoins">0</span> <span class="coins-label">币</span></div>
+                    <div style="font-size:12px;opacity:0.8">待结算: <span id="pendingCoins">0</span></div>
+                </div>
             </div>
         </div>
         <div style="display:flex;gap:10px;padding:12px 16px">
@@ -270,6 +273,20 @@
             <span></span>
         </nav>
         <div id="rulesContent"></div>
+    </div>
+
+    <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999" onclick="if(event.target===this)closeCoinTrend()">
+        <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;max-height:85vh;overflow-y:auto;padding:20px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <span style="font-size:17px;font-weight:600;color:#1a1a1a">币数趋势</span>
+                <span onclick="closeCoinTrend()" style="font-size:22px;color:#86868b;cursor:pointer">&times;</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button id="chartBtnDay" class="admin-btn btn-sm" style="background:#667eea;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px" onclick="switchCoinChart('day')">每日趋势</button>
+                <button id="chartBtnWeek" class="admin-btn btn-sm" style="background:#f2f3f5;color:#333;border-radius:8px;padding:6px 14px;font-size:12px" onclick="switchCoinChart('week')">每周趋势</button>
+            </div>
+            <canvas id="coinChart" width="720" height="400" style="width:100%;height:auto;background:#fff;border-radius:12px"></canvas>
+        </div>
     </div>
 
     <script src="js/xlsx.full.min.js"></script>
