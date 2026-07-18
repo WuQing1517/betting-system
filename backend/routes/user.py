@@ -129,4 +129,71 @@ def mark_rules_viewed():
     user.rules_viewed = True
     db.session.commit()
 
-    return jsonify({'message': 'Rules marked as viewed'})
+@user_bp.route('/user/coin-history', methods=['GET'])
+def get_coin_history():
+    user_id = request.headers.get('X-User-Id')
+    if not user_id:
+        return jsonify({'error': 'Missing user id'}), 400
+
+    from models import Bet, Question, Option, Competition, Match
+    from datetime import datetime, timedelta
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    group = request.args.get('group', 'day')
+    bets = Bet.query.filter_by(user_id=user.id).all()
+    settled = []
+    for b in bets:
+        q = Question.query.get(b.question_id)
+        if not q or q.status != 'completed' or not q.correct_option_id:
+            continue
+        total_pool = sum(o.total_coins for o in q.options)
+        correct_option = Option.query.get(q.correct_option_id)
+        if not correct_option or correct_option.total_coins == 0:
+            actual_rate = correct_option.base_rate
+        else:
+            actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
+        is_win = b.option_id == q.correct_option_id
+        change = int(b.coins * actual_rate) if is_win else -b.coins
+        dt = b.created_at or datetime.utcnow()
+        # 用match的week_number作为赛事周
+        m = Match.query.get(q.match_id) if q else None
+        if group == 'week':
+            label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
+            sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
+        else:
+            label = dt.strftime('%m/%d')
+            sort_key = dt.strftime('%Y-%m-%d')
+        settled.append({'sort_key': sort_key, 'label': label, 'change': change})
+
+    settled.sort(key=lambda x: x['sort_key'])
+
+    grouped = {}
+    for s in settled:
+        k = s['sort_key']
+        if k not in grouped:
+            grouped[k] = {'label': s['label'], 'total_change': 0}
+        grouped[k]['total_change'] += s['change']
+
+    comps = Competition.query.filter_by(status='active').order_by(Competition.start_date).first()
+    if group == 'week':
+        first_match = Match.query.filter_by(competition_id=comps.id).order_by(Match.week_number).first() if comps else None
+        first_label = '\u7B2C' + str(first_match.week_number) + '\u5468' if first_match else ''
+    else:
+        if comps and comps.start_date:
+            first_label = comps.start_date.strftime('%m/%d')
+        elif grouped:
+            first_label = list(grouped.values())[0]['label']
+        else:
+            first_label = ''
+
+    total_change = sum(g['total_change'] for g in grouped.values())
+    initial_coins = user.coins - total_change
+
+    result = [{'date': first_label, 'balance': initial_coins}]
+    balance = initial_coins
+    for g in grouped.values():
+        balance += g['total_change']
+        result.append({'date': g['label'], 'balance': balance, 'change': g['total_change']})
+    return jsonify(result)
