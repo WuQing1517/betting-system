@@ -276,16 +276,12 @@
     </div>
 
     <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeCoinTrend()">
-        <div style="background:#fff;border-radius:16px;padding:20px 16px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <span style="font-size:17px;font-weight:600;color:#1a1a1a">币数趋势</span>
+        <div style="position:relative;background:#fff;border-radius:16px;padding:20px 16px 16px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
                 <span onclick="closeCoinTrend()" style="font-size:22px;color:#86868b;cursor:pointer">&times;</span>
             </div>
-            <div style="display:flex;gap:8px;margin-bottom:10px">
-                <button id="chartBtnDay" class="admin-btn btn-sm" style="background:#667eea;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px" onclick="switchCoinChart('day')">每日趋势</button>
-                <button id="chartBtnWeek" class="admin-btn btn-sm" style="background:#f2f3f5;color:#333;border-radius:8px;padding:6px 14px;font-size:12px" onclick="switchCoinChart('week')">每周趋势</button>
-            </div>
             <canvas id="coinChart" width="720" height="400" style="width:100%;height:auto;background:#fff;border-radius:12px"></canvas>
+            <button id="chartToggleBtn" onclick="toggleCoinChart()" style="position:absolute;bottom:0;left:0;background:#34a853;color:#fff;border:none;border-radius:16px 16px 0 16px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer">周K</button>
         </div>
     </div>
 
