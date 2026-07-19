@@ -757,7 +757,7 @@ function drawCoinChart(data) {
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     var w = 720, h = 400;
-    var pad = {top: 50, right: 20, bottom: 50, left: 40};
+    var pad = {top: 50, right: 40, bottom: 50, left: 60};
     ctx.clearRect(0, 0, w, h);
 
     var balances = pts.map(function(d) { return d.balance; });
