@@ -729,8 +729,8 @@ function toggleCoinChart() {
 }
 
 function updateToggleBtn() {
-    var btn = document.getElementById('chartToggleBtn');
-    if (btn) btn.textContent = coinChartGroup === 'day' ? '\u5468K' : '\u65E5K';
+    var el = document.getElementById('chartToggleText');
+    if (el) el.textContent = coinChartGroup === 'day' ? '\u5468K' : '\u65E5K';
 }
 
 var coinChartGroup = 'day';
@@ -751,12 +751,12 @@ function drawCoinChart(data) {
     var pts = data.length > 7 ? data.slice(data.length - 7) : data;
     var dpr = 2;
     canvas.width = 720 * dpr;
-    canvas.height = 400 * dpr;
+    canvas.height = 480 * dpr;
     canvas.style.width = '100%';
-    canvas.style.height = 'auto';
+    canvas.style.height = '100%';
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    var w = 720, h = 400;
+    var w = 720, h = 480;
     var pad = {top: 50, right: 20, bottom: 50, left: 40};
     ctx.clearRect(0, 0, w, h);
 
