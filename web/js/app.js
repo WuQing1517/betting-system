@@ -378,7 +378,7 @@ async function loadRecentSchedule() {
         var comps = await api('/competitions');
         if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = ''; return; }
         var today = new Date(); today.setHours(0,0,0,0);
-        var todayStr = today.toISOString().split('T')[0];
+        var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
         var allMatches = [];
         for (var ci = 0; ci < comps.length; ci++) {
             var data = await api('/competitions/' + comps[ci].id + '/full');
