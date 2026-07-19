@@ -175,9 +175,10 @@ def get_coin_history():
             else:
                 label = dt.strftime('%m/%d')
                 sort_key = dt.strftime('%Y-%m-%d')
-        # 已结算的有盈亏变化，未结算的变化为0（余额不变）
+        # 已结算的有盈亏变化，未结算的变化为0
         change = 0
-        if q and q.status == 'completed' and q.correct_option_id:
+        settled = q and q.status == 'completed' and q.correct_option_id
+        if settled:
             total_pool = sum(o.total_coins for o in q.options)
             correct_option = Option.query.get(q.correct_option_id)
             if not correct_option or correct_option.total_coins == 0:
@@ -186,7 +187,7 @@ def get_coin_history():
                 actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
             is_win = b.option_id == q.correct_option_id
             change = int(b.coins * actual_rate) - b.coins if is_win else 0
-        events.append({'sort_key': sort_key, 'label': label, 'change': change})
+        events.append({'sort_key': sort_key, 'label': label, 'change': change, 'settled': settled})
 
     events.sort(key=lambda x: x['sort_key'])
 
@@ -194,8 +195,10 @@ def get_coin_history():
     for e in events:
         k = e['sort_key']
         if k not in grouped:
-            grouped[k] = {'label': e['label'], 'total_change': 0}
+            grouped[k] = {'label': e['label'], 'total_change': 0, 'all_settled': True}
         grouped[k]['total_change'] += e['change']
+        if not e['settled']:
+            grouped[k]['all_settled'] = False
 
     comps = Competition.query.filter_by(status='active').order_by(Competition.start_date).first()
     if group == 'week':
@@ -217,11 +220,13 @@ def get_coin_history():
     balance = initial_assets
     for g in grouped.values():
         balance += g['total_change']
-        if g['total_change'] > 0:
+        if not g['all_settled']:
+            status = 'pending'
+        elif g['total_change'] > 0:
             status = 'profit'
         elif g['total_change'] < 0:
             status = 'loss'
         else:
-            status = 'pending'
+            status = 'settled'
         result.append({'date': g['label'], 'balance': balance, 'change': g['total_change'], 'status': status})
     return jsonify(result)
