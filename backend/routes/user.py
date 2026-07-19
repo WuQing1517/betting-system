@@ -143,38 +143,38 @@ def get_coin_history():
 
     group = request.args.get('group', 'day')
     bets = Bet.query.filter_by(user_id=user.id).all()
-    settled = []
+    events = []
     for b in bets:
-        q = Question.query.get(b.question_id)
-        if not q or q.status != 'completed' or not q.correct_option_id:
-            continue
-        total_pool = sum(o.total_coins for o in q.options)
-        correct_option = Option.query.get(q.correct_option_id)
-        if not correct_option or correct_option.total_coins == 0:
-            actual_rate = correct_option.base_rate
-        else:
-            actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
-        is_win = b.option_id == q.correct_option_id
-        change = int(b.coins * actual_rate) if is_win else -b.coins
         dt = b.created_at or datetime.utcnow()
-        # 用match的week_number作为赛事周
-        m = Match.query.get(q.match_id) if q else None
+        q = Question.query.get(b.question_id)
+        if q and q.status == 'completed' and q.correct_option_id:
+            total_pool = sum(o.total_coins for o in q.options)
+            correct_option = Option.query.get(q.correct_option_id)
+            if not correct_option or correct_option.total_coins == 0:
+                actual_rate = correct_option.base_rate
+            else:
+                actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
+            is_win = b.option_id == q.correct_option_id
+            change = int(b.coins * actual_rate) if is_win else -b.coins
+        else:
+            change = -b.coins
         if group == 'week':
+            m = Match.query.get(q.match_id) if q else None
             label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
             sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
         else:
             label = dt.strftime('%m/%d')
             sort_key = dt.strftime('%Y-%m-%d')
-        settled.append({'sort_key': sort_key, 'label': label, 'change': change})
+        events.append({'sort_key': sort_key, 'label': label, 'change': change})
 
-    settled.sort(key=lambda x: x['sort_key'])
+    events.sort(key=lambda x: x['sort_key'])
 
     grouped = {}
-    for s in settled:
-        k = s['sort_key']
+    for e in events:
+        k = e['sort_key']
         if k not in grouped:
-            grouped[k] = {'label': s['label'], 'total_change': 0}
-        grouped[k]['total_change'] += s['change']
+            grouped[k] = {'label': e['label'], 'total_change': 0}
+        grouped[k]['total_change'] += e['change']
 
     comps = Competition.query.filter_by(status='active').order_by(Competition.start_date).first()
     if group == 'week':
