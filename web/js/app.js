@@ -714,15 +714,23 @@ async function showProfile() {
 function openCoinTrend() {
     document.getElementById('coinTrendOverlay').style.display = 'flex';
     coinChartGroup = 'day';
-    var btnDay = document.getElementById('chartBtnDay');
-    var btnWeek = document.getElementById('chartBtnWeek');
-    if (btnDay) { btnDay.style.background = '#667eea'; btnDay.style.color = '#fff'; }
-    if (btnWeek) { btnWeek.style.background = '#f2f3f5'; btnWeek.style.color = '#333'; }
+    updateToggleBtn();
     loadCoinHistory();
 }
 
 function closeCoinTrend() {
     document.getElementById('coinTrendOverlay').style.display = 'none';
+}
+
+function toggleCoinChart() {
+    coinChartGroup = coinChartGroup === 'day' ? 'week' : 'day';
+    updateToggleBtn();
+    loadCoinHistory();
+}
+
+function updateToggleBtn() {
+    var btn = document.getElementById('chartToggleBtn');
+    if (btn) btn.textContent = coinChartGroup === 'day' ? '\u5468K' : '\u65E5K';
 }
 
 var coinChartGroup = 'day';
@@ -732,15 +740,6 @@ async function loadCoinHistory() {
         var data = await api('/user/coin-history?group=' + coinChartGroup);
         drawCoinChart(data);
     } catch (e) {}
-}
-
-function switchCoinChart(group) {
-    coinChartGroup = group;
-    var btnDay = document.getElementById('chartBtnDay');
-    var btnWeek = document.getElementById('chartBtnWeek');
-    if (btnDay) { btnDay.style.background = group === 'day' ? '#667eea' : '#f2f3f5'; btnDay.style.color = group === 'day' ? '#fff' : '#333'; }
-    if (btnWeek) { btnWeek.style.background = group === 'week' ? '#667eea' : '#f2f3f5'; btnWeek.style.color = group === 'week' ? '#fff' : '#333'; }
-    loadCoinHistory();
 }
 
 function drawCoinChart(data) {
@@ -773,11 +772,6 @@ function drawCoinChart(data) {
     var chartW = w - dataLeft - pad.right, chartH = h - pad.top - pad.bottom;
     function xPos(i) { return dataLeft + (i / Math.max(pts.length - 1, 1)) * chartW; }
     function yPos(v) { return pad.top + (1 - (v - minB) / (maxB - minB)) * chartH; }
-
-    // CN title
-    var cn = (currentUser && currentUser.cn) || (currentUser && currentUser.nickname) || '';
-    ctx.fillStyle = '#1a1a1a'; ctx.font = 'bold 20px -apple-system,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(cn, w / 2, 28);
 
     // Y轴线（无刻度数字），向下延伸到X轴下方
     ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
