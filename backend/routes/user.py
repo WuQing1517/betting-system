@@ -156,19 +156,8 @@ def get_coin_history():
     events = []
     for b in bets:
         q = Question.query.get(b.question_id)
-        if not q or q.status != 'completed' or not q.correct_option_id:
-            continue
-        total_pool = sum(o.total_coins for o in q.options)
-        correct_option = Option.query.get(q.correct_option_id)
-        if not correct_option or correct_option.total_coins == 0:
-            actual_rate = correct_option.base_rate
-        else:
-            actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
-        is_win = b.option_id == q.correct_option_id
-        # 结算对总资产的影响：赢=赢的钱-本金，输=-本金
-        change = int(b.coins * actual_rate) - b.coins if is_win else 0
-        dt = b.created_at or datetime.utcnow()
         m = Match.query.get(q.match_id) if q else None
+        dt = b.created_at or datetime.utcnow()
         if group == 'week':
             label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
             sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
@@ -179,6 +168,17 @@ def get_coin_history():
             else:
                 label = dt.strftime('%m/%d')
                 sort_key = dt.strftime('%Y-%m-%d')
+        # 已结算的有盈亏变化，未结算的变化为0（余额不变）
+        change = 0
+        if q and q.status == 'completed' and q.correct_option_id:
+            total_pool = sum(o.total_coins for o in q.options)
+            correct_option = Option.query.get(q.correct_option_id)
+            if not correct_option or correct_option.total_coins == 0:
+                actual_rate = correct_option.base_rate
+            else:
+                actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
+            is_win = b.option_id == q.correct_option_id
+            change = int(b.coins * actual_rate) - b.coins if is_win else 0
         events.append({'sort_key': sort_key, 'label': label, 'change': change})
 
     events.sort(key=lambda x: x['sort_key'])
