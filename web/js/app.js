@@ -792,10 +792,10 @@ function drawCoinChart(data) {
         ctx.moveTo(xPos(i - 1), yPos(pts[i - 1].balance));
         ctx.lineTo(xPos(i), yPos(pts[i].balance));
         var st = pts[i].status || pts[i - 1].status || 'pending';
-        if (st === 'profit' || st === 'loss') {
-            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 1;
+        if (st === 'pending') {
+            ctx.strokeStyle = '#002FA7'; ctx.globalAlpha = 1;
         } else {
-            ctx.strokeStyle = '#3478f6'; ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 0.45;
         }
         ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
     }
@@ -806,13 +806,13 @@ function drawCoinChart(data) {
         var px = xPos(i), py = yPos(pts[i].balance);
         var st = pts[i].status || 'pending';
         var dotColor, textColor;
-        if (st === 'profit' || st === 'loss') {
-            dotColor = '#e74c3c'; textColor = '#e74c3c';
+        if (st === 'pending') {
+            dotColor = '#002FA7'; textColor = '#002FA7';
         } else {
-            dotColor = '#3478f6'; textColor = '#3478f6';
+            dotColor = '#e74c3c'; textColor = '#e74c3c';
         }
         // dot
-        ctx.globalAlpha = st === 'pending' ? 0.4 : 1;
+        ctx.globalAlpha = st === 'pending' ? 1 : 0.45;
         ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
         ctx.fillStyle = dotColor; ctx.fill();
         // value below dot
