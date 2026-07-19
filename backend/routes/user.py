@@ -143,21 +143,31 @@ def get_coin_history():
 
     group = request.args.get('group', 'day')
     bets = Bet.query.filter_by(user_id=user.id).all()
+
+    # 当前总资产 = 当前币数 + 未结算投注总额
+    pending_total = 0
+    for b in bets:
+        q = Question.query.get(b.question_id)
+        if q and q.status != 'completed':
+            pending_total += b.coins
+    current_assets = user.coins + pending_total
+
+    # 收集所有已结算投注的盈亏事件
     events = []
     for b in bets:
-        dt = b.created_at or datetime.utcnow()
         q = Question.query.get(b.question_id)
-        if q and q.status == 'completed' and q.correct_option_id:
-            total_pool = sum(o.total_coins for o in q.options)
-            correct_option = Option.query.get(q.correct_option_id)
-            if not correct_option or correct_option.total_coins == 0:
-                actual_rate = correct_option.base_rate
-            else:
-                actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
-            is_win = b.option_id == q.correct_option_id
-            change = int(b.coins * actual_rate) if is_win else -b.coins
+        if not q or q.status != 'completed' or not q.correct_option_id:
+            continue
+        total_pool = sum(o.total_coins for o in q.options)
+        correct_option = Option.query.get(q.correct_option_id)
+        if not correct_option or correct_option.total_coins == 0:
+            actual_rate = correct_option.base_rate
         else:
-            change = -b.coins
+            actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
+        is_win = b.option_id == q.correct_option_id
+        # 结算对总资产的影响：赢=赢的钱-本金，输=-本金
+        change = int(b.coins * actual_rate) - b.coins if is_win else 0
+        dt = b.created_at or datetime.utcnow()
         if group == 'week':
             m = Match.query.get(q.match_id) if q else None
             label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
@@ -188,11 +198,12 @@ def get_coin_history():
         else:
             first_label = ''
 
-    total_change = sum(g['total_change'] for g in grouped.values())
-    initial_coins = user.coins - total_change
+    # 从当前总资产反推，逐步减去每次结算的收益
+    total_settled_change = sum(g['total_change'] for g in grouped.values())
+    initial_assets = current_assets - total_settled_change
 
-    result = [{'date': first_label, 'balance': initial_coins}]
-    balance = initial_coins
+    result = [{'date': first_label, 'balance': initial_assets}]
+    balance = initial_assets
     for g in grouped.values():
         balance += g['total_change']
         result.append({'date': g['label'], 'balance': balance, 'change': g['total_change']})
