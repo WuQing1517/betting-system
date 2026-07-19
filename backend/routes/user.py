@@ -154,11 +154,31 @@ def get_coin_history():
 
     # 收集所有已结算投注的盈亏事件
     events = []
+    # 预先收集每个比赛日/周的全部题目状态
+    all_questions_by_group = {}
+    for b in bets:
+        q = Question.query.get(b.question_id)
+        if not q: continue
+        m = Match.query.get(q.match_id)
+        dt = b.created_at or datetime.utcnow()
+        match_date = None
+        if m and m.competition_id:
+            comp = db.session.get(Competition, m.competition_id)
+            if comp and comp.start_date:
+                first_monday = comp.start_date - timedelta(days=comp.start_date.weekday())
+                match_date = first_monday + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
+        if group == 'week':
+            sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
+        else:
+            sort_key = match_date.strftime('%Y-%m-%d') if match_date else dt.strftime('%Y-%m-%d')
+        if sort_key not in all_questions_by_group:
+            all_questions_by_group[sort_key] = set()
+        all_questions_by_group[sort_key].add(q.id)
+
     for b in bets:
         q = Question.query.get(b.question_id)
         m = Match.query.get(q.match_id) if q else None
         dt = b.created_at or datetime.utcnow()
-        # 计算比赛日期(从赛事start_date推算)
         match_date = None
         if m and m.competition_id:
             comp = db.session.get(Competition, m.competition_id)
@@ -175,7 +195,6 @@ def get_coin_history():
             else:
                 label = dt.strftime('%m/%d')
                 sort_key = dt.strftime('%Y-%m-%d')
-        # 已结算的有盈亏变化，未结算的变化为0
         change = 0
         settled = q and q.status == 'completed' and q.correct_option_id
         if settled:
@@ -187,7 +206,7 @@ def get_coin_history():
                 actual_rate = correct_option.base_rate * (total_pool / correct_option.total_coins)
             is_win = b.option_id == q.correct_option_id
             change = int(b.coins * actual_rate) - b.coins if is_win else 0
-        events.append({'sort_key': sort_key, 'label': label, 'change': change, 'settled': settled})
+        events.append({'sort_key': sort_key, 'label': label, 'change': change})
 
     events.sort(key=lambda x: x['sort_key'])
 
@@ -195,10 +214,17 @@ def get_coin_history():
     for e in events:
         k = e['sort_key']
         if k not in grouped:
-            grouped[k] = {'label': e['label'], 'total_change': 0, 'all_settled': True}
+            grouped[k] = {'label': e['label'], 'total_change': 0}
         grouped[k]['total_change'] += e['change']
-        if not e['settled']:
-            grouped[k]['all_settled'] = False
+
+    # 检查每个分组中所有题目是否都已结算
+    for k in grouped:
+        q_ids = all_questions_by_group.get(k, set())
+        if q_ids:
+            all_done = all(Question.query.get(qid) and Question.query.get(qid).status == 'completed' for qid in q_ids)
+        else:
+            all_done = True
+        grouped[k]['all_settled'] = all_done
 
     comps = Competition.query.filter_by(status='active').order_by(Competition.start_date).first()
     if group == 'week':
