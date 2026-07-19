@@ -276,15 +276,15 @@
     </div>
 
     <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeCoinTrend()">
-        <div style="position:relative;background:#fff;border-radius:16px;padding:16px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s;overflow:hidden" onclick="event.stopPropagation()">
+        <div style="position:relative;background:#fff;border-radius:16px;padding:16px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s;overflow:visible" onclick="event.stopPropagation()">
             <div style="position:absolute;top:8px;right:12px;z-index:2">
                 <span onclick="closeCoinTrend()" style="font-size:22px;color:#86868b;cursor:pointer">&times;</span>
             </div>
             <canvas id="coinChart" width="720" height="400" style="width:100%;height:auto;background:#fff;border-radius:12px"></canvas>
-            <div onclick="toggleCoinChart()" style="position:absolute;bottom:0;left:0;cursor:pointer;z-index:2">
-                <svg width="56" height="56" viewBox="0 0 56 56">
-                    <path d="M0,0 L0,40 Q0,56 16,56 L56,56 L0,0 Z" fill="#34a853"/>
-                    <text x="10" y="38" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="-apple-system,sans-serif" id="chartToggleText" transform="rotate(45, 10, 38)">周K</text>
+            <div onclick="toggleCoinChart()" style="position:absolute;bottom:-16px;left:-16px;cursor:pointer;z-index:2">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <path d="M0,0 L0,44 Q0,60 16,60 L60,60 L0,0 Z" fill="#34a853"/>
+                    <text x="12" y="42" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="-apple-system,sans-serif" id="chartToggleText" transform="rotate(45, 12, 42)">周K</text>
                 </svg>
             </div>
         </div>
