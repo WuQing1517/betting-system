@@ -751,12 +751,12 @@ function drawCoinChart(data) {
     var pts = data.length > 7 ? data.slice(data.length - 7) : data;
     var dpr = 2;
     canvas.width = 720 * dpr;
-    canvas.height = 480 * dpr;
+    canvas.height = 400 * dpr;
     canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    canvas.style.height = 'auto';
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    var w = 720, h = 480;
+    var w = 720, h = 400;
     var pad = {top: 50, right: 20, bottom: 50, left: 40};
     ctx.clearRect(0, 0, w, h);
 
