@@ -158,13 +158,20 @@ def get_coin_history():
         q = Question.query.get(b.question_id)
         m = Match.query.get(q.match_id) if q else None
         dt = b.created_at or datetime.utcnow()
+        # 计算比赛日期(从赛事start_date推算)
+        match_date = None
+        if m and m.competition_id:
+            comp = db.session.get(Competition, m.competition_id)
+            if comp and comp.start_date:
+                first_monday = comp.start_date - timedelta(days=comp.start_date.weekday())
+                match_date = first_monday + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
         if group == 'week':
             label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
             sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
         else:
-            if m and m.match_date:
-                label = m.match_date.strftime('%m/%d')
-                sort_key = m.match_date.strftime('%Y-%m-%d')
+            if match_date:
+                label = match_date.strftime('%m/%d')
+                sort_key = match_date.strftime('%Y-%m-%d')
             else:
                 label = dt.strftime('%m/%d')
                 sort_key = dt.strftime('%Y-%m-%d')
