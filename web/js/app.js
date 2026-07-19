@@ -786,24 +786,42 @@ function drawCoinChart(data) {
     // X轴线，向左延伸到Y轴左侧
     ctx.beginPath(); ctx.moveTo(pad.left - 15, h - pad.bottom); ctx.lineTo(w - pad.right, h - pad.bottom); ctx.stroke();
 
-    // 直线连接
-    ctx.beginPath();
-    ctx.moveTo(xPos(0), yPos(pts[0].balance));
+    // 直线连接 - 按段着色
     for (var i = 1; i < pts.length; i++) {
+        ctx.beginPath();
+        ctx.moveTo(xPos(i - 1), yPos(pts[i - 1].balance));
         ctx.lineTo(xPos(i), yPos(pts[i].balance));
+        var st = pts[i].status || pts[i - 1].status || 'pending';
+        if (st === 'profit' || st === 'loss') {
+            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 1;
+        } else {
+            ctx.strokeStyle = '#3478f6'; ctx.globalAlpha = 0.35;
+        }
+        ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
     }
-    ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    // dots + value labels below
+    // dots + value labels
     for (var i = 0; i < pts.length; i++) {
         var px = xPos(i), py = yPos(pts[i].balance);
+        var st = pts[i].status || 'pending';
+        var dotColor, textColor;
+        if (st === 'profit' || st === 'loss') {
+            dotColor = '#e74c3c'; textColor = '#e74c3c';
+        } else {
+            dotColor = '#3478f6'; textColor = '#3478f6';
+        }
+        // dot
+        ctx.globalAlpha = st === 'pending' ? 0.4 : 1;
         ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#888';
-        ctx.fill();
+        ctx.fillStyle = dotColor; ctx.fill();
         // value below dot
-        ctx.fillStyle = '#333'; ctx.font = '14px -apple-system,sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = textColor;
+        ctx.font = (i === pts.length - 1 ? 'bold ' : '') + '14px -apple-system,sans-serif';
+        ctx.textAlign = 'center';
         ctx.fillText(Math.round(pts[i].balance), px, py + 18);
     }
+    ctx.globalAlpha = 1;
 
     // x labels below values
     ctx.fillStyle = '#999'; ctx.font = '12px -apple-system,sans-serif'; ctx.textAlign = 'center';

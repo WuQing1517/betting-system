@@ -213,9 +213,15 @@ def get_coin_history():
     total_settled_change = sum(g['total_change'] for g in grouped.values())
     initial_assets = current_assets - total_settled_change
 
-    result = [{'date': first_label, 'balance': initial_assets}]
+    result = [{'date': first_label, 'balance': initial_assets, 'status': 'pending'}]
     balance = initial_assets
     for g in grouped.values():
         balance += g['total_change']
-        result.append({'date': g['label'], 'balance': balance, 'change': g['total_change']})
+        if g['total_change'] > 0:
+            status = 'profit'
+        elif g['total_change'] < 0:
+            status = 'loss'
+        else:
+            status = 'pending'
+        result.append({'date': g['label'], 'balance': balance, 'change': g['total_change'], 'status': status})
     return jsonify(result)
