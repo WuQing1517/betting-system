@@ -168,13 +168,17 @@ def get_coin_history():
         # 结算对总资产的影响：赢=赢的钱-本金，输=-本金
         change = int(b.coins * actual_rate) - b.coins if is_win else 0
         dt = b.created_at or datetime.utcnow()
+        m = Match.query.get(q.match_id) if q else None
         if group == 'week':
-            m = Match.query.get(q.match_id) if q else None
             label = '\u7B2C' + str(m.week_number) + '\u5468' if m else dt.strftime('%m/%d')
             sort_key = str(m.week_number).zfill(3) if m else dt.strftime('%Y-%m-%d')
         else:
-            label = dt.strftime('%m/%d')
-            sort_key = dt.strftime('%Y-%m-%d')
+            if m and m.match_date:
+                label = m.match_date.strftime('%m/%d')
+                sort_key = m.match_date.strftime('%Y-%m-%d')
+            else:
+                label = dt.strftime('%m/%d')
+                sort_key = dt.strftime('%Y-%m-%d')
         events.append({'sort_key': sort_key, 'label': label, 'change': change})
 
     events.sort(key=lambda x: x['sort_key'])
