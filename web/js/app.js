@@ -795,7 +795,7 @@ function drawCoinChart(data) {
         if (st === 'pending') {
             ctx.strokeStyle = '#002FA7'; ctx.globalAlpha = 1;
         } else {
-            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 0.45;
+            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 1;
         }
         ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
     }
@@ -812,7 +812,7 @@ function drawCoinChart(data) {
             dotColor = '#e74c3c'; textColor = '#e74c3c';
         }
         // dot
-        ctx.globalAlpha = st === 'pending' ? 1 : 0.45;
+        ctx.globalAlpha = 1;
         ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
         ctx.fillStyle = dotColor; ctx.fill();
         // value below dot
