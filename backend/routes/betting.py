@@ -382,3 +382,43 @@ def delete_livestream(ls_id):
     db.session.delete(ls)
     db.session.commit()
     return jsonify({'message': 'OK'})
+
+# ========== 积分榜 ==========
+@betting_bp.route('/leaderboard/<int:competition_id>/team', methods=['GET'])
+def get_competition_leaderboard(competition_id):
+    from models import LeaderboardEntry, Team
+    entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.rank).all()
+    result = []
+    for e in entries:
+        team = db.session.get(Team, e.team_id)
+        result.append({
+            'id': e.id, 'team_id': e.team_id,
+            'team_name': team.name if team else '',
+            'team_logo': (Config.SERVER_URL + team.logo_url if team and team.logo_url and not team.logo_url.startswith('http') else (team.logo_url if team else '')),
+            'rank': e.rank, 'prev_rank': e.prev_rank,
+            'wins': e.wins, 'losses': e.losses,
+            'draws': e.draws, 'net_wins': e.net_wins
+        })
+    return jsonify(result)
+
+@betting_bp.route('/leaderboard/<int:competition_id>/team', methods=['PUT'])
+def update_competition_leaderboard(competition_id):
+    from models import LeaderboardEntry, Team, db
+    data = request.get_json()
+    entries_data = data.get('entries', [])
+    for ed in entries_data:
+        entry = LeaderboardEntry.query.filter_by(competition_id=competition_id, team_id=ed['team_id']).first()
+        if not entry:
+            entry = LeaderboardEntry(competition_id=competition_id, team_id=ed['team_id'])
+            db.session.add(entry)
+        entry.wins = ed.get('wins', 0)
+        entry.losses = ed.get('losses', 0)
+        entry.draws = ed.get('draws', 0)
+        entry.net_wins = entry.wins - entry.losses
+    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.net_wins.desc(), LeaderboardEntry.wins.desc()).all()
+    for i, e in enumerate(all_entries):
+        if e.rank > 0:
+            e.prev_rank = e.rank
+        e.rank = i + 1
+    db.session.commit()
+    return jsonify({'message': 'OK'})

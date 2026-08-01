@@ -129,3 +129,17 @@ class Livestream(db.Model):
     creator_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class LeaderboardEntry(db.Model):
+    __tablename__ = 'leaderboard_entries'
+
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey('competitions.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('teams.id'))
+    wins = db.Column(db.Integer, default=0)
+    losses = db.Column(db.Integer, default=0)
+    draws = db.Column(db.Integer, default=0)
+    net_wins = db.Column(db.Integer, default=0)  # wins - losses
+    rank = db.Column(db.Integer, default=0)
+    prev_rank = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -440,6 +440,119 @@ async function loadRecentSchedule() {
     } catch (e) {}
 }
 
+// ========== 积分榜 ==========
+function openLeaderboard() {
+    document.getElementById('leaderboardOverlay').style.display = 'flex';
+    loadLeaderboardForPopup();
+}
+
+function closeLeaderboard() {
+    document.getElementById('leaderboardOverlay').style.display = 'none';
+}
+
+async function loadLeaderboardForPopup() {
+    try {
+        var comps = await api('/competitions');
+        if (comps.length === 0) { document.getElementById('leaderboardContent').innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u4E8B</div>'; return; }
+        var activeComp = comps.find(function(c) { return c.status === 'active'; }) || comps[0];
+        var entries = await api('/leaderboard/' + activeComp.id + '/team');
+        var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
+        renderLeaderboard(entries, activeComp.id, compOpts);
+    } catch (e) {}
+}
+
+function renderLeaderboard(entries, compId, compOpts) {
+    var h = '<div style="padding:0 16px 12px">';
+    h += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">';
+    h += '<div id="lbCompSelect" style="flex:1"></div>';
+    h += '<button class="admin-btn btn-success" style="font-size:14px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
+    h += '</div>';
+    if (entries.length === 0) {
+        h += '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u79EF\u5206\u6570\u636E\uFF0C\u70B9\u51FB\u53F3\u4E0A\u89D2 + \u6DFB\u52A0\u6218\u961F</div>';
+    } else {
+        var winColor = '#4caf50';
+        var loseColor = '#e74c3c';
+        var outColor = '#9e9e9e';
+        entries.forEach(function(e) {
+            var bgColor = e.rank <= 4 ? '#e8f5e9' : e.rank <= 8 ? '#fce4ec' : '#f5f5f5';
+            var rankColor = e.rank <= 4 ? winColor : e.rank <= 8 ? loseColor : outColor;
+            var change = e.prev_rank > 0 ? e.prev_rank - e.rank : 0;
+            var changeIcon = change > 0 ? '<span style="color:#4caf50">▲' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">▼' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
+            h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:' + bgColor + ';border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="editLBEntry(' + e.team_id + ',' + compId + ')">';
+            h += '<span style="font-size:15px;font-weight:700;color:' + rankColor + ';width:20px;text-align:center">' + e.rank + '</span>';
+            if (e.team_logo) h += '<img src="' + e.team_logo + '" style="width:24px;height:24px;border-radius:6px;object-fit:contain;background:#f2f3f5">';
+            h += '<span style="font-size:14px;font-weight:500;color:#1a1a1a;flex:1">' + (e.team_name || '?') + '</span>';
+            h += '<span style="font-size:12px;color:#666">W' + e.wins + '</span>';
+            h += '<span style="font-size:12px;color:#666">L' + e.losses + '</span>';
+            h += '<span style="font-size:12px;color:#3478f6">净' + e.net_wins + '</span>';
+            h += '<span style="font-size:12px;color:#666">平' + e.draws + '</span>';
+            h += '<span style="font-size:12px;width:24px;text-align:right">' + changeIcon + '</span>';
+            h += '</div>';
+        });
+    }
+    h += '</div>';
+    document.getElementById('leaderboardContent').innerHTML = h;
+    if (compOpts && compOpts.length > 0) {
+        miuiSelect('lbCompSelect', compOpts, String(compId), function(val) {
+            loadLeaderboardByComp(val);
+        });
+    }
+}
+
+async function loadLeaderboardByComp(compId) {
+    try {
+        var entries = await api('/leaderboard/' + compId + '/team');
+        var comps = await api('/competitions');
+        var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
+        renderLeaderboard(entries, compId, compOpts);
+    } catch (e) {}
+}
+
+async function addLBEntry(compId) {
+    var teams = await api('/admin/teams');
+    if (teams.length === 0) { showToast('\u5148\u521B\u5EFA\u961F\u4F0D', 'error'); return; }
+    var teamOpts = teams.map(function(t) { return {value: String(t.id), label: t.name}; });
+    var result = await miuiPromptMulti([
+        {key:'team_id', label:'\u9009\u62E9\u6218\u961F', type:'select', options: teamOpts},
+        {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue:'0'},
+        {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue:'0'},
+        {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue:'0'}
+    ]);
+    if (!result) return;
+    var entries = await api('/leaderboard/' + compId + '/team');
+    var newEntry = {team_id: parseInt(result.team_id), wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0};
+    var allEntries = entries.map(function(e) { return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws}; });
+    allEntries.push(newEntry);
+    try {
+        await api('/leaderboard/' + compId + '/team', 'PUT', {entries: allEntries});
+        showToast('\u6DFB\u52A0\u6210\u529F', 'success');
+        loadLeaderboardByComp(compId);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function editLBEntry(teamId, compId) {
+    var entries = await api('/leaderboard/' + compId + '/team');
+    var entry = entries.find(function(e) { return e.team_id === teamId; });
+    if (!entry) entry = { team_id: teamId, wins: 0, losses: 0, draws: 0 };
+    var result = await miuiPromptMulti([
+        {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue: String(entry.wins)},
+        {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue: String(entry.losses)},
+        {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue: String(entry.draws)}
+    ]);
+    if (!result) return;
+    try {
+        var newEntries = entries.map(function(e) {
+            if (e.team_id === teamId) {
+                return {team_id: e.team_id, wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0};
+            }
+            return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws};
+        });
+        await api('/leaderboard/' + compId + '/team', 'PUT', {entries: newEntries});
+        showToast('\u66F4\u65B0\u6210\u529F', 'success');
+        loadLeaderboardByComp(compId);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
 function showFullSchedule() {
     showPage('schedule');
     loadFullSchedule();
