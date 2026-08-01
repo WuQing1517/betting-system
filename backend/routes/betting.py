@@ -414,8 +414,8 @@ def update_competition_leaderboard(competition_id):
         entry.wins = ed.get('wins', 0)
         entry.losses = ed.get('losses', 0)
         entry.draws = ed.get('draws', 0)
-        entry.net_wins = entry.wins - entry.losses
-    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.net_wins.desc(), LeaderboardEntry.wins.desc()).all()
+        entry.net_wins = ed.get('net_wins', 0)
+    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.wins.desc(), LeaderboardEntry.net_wins.desc(), LeaderboardEntry.draws.asc()).all()
     for i, e in enumerate(all_entries):
         if e.rank > 0:
             e.prev_rank = e.rank

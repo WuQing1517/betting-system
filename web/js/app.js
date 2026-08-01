@@ -463,12 +463,12 @@ async function loadLeaderboardForPopup() {
 
 function renderLeaderboard(entries, compId, compOpts) {
     var h = '<div style="padding:0 16px 12px">';
-    h += '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">';
+    h += '<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">';
     h += '<div id="lbCompSelect" style="flex:1"></div>';
-    h += '<button class="admin-btn btn-success" style="font-size:14px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
+    h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
     h += '</div>';
     if (entries.length === 0) {
-        h += '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u79EF\u5206\u6570\u636E\uFF0C\u70B9\u51FB\u53F3\u4E0A\u89D2 + \u6DFB\u52A0\u6218\u961F</div>';
+        h += '<div style="padding:30px;text-align:center;color:#86868b;font-size:15px">\u6682\u65E0\u79EF\u5206\u6570\u636E\uFF0C\u70B9\u51FB\u53F3\u4E0A\u89D2 + \u6DFB\u52A0\u6218\u961F</div>';
     } else {
         var winColor = '#4caf50';
         var loseColor = '#e74c3c';
@@ -476,17 +476,19 @@ function renderLeaderboard(entries, compId, compOpts) {
         entries.forEach(function(e) {
             var bgColor = e.rank <= 4 ? '#e8f5e9' : e.rank <= 8 ? '#fce4ec' : '#f5f5f5';
             var rankColor = e.rank <= 4 ? winColor : e.rank <= 8 ? loseColor : outColor;
+            var nw = e.net_wins;
+            var nwStr = nw > 0 ? '+' + nw : String(nw);
             var change = e.prev_rank > 0 ? e.prev_rank - e.rank : 0;
-            var changeIcon = change > 0 ? '<span style="color:#4caf50">▲' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">▼' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
-            h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:' + bgColor + ';border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="editLBEntry(' + e.team_id + ',' + compId + ')">';
-            h += '<span style="font-size:15px;font-weight:700;color:' + rankColor + ';width:20px;text-align:center">' + e.rank + '</span>';
-            if (e.team_logo) h += '<img src="' + e.team_logo + '" style="width:24px;height:24px;border-radius:6px;object-fit:contain;background:#f2f3f5">';
-            h += '<span style="font-size:14px;font-weight:500;color:#1a1a1a;flex:1">' + (e.team_name || '?') + '</span>';
-            h += '<span style="font-size:12px;color:#666">W' + e.wins + '</span>';
-            h += '<span style="font-size:12px;color:#666">L' + e.losses + '</span>';
-            h += '<span style="font-size:12px;color:#3478f6">净' + e.net_wins + '</span>';
-            h += '<span style="font-size:12px;color:#666">平' + e.draws + '</span>';
-            h += '<span style="font-size:12px;width:24px;text-align:right">' + changeIcon + '</span>';
+            var changeIcon = change > 0 ? '<span style="color:#4caf50">\u25B2' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">\u25BC' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';border-radius:12px;margin-bottom:6px;cursor:pointer" onclick="editLBEntry(' + e.team_id + ',' + compId + ')">';
+            h += '<span style="font-size:18px;font-weight:700;color:' + rankColor + ';width:24px;text-align:center">' + e.rank + '</span>';
+            if (e.team_logo) h += '<img src="' + e.team_logo + '" style="width:28px;height:28px;border-radius:6px;object-fit:contain;background:#f2f3f5">';
+            h += '<span style="font-size:16px;font-weight:500;color:#1a1a1a;flex:1">' + (e.team_name || '?') + '</span>';
+            h += '<span style="font-size:14px;color:#666">W' + e.wins + '</span>';
+            h += '<span style="font-size:14px;color:#666">L' + e.losses + '</span>';
+            h += '<span style="font-size:14px;color:#3478f6;font-weight:500">净' + nwStr + '</span>';
+            h += '<span style="font-size:14px;color:#666">平' + e.draws + '</span>';
+            h += '<span style="font-size:14px;width:28px;text-align:right">' + changeIcon + '</span>';
             h += '</div>';
         });
     }
@@ -516,12 +518,13 @@ async function addLBEntry(compId) {
         {key:'team_id', label:'\u9009\u62E9\u6218\u961F', type:'select', options: teamOpts},
         {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue:'0'},
         {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue:'0'},
+        {key:'net_wins', label:'\u5C0F\u5C40\u51C0\u80DC', type:'number', defaultValue:'0'},
         {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue:'0'}
     ]);
     if (!result) return;
     var entries = await api('/leaderboard/' + compId + '/team');
-    var newEntry = {team_id: parseInt(result.team_id), wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0};
-    var allEntries = entries.map(function(e) { return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws}; });
+    var newEntry = {team_id: parseInt(result.team_id), wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0, net_wins: parseInt(result.net_wins)||0};
+    var allEntries = entries.map(function(e) { return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws, net_wins: e.net_wins}; });
     allEntries.push(newEntry);
     try {
         await api('/leaderboard/' + compId + '/team', 'PUT', {entries: allEntries});
@@ -537,13 +540,14 @@ async function editLBEntry(teamId, compId) {
     var result = await miuiPromptMulti([
         {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue: String(entry.wins)},
         {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue: String(entry.losses)},
+        {key:'net_wins', label:'\u5C0F\u5C40\u51C0\u80DC', type:'number', defaultValue: String(entry.net_wins)},
         {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue: String(entry.draws)}
     ]);
     if (!result) return;
     try {
         var newEntries = entries.map(function(e) {
             if (e.team_id === teamId) {
-                return {team_id: e.team_id, wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0};
+                return {team_id: e.team_id, wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0, net_wins: parseInt(result.net_wins)||0};
             }
             return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws};
         });
