@@ -1648,7 +1648,7 @@ function renderQuestionContent(data) {
                 if (q.status !== 'completed') h += '<button class="admin-btn btn-danger" style="font-size:14px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px" onclick="deleteOptionWeb(' + o.id + ',' + q.id + ')"><i class="ri-close-line"></i></button>';
                 h += '</div>';
             });
-            if (q.options.length < 3 && q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
+            if (q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
             h += '</div>';
         });
         h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
