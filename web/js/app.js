@@ -549,7 +549,7 @@ async function editLBEntry(teamId, compId) {
             if (e.team_id === teamId) {
                 return {team_id: e.team_id, wins: parseInt(result.wins)||0, losses: parseInt(result.losses)||0, draws: parseInt(result.draws)||0, net_wins: parseInt(result.net_wins)||0};
             }
-            return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws};
+            return {team_id: e.team_id, wins: e.wins, losses: e.losses, draws: e.draws, net_wins: e.net_wins};
         });
         await api('/leaderboard/' + compId + '/team', 'PUT', {entries: newEntries});
         showToast('\u66F4\u65B0\u6210\u529F', 'success');
