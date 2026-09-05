@@ -53,18 +53,33 @@ def create_app():
     def image_file(filename):
         return send_from_directory(os.path.join(WEB_FOLDER, 'images'), filename)
 
-    # 创建数据库表
+    # 创建数据库表 + 自动迁移
     with app.app_context():
         db.create_all()
-        # SQLite: 自动添加缺失的 cover_url 列
-        try:
-            from sqlalchemy import text
-            cols = [r[1] for r in db.session.execute(text("PRAGMA table_info(livestreams)")).fetchall()]
-            if 'cover_url' not in cols:
-                db.session.execute(text("ALTER TABLE livestreams ADD COLUMN cover_url VARCHAR(512) DEFAULT ''"))
-                db.session.commit()
-        except Exception:
-            pass
+
+        # 自动添加缺失列(兼容SQLite和PostgreSQL)
+        from sqlalchemy import text, inspect
+        engine = db.engine
+        dialect = engine.dialect.name
+
+        def add_column_if_missing(table, column, col_def):
+            """安全添加列, 已存在则跳过"""
+            try:
+                if dialect == 'sqlite':
+                    cols = [r[1] for r in engine.execute(text(f"PRAGMA table_info({table})")).fetchall()]
+                else:
+                    cols = [c['name'] for c in inspect(engine).get_columns(table)]
+                if column not in cols:
+                    engine.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+                    db.session.commit()
+            except Exception:
+                pass
+
+        add_column_if_missing('livestreams', 'cover_url', "VARCHAR(512) DEFAULT ''")
+        add_column_if_missing('match_scores', 'bo4_home', 'INTEGER DEFAULT 0')
+        add_column_if_missing('match_scores', 'bo4_away', 'INTEGER DEFAULT 0')
+        add_column_if_missing('match_scores', 'ot_winner_team_id', 'INTEGER')
+
         # 确保超级管理员账号存在
         from models import User
         if not User.query.filter_by(openid='dev_wuqing').first():

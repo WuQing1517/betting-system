@@ -1,13 +1,23 @@
 services:
   - type: web
-    name: coin-v-q
+    name: coin-ivl-wuqing
     runtime: python
-    buildCommand: pip install -r backend/requirements.txt && pip install gunicorn
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: coin-vq-db
+          property: connectionString
       - key: SERVER_URL
         sync: false
       - key: PYTHON_VERSION
         value: 3.11.0
+
+databases:
+  - name: coin-vq-db
+    plan: free
+    databaseName: coin_vq
+    ipAllowList: []
