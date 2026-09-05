@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: coin-v-q
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt && pip install gunicorn
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SERVER_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
