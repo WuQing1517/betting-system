@@ -919,17 +919,22 @@ def export_data():
     return Response(json.dumps(data, ensure_ascii=False, indent=2), mimetype='application/json', headers={'Content-Disposition': 'attachment; filename=backup.json'})
 
 @admin_bp.route('/import', methods=['POST'])
-@superadmin_required
 def import_data():
-    """导入数据"""
+    """导入数据 (超级管理员登录 或 备份令牌X-Backup-Token)"""
     try:
         data = request.get_json()
         from datetime import date as date_type
-        # 记录导入者身份: 用户表会被重建, 导入者必须保留超级管理员权限
+        # 备份令牌放行: 用于备站自动同步, 用户与超管标识以备份内容为准
+        backup_token = os.environ.get('BACKUP_TOKEN', '')
+        req_token = request.headers.get('X-Backup-Token', '')
+        token_ok = bool(backup_token) and req_token == backup_token
+        # 记录导入者身份: 用户表会被重建, 管理员手动导入时导入者保留超级管理员权限
         importer_openid = None
-        uid = request.headers.get('X-User-Id')
-        importer = User.query.get(int(uid)) if uid and uid.isdigit() else None
-        if importer:
+        if not token_ok:
+            uid = request.headers.get('X-User-Id')
+            importer = User.query.get(int(uid)) if uid and uid.isdigit() else None
+            if not importer or not importer.is_superadmin:
+                return jsonify({'error': '需要超级管理员权限'}), 403
             importer_openid = importer.openid
 
         # SQLite时代的脏数据清洗: 整数字段可能存了空字符串等非数值内容

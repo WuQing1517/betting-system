@@ -38,3 +38,15 @@ jobs:
           git add backups
           git commit -m "自动备份 ${DATE}" || echo "内容无变化，跳过提交"
           git push
+
+      - name: 同步到PythonAnywhere备站
+        env:
+          PA_URL: ${{ secrets.PA_URL }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          RESP=$(curl -sS --retry 3 --retry-delay 30 --max-time 600 \
+            -X POST -H "Content-Type: application/json" -H "X-Backup-Token: ${BACKUP_TOKEN}" \
+            --data-binary @backup.json "${PA_URL}/api/admin/import")
+          echo "$RESP" | head -c 300
+          echo "$RESP" | grep -q '"message"' || { echo "备站同步失败"; exit 1; }
+          echo "备站同步成功"

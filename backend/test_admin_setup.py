@@ -97,6 +97,26 @@ with app.test_client() as c:
         boss = User.query.filter_by(openid='dev_boss').first()
         check('导入者(boss)重建且仍是超管', boss is not None and bool(boss.is_superadmin))
 
+    print('== 场景1f: 备份令牌导入(备站自动同步路径) ==')
+    os.environ['BACKUP_TOKEN'] = 'sync-token-abc'
+    backup2 = {'version': 2,
+               'users': [{'id': 30, 'openid': 'dev_someone2', 'password': 'y', 'nickname': 's2', 'cn': '',
+                          'coins': 2, 'is_admin': True, 'is_superadmin': True, 'avatar_url': '', 'rules_viewed': False}],
+               'teams': [], 'competitions': [], 'matches': [], 'questions': [], 'options': [],
+               'bets': [], 'prizes': [], 'livestreams': [], 'leaderboard': [], 'match_scores': []}
+    r = c.post('/api/admin/import', headers={'Content-Type': 'application/json', 'X-Backup-Token': 'sync-token-abc'},
+               data=json.dumps(backup2))
+    check('令牌导入成功', r.status_code == 200, r.data[:80])
+    with app.app_context():
+        users_now = User.query.all()
+        sup = [u for u in users_now if u.is_superadmin]
+        check('用户与备份完全一致(无导入者账号)', len(users_now) == 1 and users_now[0].openid == 'dev_someone2')
+        check('备份中的is_superadmin生效', len(sup) == 1 and sup[0].openid == 'dev_someone2')
+    r = c.post('/api/admin/import', headers={'Content-Type': 'application/json', 'X-Backup-Token': 'wrong-token'},
+               data=json.dumps(backup2))
+    check('错误令牌403', r.status_code == 403, f'got {r.status_code}')
+    os.environ.pop('BACKUP_TOKEN', None)
+
 # ================= 场景2: 旧库升级 =================
 print('== 场景2: 旧库(dev_wuqing无标识)升级自动继承 ==')
 db2 = fresh_db('t_admin_legacy.db')
