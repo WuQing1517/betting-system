@@ -143,3 +143,28 @@ class LeaderboardEntry(db.Model):
     rank = db.Column(db.Integer, default=0)
     prev_rank = db.Column(db.Integer, default=0)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class MatchScore(db.Model):
+    __tablename__ = 'match_scores'
+
+    id = db.Column(db.Integer, primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey('competitions.id'))
+    match_date = db.Column(db.String(16))
+    home_team_id = db.Column(db.Integer, db.ForeignKey('teams.id'))
+    away_team_id = db.Column(db.Integer, db.ForeignKey('teams.id'))
+    bo1_home = db.Column(db.Integer, default=0)
+    bo1_away = db.Column(db.Integer, default=0)
+    bo2_home = db.Column(db.Integer, default=0)
+    bo2_away = db.Column(db.Integer, default=0)
+    bo3_home = db.Column(db.Integer, default=0)
+    bo3_away = db.Column(db.Integer, default=0)
+    bo4_home = db.Column(db.Integer, default=0)
+    bo4_away = db.Column(db.Integer, default=0)
+    home_wins = db.Column(db.Integer, default=0)
+    away_wins = db.Column(db.Integer, default=0)
+    home_net = db.Column(db.Integer, default=0)
+    away_net = db.Column(db.Integer, default=0)
+    home_draws = db.Column(db.Integer, default=0)
+    away_draws = db.Column(db.Integer, default=0)
+    is_settled = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

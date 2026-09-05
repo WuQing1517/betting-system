@@ -18,6 +18,11 @@ def get_competitions():
     competitions = Competition.query.filter_by(status='active').all()
     return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status} for c in competitions])
 
+@betting_bp.route('/teams', methods=['GET'])
+def get_teams():
+    teams = Team.query.all()
+    return jsonify([{'id': t.id, 'name': t.name, 'logo_url': t.logo_url or ''} for t in teams])
+
 @betting_bp.route('/competitions/<int:competition_id>/matches', methods=['GET'])
 def get_competition_matches(competition_id):
     matches = Match.query.filter_by(competition_id=competition_id).order_by(Match.week_number, Match.day_number, Match.match_number).all()
@@ -422,3 +427,179 @@ def update_competition_leaderboard(competition_id):
         e.rank = i + 1
     db.session.commit()
     return jsonify({'message': 'OK'})
+
+# ========== 比赛比分录入 ==========
+@betting_bp.route('/leaderboard/<int:competition_id>/match-scores', methods=['GET'])
+def get_match_scores(competition_id):
+    from models import MatchScore
+    date = request.args.get('date', '')
+    query = MatchScore.query.filter_by(competition_id=competition_id)
+    if date:
+        query = query.filter_by(match_date=date)
+    scores = query.order_by(MatchScore.id).all()
+    result = []
+    for s in scores:
+        result.append({
+            'id': s.id, 'match_date': s.match_date,
+            'home_team_id': s.home_team_id, 'away_team_id': s.away_team_id,
+            'bo1_home': s.bo1_home, 'bo1_away': s.bo1_away,
+            'bo2_home': s.bo2_home, 'bo2_away': s.bo2_away,
+            'bo3_home': s.bo3_home, 'bo3_away': s.bo3_away,
+            'bo4_home': s.bo4_home, 'bo4_away': s.bo4_away,
+            'home_wins': s.home_wins, 'away_wins': s.away_wins,
+            'home_net': s.home_net, 'away_net': s.away_net,
+            'home_draws': s.home_draws, 'away_draws': s.away_draws,
+            'is_settled': s.is_settled
+        })
+    return jsonify(result)
+
+@betting_bp.route('/leaderboard/<int:competition_id>/match-scores', methods=['POST'])
+def create_match_score(competition_id):
+    from models import MatchScore, db
+    data = request.get_json()
+    ms = MatchScore(
+        competition_id=competition_id,
+        match_date=data.get('match_date', ''),
+        home_team_id=data.get('home_team_id'),
+        away_team_id=data.get('away_team_id')
+    )
+    db.session.add(ms)
+    db.session.commit()
+    return jsonify({'id': ms.id, 'message': 'OK'})
+
+def _calc_bo_results(home_scores, away_scores, home_team_id=None, away_team_id=None, ot_winner_team_id=None):
+    """BO3 + OT: escape count 4->5,3->3,2->2,1->1,0->0. Higher wins BO.
+    胜场=match-level (1 won,0 lost). 净胜=per-BO net. OT NOT counted for wins/draws."""
+    bo_results = []
+    for i in range(3):
+        hs = home_scores[i]
+        as_ = away_scores[i]
+        if hs == 0 and as_ == 0:
+            continue
+        if hs > as_:
+            bo_results.append('home')
+        elif as_ > hs:
+            bo_results.append('away')
+        else:
+            bo_results.append('tie')
+    bo_wins_home = bo_results.count('home')
+    bo_wins_away = bo_results.count('away')
+    bo_ties = bo_results.count('tie')
+    # 胜场 = match level
+    home_w = 1 if bo_wins_home > bo_wins_away else 0
+    away_w = 1 if bo_wins_away > bo_wins_home else 0
+    # 净胜 = per BO
+    home_net = bo_wins_home - bo_wins_away
+    away_net = bo_wins_away - bo_wins_home
+    # Draw: signed
+    if bo_wins_home > bo_wins_away:
+        home_draws = -bo_ties
+        away_draws = bo_ties
+    elif bo_wins_away > bo_wins_home:
+        home_draws = bo_ties
+        away_draws = -bo_ties
+    else:
+        home_draws = bo_ties
+        away_draws = bo_ties
+    return home_w, away_w, home_net, away_net, home_draws, away_draws
+
+@betting_bp.route('/leaderboard/<int:competition_id>/match-scores/<int:score_id>', methods=['GET'])
+def get_match_score(competition_id, score_id):
+    from models import MatchScore
+    s = MatchScore.query.get(score_id)
+    if not s:
+        return jsonify({'error': '\u672A\u627E\u5230'}), 404
+    return jsonify({
+        'id': s.id, 'match_date': s.match_date,
+        'home_team_id': s.home_team_id, 'away_team_id': s.away_team_id,
+        'bo1_home': s.bo1_home, 'bo1_away': s.bo1_away,
+        'bo2_home': s.bo2_home, 'bo2_away': s.bo2_away,
+        'bo3_home': s.bo3_home, 'bo3_away': s.bo3_away,
+        'bo4_home': s.bo4_home, 'bo4_away': s.bo4_away,
+        'home_wins': s.home_wins, 'away_wins': s.away_wins,
+        'home_net': s.home_net, 'away_net': s.away_net,
+        'home_draws': s.home_draws, 'away_draws': s.away_draws,
+        'is_settled': s.is_settled
+    })
+
+@betting_bp.route('/leaderboard/<int:competition_id>/match-scores/<int:score_id>', methods=['PUT'])
+def update_match_score(competition_id, score_id):
+    from models import MatchScore, db
+    s = MatchScore.query.get(score_id)
+    if not s:
+        return jsonify({'error': '\u672A\u627E\u5230'}), 404
+    data = request.get_json()
+    s.bo1_home = data.get('bo1_home', 0)
+    s.bo1_away = data.get('bo1_away', 0)
+    s.bo2_home = data.get('bo2_home', 0)
+    s.bo2_away = data.get('bo2_away', 0)
+    s.bo3_home = data.get('bo3_home', 0)
+    s.bo3_away = data.get('bo3_away', 0)
+    s.bo4_home = data.get('bo4_home', 0)
+    s.bo4_away = data.get('bo4_away', 0)
+    ot_winner_team_id = data.get('ot_winner_team_id')
+    hw, aw, hn, an, hd, ad = _calc_bo_results(
+        [s.bo1_home, s.bo2_home, s.bo3_home],
+        [s.bo1_away, s.bo2_away, s.bo3_away],
+        s.home_team_id, s.away_team_id, ot_winner_team_id
+    )
+    s.home_wins = hw
+    s.away_wins = aw
+    s.home_net = hn
+    s.away_net = an
+    s.home_draws = hd
+    s.away_draws = ad
+    s.is_settled = hw >= 1 or aw >= 1 or (ot_winner_team_id is not None)
+    db.session.commit()
+    _update_leaderboard_from_scores(competition_id)
+    return jsonify({'message': 'OK'})
+
+def _update_leaderboard_from_scores(competition_id):
+    from models import MatchScore, LeaderboardEntry, Team, db
+    scores = MatchScore.query.filter_by(competition_id=competition_id).all()
+    team_stats = {}
+    for s in scores:
+        if not s.is_settled:
+            # 未结算的只统计当前BO结果
+            for tid, wn, ln in [
+                (s.home_team_id, s.home_wins, s.away_wins),
+                (s.away_team_id, s.away_wins, s.home_wins)
+            ]:
+                if tid not in team_stats:
+                    team_stats[tid] = {'wins': 0, 'losses': 0, 'draws': 0, 'net_wins': 0}
+                team_stats[tid]['wins'] += wn
+                team_stats[tid]['losses'] += ln
+                team_stats[tid]['net_wins'] += wn - ln
+        else:
+            for tid, wn, ln, nn, dn in [
+                (s.home_team_id, s.home_wins, s.away_wins, s.home_net, s.home_draws),
+                (s.away_team_id, s.away_wins, s.home_wins, s.away_net, s.away_draws)
+            ]:
+                if tid not in team_stats:
+                    team_stats[tid] = {'wins': 0, 'losses': 0, 'draws': 0, 'net_wins': 0}
+                team_stats[tid]['wins'] += wn
+                team_stats[tid]['losses'] += ln
+                team_stats[tid]['net_wins'] += nn
+                team_stats[tid]['draws'] += dn
+    existing = {e.team_id: e for e in LeaderboardEntry.query.filter_by(competition_id=competition_id).all()}
+    for tid, stats in team_stats.items():
+        if tid in existing:
+            e = existing[tid]
+            e.wins = stats['wins']
+            e.losses = stats['losses']
+            e.draws = stats['draws']
+            e.net_wins = stats['net_wins']
+        else:
+            e = LeaderboardEntry(competition_id=competition_id, team_id=tid,
+                wins=stats['wins'], losses=stats['losses'],
+                draws=stats['draws'], net_wins=stats['net_wins'])
+            db.session.add(e)
+    for tid, e in existing.items():
+        if tid not in team_stats:
+            db.session.delete(e)
+    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.wins.desc(), LeaderboardEntry.net_wins.desc(), LeaderboardEntry.draws.asc()).all()
+    for i, e in enumerate(all_entries):
+        if e.rank > 0:
+            e.prev_rank = e.rank
+        e.rank = i + 1
+    db.session.commit()

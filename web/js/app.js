@@ -456,8 +456,27 @@ async function loadLeaderboardForPopup() {
         if (comps.length === 0) { document.getElementById('leaderboardContent').innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u4E8B</div>'; return; }
         var activeComp = comps.find(function(c) { return c.status === 'active'; }) || comps[0];
         var entries = await api('/leaderboard/' + activeComp.id + '/team');
+        var teams = await api('/teams');
+        var entryMap = {};
+        entries.forEach(function(e) { entryMap[e.team_id] = e; });
+        // All teams with logo go into leaderboard
+        var allEntries = [];
+        teams.forEach(function(t) {
+            if (t.logo_url) {
+                var e = entryMap[t.id];
+                allEntries.push({
+                    team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
+                    rank: 0, prev_rank: 0,
+                    wins: e ? e.wins : 0, losses: e ? e.losses : 0,
+                    draws: e ? e.draws : 0, net_wins: e ? e.net_wins : 0
+                });
+            }
+        });
+        // Recalculate ranks
+        allEntries.sort(function(a, b) { return b.wins - a.wins || b.net_wins - a.net_wins || a.draws - b.draws; });
+        allEntries.forEach(function(e, i) { e.rank = i + 1; });
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
-        renderLeaderboard(entries, activeComp.id, compOpts);
+        renderLeaderboard(allEntries, activeComp.id, compOpts);
     } catch (e) {}
 }
 
@@ -487,7 +506,8 @@ function renderLeaderboard(entries, compId, compOpts) {
             h += '<span style="font-size:14px;color:#666">W' + e.wins + '</span>';
             h += '<span style="font-size:14px;color:#666">L' + e.losses + '</span>';
             h += '<span style="font-size:14px;color:#3478f6;font-weight:500">净' + nwStr + '</span>';
-            h += '<span style="font-size:14px;color:#666">平' + e.draws + '</span>';
+            var drawStr = e.draws > 0 ? '+' + e.draws : String(e.draws);
+            h += '<span style="font-size:14px;color:#666">平' + drawStr + '</span>';
             h += '<span style="font-size:14px;width:28px;text-align:right">' + changeIcon + '</span>';
             h += '</div>';
         });
@@ -504,14 +524,31 @@ function renderLeaderboard(entries, compId, compOpts) {
 async function loadLeaderboardByComp(compId) {
     try {
         var entries = await api('/leaderboard/' + compId + '/team');
+        var teams = await api('/teams');
         var comps = await api('/competitions');
+        var entryMap = {};
+        entries.forEach(function(e) { entryMap[e.team_id] = e; });
+        var allEntries = [];
+        teams.forEach(function(t) {
+            if (t.logo_url) {
+                var e = entryMap[t.id];
+                allEntries.push({
+                    team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
+                    rank: 0, prev_rank: 0,
+                    wins: e ? e.wins : 0, losses: e ? e.losses : 0,
+                    draws: e ? e.draws : 0, net_wins: e ? e.net_wins : 0
+                });
+            }
+        });
+        allEntries.sort(function(a, b) { return b.wins - a.wins || b.net_wins - a.net_wins || a.draws - b.draws; });
+        allEntries.forEach(function(e, i) { e.rank = i + 1; });
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
-        renderLeaderboard(entries, compId, compOpts);
+        renderLeaderboard(allEntries, compId, compOpts);
     } catch (e) {}
 }
 
 async function addLBEntry(compId) {
-    var teams = await api('/admin/teams');
+    var teams = await api('/teams');
     if (teams.length === 0) { showToast('\u5148\u521B\u5EFA\u961F\u4F0D', 'error'); return; }
     var teamOpts = teams.map(function(t) { return {value: String(t.id), label: t.name}; });
     var result = await miuiPromptMulti([
@@ -557,6 +594,308 @@ async function editLBEntry(teamId, compId) {
     } catch (e) { showToast(e.message, 'error'); }
 }
 
+// ========== 比赛录入比分 ==========
+async function openMatchScore() {
+    var input = document.createElement('input');
+    input.type = 'date';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.onchange = async function() {
+        var date = input.value;
+        input.remove();
+        if (!date) return;
+        var cid = getMiuiSelectValue('lbCompSelect');
+        if (!cid) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
+        await loadMatchScores(cid, date);
+    };
+    input.showPicker ? input.showPicker() : input.click();
+}
+
+var _matchScoreCompId = null;
+var _matchScoreDate = '';
+var _currentTeamMap = {};
+
+async function loadMatchScores(compId, date) {
+    _matchScoreCompId = compId;
+    _matchScoreDate = date;
+    var content = document.getElementById('leaderboardContent');
+    content.innerHTML = '<div style="text-align:center;padding:20px;color:#999">\u52A0\u8F7D\u4E2D...</div>';
+    try {
+        var data = await api('/competitions/' + compId + '/full');
+        var teams = await api('/teams');
+        var teamNameToId = {};
+        var teamIdToName = {};
+        teams.forEach(function(t) { 
+            teamNameToId[t.name.trim()] = t.id; 
+            teamIdToName[t.id] = t.name; 
+            teamNameToId[t.name.toLowerCase().trim()] = t.id; 
+        });
+        _currentTeamMap = teamIdToName;
+        var dayMatches = data.matches.filter(function(m) { return m.match_date === date; });
+        var existingScores = [];
+        try { var resp = await fetch(API_BASE + '/leaderboard/' + compId + '/match-scores?date=' + date, { headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) } }); existingScores = await resp.json(); } catch (e) {}
+        var scoreMap = {};
+        existingScores.forEach(function(s) { scoreMap[s.home_team_id + '_' + s.away_team_id] = s; });
+        var h = '<div style="padding:0 16px 12px">';
+        h += '<div style="font-size:14px;color:#86868b;margin-bottom:10px">' + date + ' \u7684\u6BD4\u8D5B</div>';
+        if (dayMatches.length > 0) {
+            dayMatches.forEach(function(m) {
+                var homeId = teamNameToId[m.home_team] || teamNameToId[(m.home_team||'').toLowerCase().trim()] || 0;
+                var awayId = teamNameToId[m.away_team] || teamNameToId[(m.away_team||'').toLowerCase().trim()] || 0;
+                var score = scoreMap[homeId + '_' + awayId] || {};
+                var bg = score.is_settled ? '#f5f5f5' : '#e8f4fd';
+                h += '<div style="background:' + bg + ';border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="editMatchScoreByTeams(' + homeId + ',' + awayId + ',\'' + date + '\')">';
+                h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+                h += '<span style="font-size:18px;font-weight:600">' + (m.home_team||'?') + '</span>';
+                var scoreText = ((score.home_wins||0) + ':' + (score.home_draws||0) + ':' + (score.away_wins||0));
+                h += '<span style="font-size:22px;font-weight:700;color:#333;margin:0 12px">' + scoreText + '</span>';
+                h += '<span style="font-size:18px;font-weight:600">' + (m.away_team||'?') + '</span>';
+                h += '</div>';
+                h += '<div style="display:flex;justify-content:space-between;font-size:13px;color:#888">';
+                for (var b = 1; b <= 3; b++) {
+                    var bs = (score['bo'+b+'_home']||0) + ':' + (score['bo'+b+'_away']||0);
+                    if ((score['bo'+b+'_home']||0) === 0 && (score['bo'+b+'_away']||0) === 0) bs = '--';
+                    h += '<span>BO' + b + ' ' + bs + '</span>';
+                }
+                h += '</div></div>';
+            });
+        } else {
+            h += '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px">\u8BE5\u65E5\u65E0\u8D5B\u7A0B</div>';
+        }
+        h += '</div>';
+        content.innerHTML = h;
+    } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
+}
+
+async function editMatchScoreByTeams(homeId, awayId, date) {
+    var scores = [];
+    try {
+        var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores?date=' + date, {
+            headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }
+        });
+        scores = await resp.json();
+    } catch (e) {}
+    var existing = scores.find(function(s) { return s.home_team_id === homeId && s.away_team_id === awayId; });
+    var scoreId;
+    if (existing) {
+        scoreId = existing.id;
+    } else {
+        try {
+            var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+                body: JSON.stringify({ competition_id: parseInt(_matchScoreCompId), match_date: _matchScoreDate, home_team_id: homeId, away_team_id: awayId })
+            });
+            var data = await resp.json();
+            scoreId = data.id;
+        } catch (e) { showToast(e.message, 'error'); return; }
+    }
+    openScoreDialog(scoreId, homeId, awayId);
+}
+
+function openScoreDialog(scoreId, homeId, awayId) {
+    var overlay = document.createElement('div');
+    overlay.id = 'scoreDialogOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    overlay.onclick = async function(e) { if (e.target === overlay) { await saveScore(); overlay.remove(); loadMatchScores(_matchScoreCompId, _matchScoreDate); } };
+    document.body.appendChild(overlay);
+    overlay._scoreId = scoreId;
+    overlay._homeId = homeId;
+    overlay._awayId = awayId;
+    renderScoreDialog(scoreId, homeId, awayId);
+}
+
+async function renderScoreDialog(scoreId, homeId, awayId) {
+    var score = null;
+    try {
+        var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores/' + scoreId, {
+            headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }
+        });
+        score = await resp.json();
+    } catch (e) {}
+    var homeName = _currentTeamMap[homeId] || '';
+    var awayName = _currentTeamMap[awayId] || '';
+
+    var bo1H = -1, bo1A = -1, bo2H = -1, bo2A = -1, bo3H = -1, bo3A = -1, otH = -1, otA = -1;
+    if (score && score.id) {
+        bo1H = score.bo1_home; bo1A = score.bo1_away;
+        bo2H = score.bo2_home; bo2A = score.bo2_away;
+        bo3H = score.bo3_home; bo3A = score.bo3_away;
+        otH = score.bo4_home || -1; otA = score.bo4_away || -1;
+    }
+
+    var bo1Filled = bo1H >= 0 && bo1A >= 0;
+    var bo2Filled = bo2H >= 0 && bo2A >= 0;
+    var bo3Filled = bo3H >= 0 && bo3A >= 0;
+    // BO3 input enabled when BO1+BO2 filled and no team won 2 BOs
+    var hw2 = 0, aw2 = 0;
+    if (bo1H > bo1A) hw2++; else if (bo1A > bo1H) aw2++;
+    if (bo2H > bo2A) hw2++; else if (bo2A > bo2H) aw2++;
+    var bo3Enabled = bo1Filled && bo2Filled && !(hw2 >= 2 || aw2 >= 2);
+    // OT input enabled when BO3 filled and no team won 2 BOs total
+    var hw3 = 0, aw3 = 0;
+    [[bo1H,bo1A],[bo2H,bo2A],[bo3H,bo3A]].forEach(function(r) {
+        if (r[0] > r[1]) hw3++; else if (r[1] > r[0]) aw3++;
+    });
+    var otEnabled = bo3Filled && !(hw3 >= 2 || aw3 >= 2);
+
+    var overlay = document.getElementById('scoreDialogOverlay');
+    overlay._scoreId = scoreId;
+    var h = '<div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+    h += '<span style="font-size:18px;font-weight:600">' + homeName + ' vs ' + awayName + '</span>';
+    h += '<span onclick="doSaveAndClose()" style="font-size:22px;color:#667eea;cursor:pointer">&#x2713;</span>';
+    h += '</div>';
+    h += renderBORow('BO1', 1, bo1H, bo1A, false);
+    h += renderBORow('BO2', 2, bo2H, bo2A, false);
+    h += renderBORow('BO3', 3, bo3H, bo3A, false);
+    h += renderBORow('OT', 4, otH, otA, false);
+    h += '<div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px">\u524D\u9762=\u4E3B\u961F\u6293\u51E0\u4E2A \u540E\u9762=\u5BA2\u961F\u6293\u51E0\u4E2A</div>';
+    h += '</div>';
+    overlay.innerHTML = h;
+}
+
+function renderBORow(label, boNum, homeScore, awayScore, disabled) {
+    var dis = disabled ? 'disabled' : '';
+    var bg = disabled ? '#e0e0e0' : '#f8f9fa';
+    var opts = '<option value="-1">\u8BF7\u9009\u62E9</option>';
+    for (var v = 0; v <= 4; v++) {
+        opts += '<option value="' + v + '"' + (homeScore === v ? ' selected' : '') + '>' + v + '</option>';
+    }
+    var opts2 = '<option value="-1">\u8BF7\u9009\u62E9</option>';
+    for (var v = 0; v <= 4; v++) {
+        opts2 += '<option value="' + v + '"' + (awayScore === v ? ' selected' : '') + '>' + v + '</option>';
+    }
+    var scoreMap = {4: [5,0], 3: [3,1], 2: [2,2], 1: [1,3], 0: [0,5]};
+    var hResult = homeScore >= 0 ? (scoreMap[homeScore] || [0,0]) : [0,0];
+    var aResult = awayScore >= 0 ? (scoreMap[awayScore] || [0,0]) : [0,0];
+    var overlay = document.getElementById('scoreDialogOverlay');
+    var homeName = _currentTeamMap[overlay._homeId] || '\u4E3B\u961F';
+    var awayName = _currentTeamMap[overlay._awayId] || '\u5BA2\u961F';
+    var h = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;padding:8px;background:' + bg + ';border-radius:10px;opacity:' + (disabled ? '0.5' : '1') + '">';
+    h += '<span style="font-size:14px;font-weight:600;width:36px">' + label + '</span>';
+    h += '<select id="bo' + boNum + 'Home" onchange="calcBO(' + boNum + ')" ' + dis + ' style="width:42px;padding:5px;border:1px solid #e8edf5;border-radius:8px;text-align:center;font-size:13px;background:#fff">' + opts + '</select>';
+    h += '<span style="font-size:11px;color:#86868b">' + homeName + '\u6293</span>';
+    h += '<select id="bo' + boNum + 'Away" onchange="calcBO(' + boNum + ')" ' + dis + ' style="width:42px;padding:5px;border:1px solid #e8edf5;border-radius:8px;text-align:center;font-size:13px;background:#fff">' + opts2 + '</select>';
+    h += '<span style="font-size:11px;color:#86868b">' + awayName + '\u6293</span>';
+    var scoreDisplay = (homeScore >= 0 && awayScore >= 0) ? (hResult[0] + ':' + hResult[1] + ' / ' + aResult[1] + ':' + aResult[0]) : '--';
+    h += '<span id="bo' + boNum + 'Result" style="font-size:14px;font-weight:700;margin-left:auto">' + scoreDisplay + '</span>';
+    h += '</div>';
+    return h;
+}
+function calcBO(boNum) {
+    var hVal = parseInt(document.getElementById('bo' + boNum + 'Home').value);
+    var aVal = parseInt(document.getElementById('bo' + boNum + 'Away').value);
+    if (hVal < 0 || aVal < 0) {
+        document.getElementById('bo' + boNum + 'Result').textContent = '--';
+        return;
+    }
+    var scoreMap = {4: [5,0], 3: [3,1], 2: [2,2], 1: [1,3], 0: [0,5]};
+    var hResult = scoreMap[hVal] || [0, 0];
+    var aResult = scoreMap[aVal] || [0, 0];
+    document.getElementById('bo' + boNum + 'Result').textContent = hResult[0] + ':' + hResult[1] + ' / ' + aResult[0] + ':' + aResult[1];
+    saveScore();
+    // OT平局检测
+    if (boNum === 4) {
+        var totalHome = 0, totalAway = 0;
+        for (var i = 1; i <= 3; i++) {
+            var shEl = document.getElementById('bo' + i + 'Home');
+            var saEl = document.getElementById('bo' + i + 'Away');
+            if (shEl && saEl) {
+                var sv = parseInt(shEl.value);
+                var av = parseInt(saEl.value);
+                if (sv >= 0 && av >= 0) {
+                    var sr = scoreMap[sv] || [0,0];
+                    var ar = scoreMap[av] || [0,0];
+                    totalHome += sr[0];
+                    totalAway += ar[0];
+                }
+            }
+        }
+        var thEl = document.getElementById('bo4Home');
+        var taEl = document.getElementById('bo4Away');
+        if (thEl && taEl) {
+            var thv = parseInt(thEl.value);
+            var tav = parseInt(taEl.value);
+            if (thv >= 0 && tav >= 0) {
+                var thr = scoreMap[thv] || [0,0];
+                var tar = scoreMap[tav] || [0,0];
+                totalHome += thr[0];
+                totalAway += tar[0];
+            }
+        }
+        if (totalHome === totalAway && (hVal >= 0 || aVal >= 0)) {
+            showOTWinnerDialog();
+        }
+    }
+}
+
+function showOTWinnerDialog() {
+    var overlay = document.getElementById('scoreDialogOverlay');
+    var homeName = _currentTeamMap[overlay._homeId] || '主场';
+    var awayName = _currentTeamMap[overlay._awayId] || '客场';
+    var h = '<div id="otWinnerDialog" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:80%;max-width:300px;text-align:center" onclick="event.stopPropagation()">';
+    h += '<div style="font-size:16px;font-weight:600;margin-bottom:16px">\u52A0\u8D5B\u5E73\u5C40\uFF0C\u8BF7\u9009\u62E9\u83B7\u80DC\u961F\u4F0D</div>';
+    h += '<button onclick="pickOTWinner(\'' + overlay._homeId + '\')" style="width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:none;background:#3478f6;color:#fff;font-size:15px;cursor:pointer">' + homeName + '</button>';
+    h += '<button onclick="pickOTWinner(\'' + overlay._awayId + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:#3478f6;color:#fff;font-size:15px;cursor:pointer">' + awayName + '</button>';
+    h += '</div></div>';
+    overlay.insertAdjacentHTML('beforeend', h);
+}
+
+function pickOTWinner(teamId) {
+    var dialog = document.getElementById('otWinnerDialog');
+    if (dialog) dialog.remove();
+    var overlay = document.getElementById('scoreDialogOverlay');
+    overlay._otWinner = teamId;
+    saveScore();
+}
+
+async function saveScore() {
+    var overlay = document.getElementById('scoreDialogOverlay');
+    if (!overlay || !overlay._scoreId) return;
+    var scoreId = overlay._scoreId;
+    var boScores = {};
+    for (var i = 1; i <= 4; i++) {
+        var hEl = document.getElementById('bo' + i + 'Home');
+        var aEl = document.getElementById('bo' + i + 'Away');
+        if (hEl && aEl) {
+            var hVal = parseInt(hEl.value);
+            var aVal = parseInt(aEl.value);
+            boScores['bo' + i + '_home'] = hVal >= 0 ? hVal : 0;
+            boScores['bo' + i + '_away'] = aVal >= 0 ? aVal : 0;
+        } else {
+            boScores['bo' + i + '_home'] = 0;
+            boScores['bo' + i + '_away'] = 0;
+        }
+    }
+    var overlay = document.getElementById('scoreDialogOverlay');
+    var payload = Object.assign({}, boScores);
+    if (overlay._otWinner) {
+        payload.ot_winner_team_id = overlay._otWinner;
+    }
+    try {
+        await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores/' + scoreId, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {}
+}
+
+async function doSaveAndClose() {
+    await saveScore();
+    var el = document.getElementById('scoreDialogOverlay');
+    if (el) el.remove();
+    openLeaderboard();
+}
+
+async function closeScoreDialog() {
+    await saveScore();
+    var el = document.getElementById('scoreDialogOverlay');
+    if (el) el.remove();
+    loadMatchScores(_matchScoreCompId, _matchScoreDate);
+}
 function showFullSchedule() {
     showPage('schedule');
     loadFullSchedule();
@@ -1355,7 +1694,7 @@ async function adjustCoins(uid) {
 // ---- \u961F\u4F0D ----
 async function loadAdminTeams() {
     try {
-        var teams = await api('/admin/teams');
+        var teams = await api('/teams');
         var h = '<div class="admin-section">';
         h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="addTeam()" title="\u6DFB\u52A0\u961F\u4F0D"><i class="ri-add-circle-line"></i></button>';
         teams.forEach(function(t) {
@@ -1485,7 +1824,7 @@ async function editMatchDialog(matchId, compId) {
     var data = await api('/competitions/' + compId + '/full');
     var match = data.matches.find(function(m) { return m.id === matchId; });
     if (!match) return;
-    var teams = await api('/admin/teams');
+    var teams = await api('/teams');
     var teamOpts = teams.map(function(t) { return {value: t.name, label: t.name}; });
     teamOpts.unshift({value: '', label: '\u65E0'});
     var weekOpts = [];
@@ -1591,7 +1930,7 @@ async function handleMatchExcelImport(input) {
 async function addNewMatch(cid) {
     var existing = document.getElementById('newMatchForm');
     if (existing) { existing.scrollIntoView(); return; }
-    var teams = await api('/admin/teams');
+    var teams = await api('/teams');
     var teamOptsHtml = '<option value="">\u65E0</option>';
     teams.forEach(function(t) { teamOptsHtml += '<option value="' + t.name + '">' + t.name + '</option>'; });
     var wdOpts = '<option value="1">\u5468\u4E00</option><option value="2">\u5468\u4E8C</option><option value="3">\u5468\u4E09</option><option value="4">\u5468\u56DB</option><option value="5">\u5468\u4E94</option><option value="6">\u5468\u516D</option><option value="7">\u5468\u65E5</option>';
