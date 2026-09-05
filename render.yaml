@@ -7,10 +7,9 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      # 数据库连接串在 Render 面板 Environment 中手动填写 (Supabase Session pooler 地址)
       - key: DATABASE_URL
-        fromDatabase:
-          name: coin-vq-db
-          property: connectionString
+        sync: false
       - key: SERVER_URL
         sync: false
       - key: PYTHON_VERSION
