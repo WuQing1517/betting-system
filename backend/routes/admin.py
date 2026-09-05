@@ -953,7 +953,10 @@ def import_data():
             except (TypeError, ValueError):
                 return default
         # 用户按备份的显式id重建, 保证bets等表中的user_id引用一致
-        # (需先删除bets: PostgreSQL外键约束, 且bets随后会按原id重新导入)
+        # (删除顺序按外键依赖: prizes/livestreams的creator_id与bets的user_id都指向users)
+        from models import Prize as _Prize, Livestream as _Livestream
+        _Prize.query.delete()
+        _Livestream.query.delete()
         Bet.query.delete()
         User.query.delete()
         db.session.commit()
