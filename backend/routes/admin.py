@@ -883,9 +883,17 @@ def delete_prize(prize_id):
     return jsonify({'message': 'Prize deleted'})
 
 @admin_bp.route('/export', methods=['GET'])
-@superadmin_required
 def export_data():
-    """导出所有数据为JSON"""
+    """导出所有数据为JSON (超级管理员登录 或 备份令牌)"""
+    backup_token = os.environ.get('BACKUP_TOKEN', '')
+    req_token = request.headers.get('X-Backup-Token', '')
+    if not (backup_token and req_token and req_token == backup_token):
+        # 无令牌或令牌不匹配: 按超级管理员身份校验
+        from models import User as _User
+        user_id = request.headers.get('X-User-Id')
+        user = _User.query.get(int(user_id)) if user_id and user_id.isdigit() else None
+        if not user or not user.is_superadmin:
+            return jsonify({'error': '需要超级管理员权限'}), 403
     from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore
     data = {
         'version': 2,

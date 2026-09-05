@@ -1,0 +1,40 @@
+name: 每周自动备份
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # 每周一 UTC 00:00 = 北京时间周一早8点
+  workflow_dispatch: {}    # 支持在 Actions 页面手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取备份数据
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          curl -sS --retry 4 --retry-delay 30 --max-time 300 \
+            -H "X-Backup-Token: ${BACKUP_TOKEN}" \
+            "${SITE_URL}/api/admin/export" -o backup.json
+          grep -q '"version"' backup.json || { echo "备份内容异常:"; head -c 300 backup.json; exit 1; }
+          echo "备份大小: $(wc -c < backup.json) 字节"
+
+      - name: 推送到备份仓库
+        env:
+          PAT: ${{ secrets.BACKUP_PAT }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          git clone --depth 1 "https://x-access-token:${PAT}@github.com/WuQing1517/betting-backup.git" repo
+          cd repo
+          mkdir -p backups
+          cp ../backup.json "backups/backup_${DATE}.json"
+          ls -t backups/backup_*.json 2>/dev/null | tail -n +13 | xargs -r git rm -q
+          git config user.name "backup-bot"
+          git config user.email "actions@github.com"
+          git add backups
+          git commit -m "自动备份 ${DATE}" || echo "内容无变化，跳过提交"
+          git push
