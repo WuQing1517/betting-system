@@ -406,9 +406,18 @@ def get_competition_leaderboard(competition_id):
         })
     return jsonify(result)
 
+def _require_admin():
+    user_id = request.headers.get('X-User-Id')
+    user = User.query.get(int(user_id)) if user_id and user_id.isdigit() else None
+    if not user or not user.is_admin:
+        return None
+    return user
+
 @betting_bp.route('/leaderboard/<int:competition_id>/team', methods=['PUT'])
 def update_competition_leaderboard(competition_id):
-    from models import LeaderboardEntry, Team, db
+    from models import LeaderboardEntry, db
+    if not _require_admin():
+        return jsonify({'error': '需要管理员权限'}), 403
     data = request.get_json()
     entries_data = data.get('entries', [])
     for ed in entries_data:
@@ -420,12 +429,8 @@ def update_competition_leaderboard(competition_id):
         entry.losses = ed.get('losses', 0)
         entry.draws = ed.get('draws', 0)
         entry.net_wins = ed.get('net_wins', 0)
-    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.wins.desc(), LeaderboardEntry.net_wins.desc(), LeaderboardEntry.draws.asc()).all()
-    for i, e in enumerate(all_entries):
-        if e.rank > 0:
-            e.prev_rank = e.rank
-        e.rank = i + 1
     db.session.commit()
+    _rank_leaderboard(competition_id)
     return jsonify({'message': 'OK'})
 
 # ========== 比赛比分录入 ==========
@@ -446,6 +451,7 @@ def get_match_scores(competition_id):
             'bo2_home': s.bo2_home, 'bo2_away': s.bo2_away,
             'bo3_home': s.bo3_home, 'bo3_away': s.bo3_away,
             'bo4_home': s.bo4_home, 'bo4_away': s.bo4_away,
+            'ot_winner_team_id': s.ot_winner_team_id,
             'home_wins': s.home_wins, 'away_wins': s.away_wins,
             'home_net': s.home_net, 'away_net': s.away_net,
             'home_draws': s.home_draws, 'away_draws': s.away_draws,
@@ -456,52 +462,105 @@ def get_match_scores(competition_id):
 @betting_bp.route('/leaderboard/<int:competition_id>/match-scores', methods=['POST'])
 def create_match_score(competition_id):
     from models import MatchScore, db
+    from sqlalchemy import or_, and_
+    if not _require_admin():
+        return jsonify({'error': '需要管理员权限'}), 403
     data = request.get_json()
+    match_date = data.get('match_date', '')
+    home_team_id = data.get('home_team_id')
+    away_team_id = data.get('away_team_id')
+    # 一场比赛只能有一条记录: 同日同对阵(不分主客)直接复用已有记录
+    existing = MatchScore.query.filter_by(competition_id=competition_id, match_date=match_date).filter(or_(
+        and_(MatchScore.home_team_id == home_team_id, MatchScore.away_team_id == away_team_id),
+        and_(MatchScore.home_team_id == away_team_id, MatchScore.away_team_id == home_team_id)
+    )).first()
+    if existing:
+        return jsonify({'id': existing.id, 'existed': True, 'message': 'OK'})
     ms = MatchScore(
         competition_id=competition_id,
-        match_date=data.get('match_date', ''),
-        home_team_id=data.get('home_team_id'),
-        away_team_id=data.get('away_team_id')
+        match_date=match_date,
+        home_team_id=home_team_id,
+        away_team_id=away_team_id
     )
     db.session.add(ms)
     db.session.commit()
     return jsonify({'id': ms.id, 'message': 'OK'})
 
-def _calc_bo_results(home_scores, away_scores, home_team_id=None, away_team_id=None, ot_winner_team_id=None):
-    """BO3 + OT: escape count 4->5,3->3,2->2,1->1,0->0. Higher wins BO.
-    胜场=match-level (1 won,0 lost). 净胜=per-BO net. OT NOT counted for wins/draws."""
+# IVL计分: 按抓捕/逃生人数积分, 4->5分, 3->3分, 2->2分, 1->1分, 0->0分
+_CATCH_POINTS = {0: 0, 1: 1, 2: 2, 3: 3, 4: 5}
+
+def _calc_match_result(home_scores, away_scores, home_team_id=None, away_team_id=None, ot_winner_team_id=None):
+    """按IVL官方规则计算一场比赛结果(BO3+加赛)。
+    - 每局胜负: 上下半场积分之和高者胜, 相同平局
+    - 官方: 前2局取得2胜即分出胜负, 后续局不再进行(不计入)
+    - 三局打完未分胜负: 比较三局总积分, 高者直接获胜(无需加赛)
+    - 三局打完且总积分相同: 进入加赛(BO4), 加赛积分定胜负; 加赛仍平则按ot_winner人工判定
+    - 局数不足3局且无2胜: 比赛未打完, 不判胜负
+    - 净胜局: 仅统计BO1-3局差(加赛结果不计入净胜局/平局记录)
+    - 平局记录: 官方口径=负场平局数-胜场平局数, 胜方-ties/负方+ties; 未决出胜负为0
+    返回: home_w, away_w, home_net, away_net, home_draws, away_draws, decided"""
     bo_results = []
+    home_pts = away_pts = 0
     for i in range(3):
         hs = home_scores[i]
         as_ = away_scores[i]
         if hs == 0 and as_ == 0:
-            continue
+            continue  # 未录入的局
+        # 单局积分: 主队 = 主抓f(h) + 主逃f(4-a), 客队 = 客抓f(a) + 客逃f(4-h)
+        home_pts += _CATCH_POINTS.get(hs, 0) + _CATCH_POINTS.get(4 - as_, 0)
+        away_pts += _CATCH_POINTS.get(as_, 0) + _CATCH_POINTS.get(4 - hs, 0)
         if hs > as_:
             bo_results.append('home')
         elif as_ > hs:
             bo_results.append('away')
         else:
             bo_results.append('tie')
-    bo_wins_home = bo_results.count('home')
-    bo_wins_away = bo_results.count('away')
-    bo_ties = bo_results.count('tie')
-    # 胜场 = match level
-    home_w = 1 if bo_wins_home > bo_wins_away else 0
-    away_w = 1 if bo_wins_away > bo_wins_home else 0
-    # 净胜 = per BO
-    home_net = bo_wins_home - bo_wins_away
-    away_net = bo_wins_away - bo_wins_home
-    # Draw: signed
-    if bo_wins_home > bo_wins_away:
-        home_draws = -bo_ties
-        away_draws = bo_ties
-    elif bo_wins_away > bo_wins_home:
-        home_draws = bo_ties
-        away_draws = -bo_ties
+        if bo_results.count('home') >= 2 or bo_results.count('away') >= 2:
+            break  # 已分出胜负, 后续局不再统计
+    hw_count = bo_results.count('home')
+    aw_count = bo_results.count('away')
+    ties = bo_results.count('tie')
+    home_net = hw_count - aw_count
+    away_net = aw_count - hw_count
+
+    winner = None
+    if hw_count >= 2:
+        winner = 'home'
+    elif aw_count >= 2:
+        winner = 'away'
+    elif len(bo_results) == 3 and home_pts != away_pts:
+        winner = 'home' if home_pts > away_pts else 'away'  # 三局打完, 总积分决胜
+    elif len(bo_results) == 3:
+        # 三局打完且总积分相同 -> 加赛
+        ot_home = home_scores[3] if len(home_scores) > 3 else 0
+        ot_away = away_scores[3] if len(away_scores) > 3 else 0
+        if not (ot_home == 0 and ot_away == 0):
+            if ot_home > ot_away:
+                winner = 'home'  # 加赛积分定胜负
+            elif ot_away > ot_home:
+                winner = 'away'
+        if winner is None and ot_winner_team_id:
+            try:
+                ot_id = int(ot_winner_team_id)
+            except (TypeError, ValueError):
+                ot_id = None
+            if ot_id and ot_id == home_team_id:
+                winner = 'home'
+            elif ot_id and ot_id == away_team_id:
+                winner = 'away'
+    # 局数不足3局且无2胜: 比赛未打完, 不判胜负
+
+    if winner == 'home':
+        home_w, away_w = 1, 0
+        home_draws, away_draws = -ties, ties
+    elif winner == 'away':
+        home_w, away_w = 0, 1
+        home_draws, away_draws = ties, -ties
     else:
-        home_draws = bo_ties
-        away_draws = bo_ties
-    return home_w, away_w, home_net, away_net, home_draws, away_draws
+        home_w, away_w = 0, 0
+        home_draws, away_draws = 0, 0
+    decided = winner is not None
+    return home_w, away_w, home_net, away_net, home_draws, away_draws, decided
 
 @betting_bp.route('/leaderboard/<int:competition_id>/match-scores/<int:score_id>', methods=['GET'])
 def get_match_score(competition_id, score_id):
@@ -516,6 +575,7 @@ def get_match_score(competition_id, score_id):
         'bo2_home': s.bo2_home, 'bo2_away': s.bo2_away,
         'bo3_home': s.bo3_home, 'bo3_away': s.bo3_away,
         'bo4_home': s.bo4_home, 'bo4_away': s.bo4_away,
+        'ot_winner_team_id': s.ot_winner_team_id,
         'home_wins': s.home_wins, 'away_wins': s.away_wins,
         'home_net': s.home_net, 'away_net': s.away_net,
         'home_draws': s.home_draws, 'away_draws': s.away_draws,
@@ -525,9 +585,11 @@ def get_match_score(competition_id, score_id):
 @betting_bp.route('/leaderboard/<int:competition_id>/match-scores/<int:score_id>', methods=['PUT'])
 def update_match_score(competition_id, score_id):
     from models import MatchScore, db
+    if not _require_admin():
+        return jsonify({'error': '需要管理员权限'}), 403
     s = MatchScore.query.get(score_id)
     if not s:
-        return jsonify({'error': '\u672A\u627E\u5230'}), 404
+        return jsonify({'error': '未找到'}), 404
     data = request.get_json()
     s.bo1_home = data.get('bo1_home', 0)
     s.bo1_away = data.get('bo1_away', 0)
@@ -537,10 +599,15 @@ def update_match_score(competition_id, score_id):
     s.bo3_away = data.get('bo3_away', 0)
     s.bo4_home = data.get('bo4_home', 0)
     s.bo4_away = data.get('bo4_away', 0)
-    ot_winner_team_id = data.get('ot_winner_team_id')
-    hw, aw, hn, an, hd, ad = _calc_bo_results(
-        [s.bo1_home, s.bo2_home, s.bo3_home],
-        [s.bo1_away, s.bo2_away, s.bo3_away],
+    ot_winner_team_id = data.get('ot_winner_team_id') or s.ot_winner_team_id
+    if 'ot_winner_team_id' in data and data['ot_winner_team_id']:
+        try:
+            s.ot_winner_team_id = int(data['ot_winner_team_id'])
+        except (TypeError, ValueError):
+            pass
+    hw, aw, hn, an, hd, ad, decided = _calc_match_result(
+        [s.bo1_home, s.bo2_home, s.bo3_home, s.bo4_home],
+        [s.bo1_away, s.bo2_away, s.bo3_away, s.bo4_away],
         s.home_team_id, s.away_team_id, ot_winner_team_id
     )
     s.home_wins = hw
@@ -549,38 +616,37 @@ def update_match_score(competition_id, score_id):
     s.away_net = an
     s.home_draws = hd
     s.away_draws = ad
-    s.is_settled = hw >= 1 or aw >= 1 or (ot_winner_team_id is not None)
+    s.is_settled = decided
     db.session.commit()
     _update_leaderboard_from_scores(competition_id)
     return jsonify({'message': 'OK'})
 
 def _update_leaderboard_from_scores(competition_id):
-    from models import MatchScore, LeaderboardEntry, Team, db
+    from models import MatchScore, LeaderboardEntry, db
     scores = MatchScore.query.filter_by(competition_id=competition_id).all()
     team_stats = {}
+    def ensure(tid):
+        if tid not in team_stats:
+            team_stats[tid] = {'wins': 0, 'losses': 0, 'draws': 0, 'net_wins': 0}
+        return team_stats[tid]
     for s in scores:
-        if not s.is_settled:
-            # 未结算的只统计当前BO结果
-            for tid, wn, ln in [
-                (s.home_team_id, s.home_wins, s.away_wins),
-                (s.away_team_id, s.away_wins, s.home_wins)
-            ]:
-                if tid not in team_stats:
-                    team_stats[tid] = {'wins': 0, 'losses': 0, 'draws': 0, 'net_wins': 0}
-                team_stats[tid]['wins'] += wn
-                team_stats[tid]['losses'] += ln
-                team_stats[tid]['net_wins'] += wn - ln
+        if s.home_team_id is None or s.away_team_id is None:
+            continue
+        if s.is_settled:
+            hs = ensure(s.home_team_id)
+            hs['wins'] += s.home_wins
+            hs['losses'] += s.away_wins
+            hs['net_wins'] += s.home_net
+            hs['draws'] += s.home_draws
+            as_ = ensure(s.away_team_id)
+            as_['wins'] += s.away_wins
+            as_['losses'] += s.home_wins
+            as_['net_wins'] += s.away_net
+            as_['draws'] += s.away_draws
         else:
-            for tid, wn, ln, nn, dn in [
-                (s.home_team_id, s.home_wins, s.away_wins, s.home_net, s.home_draws),
-                (s.away_team_id, s.away_wins, s.home_wins, s.away_net, s.away_draws)
-            ]:
-                if tid not in team_stats:
-                    team_stats[tid] = {'wins': 0, 'losses': 0, 'draws': 0, 'net_wins': 0}
-                team_stats[tid]['wins'] += wn
-                team_stats[tid]['losses'] += ln
-                team_stats[tid]['net_wins'] += nn
-                team_stats[tid]['draws'] += dn
+            # 未决出胜负的比赛: 只累计净胜局, 不计胜场/平局记录
+            ensure(s.home_team_id)['net_wins'] += s.home_net
+            ensure(s.away_team_id)['net_wins'] += s.away_net
     existing = {e.team_id: e for e in LeaderboardEntry.query.filter_by(competition_id=competition_id).all()}
     for tid, stats in team_stats.items():
         if tid in existing:
@@ -594,12 +660,63 @@ def _update_leaderboard_from_scores(competition_id):
                 wins=stats['wins'], losses=stats['losses'],
                 draws=stats['draws'], net_wins=stats['net_wins'])
             db.session.add(e)
-    for tid, e in existing.items():
-        if tid not in team_stats:
-            db.session.delete(e)
-    all_entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).order_by(LeaderboardEntry.wins.desc(), LeaderboardEntry.net_wins.desc(), LeaderboardEntry.draws.asc()).all()
-    for i, e in enumerate(all_entries):
+    # 无比赛记录的队伍保留其手动编辑的数据(不删除不覆盖)
+    db.session.commit()
+    _rank_leaderboard(competition_id)
+
+def _rank_leaderboard(competition_id):
+    """排名: 胜场数 > 净胜局数 > 平局记录 > 相互胜负关系 > 相互对战净胜局数 (IVL官方口径)"""
+    from models import LeaderboardEntry, MatchScore, db
+    entries = LeaderboardEntry.query.filter_by(competition_id=competition_id).all()
+    scores = MatchScore.query.filter_by(competition_id=competition_id, is_settled=True).all()
+    h2h = {}  # (小id, 大id) -> {team_id: {'wins': 相互胜场, 'net': 相互对战净胜局}}
+    def _h2h_rec(a, b):
+        key = (a, b) if a < b else (b, a)
+        return h2h.setdefault(key, {a: {'wins': 0, 'net': 0}, b: {'wins': 0, 'net': 0}})
+    for s in scores:
+        if s.home_team_id is None or s.away_team_id is None:
+            continue
+        if s.home_wins > s.away_wins:
+            w, l = s.home_team_id, s.away_team_id
+        elif s.away_wins > s.home_wins:
+            w, l = s.away_team_id, s.home_team_id
+        else:
+            continue  # 无胜场的记录不参与相互胜负
+        w_net = s.home_net if w == s.home_team_id else s.away_net
+        l_net = s.away_net if w == s.home_team_id else s.home_net
+        rec = _h2h_rec(s.home_team_id, s.away_team_id)
+        rec[w]['wins'] += 1
+        rec[w]['net'] += w_net
+        rec[l]['net'] += l_net
+
+    def primary_key(e):
+        return (-e.wins, -e.net_wins, e.draws)
+    entries.sort(key=lambda e: (primary_key(e), e.id))
+    # 总分相同的队伍之间依次比较相互胜负关系、相互对战净胜局数
+    i = 0
+    while i < len(entries):
+        j = i
+        while j + 1 < len(entries) and primary_key(entries[j + 1]) == primary_key(entries[i]):
+            j += 1
+        if j > i:
+            group = entries[i:j + 1]
+            member_ids = [e.team_id for e in group]  # 先快照: key函数不能遍历正在排序的列表
+            def h2h_key(e):
+                w = n = 0
+                for oid in member_ids:
+                    if oid == e.team_id:
+                        continue
+                    key = (e.team_id, oid) if e.team_id < oid else (oid, e.team_id)
+                    rec = h2h.get(key)
+                    if rec and e.team_id in rec:
+                        w += rec[e.team_id]['wins']
+                        n += rec[e.team_id]['net']
+                return (-w, -n)
+            group.sort(key=h2h_key)  # 稳定排序, 战绩仍相同则保持原相对顺序
+            entries[i:j + 1] = group
+        i = j + 1
+    for idx, e in enumerate(entries):
         if e.rank > 0:
             e.prev_rank = e.rank
-        e.rank = i + 1
+        e.rank = idx + 1
     db.session.commit()

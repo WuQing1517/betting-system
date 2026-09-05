@@ -321,7 +321,11 @@ function updateUserInfo() {
     } else {
         avatar.textContent = (currentUser.nickname || '?')[0].toUpperCase();
     }
-    if (currentUser.is_admin) document.getElementById('navAdmin').style.display = 'inline';
+    if (currentUser.is_admin) {
+        document.getElementById('navAdmin').style.display = 'inline';
+        var btnScore = document.getElementById('btnMatchScore');
+        if (btnScore) btnScore.style.display = 'flex';
+    }
     loadPendingCoins();
 }
 
@@ -450,6 +454,35 @@ function closeLeaderboard() {
     document.getElementById('leaderboardOverlay').style.display = 'none';
 }
 
+// 组装弹窗积分榜数据: 有排名数据的按后端排序(含相互战绩)展示, 无比赛数据的队伍附在最后
+function buildLeaderboardView(entries, teams) {
+    var entryMap = {};
+    entries.forEach(function(e) { entryMap[e.team_id] = e; });
+    var allEntries = [];
+    entries.forEach(function(e) {
+        var t = null;
+        for (var i = 0; i < teams.length; i++) { if (teams[i].id === e.team_id) { t = teams[i]; break; } }
+        if (t && t.logo_url) {
+            allEntries.push({
+                team_id: e.team_id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
+                rank: e.rank, prev_rank: e.prev_rank,
+                wins: e.wins, losses: e.losses, draws: e.draws, net_wins: e.net_wins
+            });
+        }
+    });
+    teams.forEach(function(t) {
+        if (t.logo_url && !entryMap[t.id]) {
+            allEntries.push({
+                team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
+                rank: 0, prev_rank: 0, wins: 0, losses: 0, draws: 0, net_wins: 0
+            });
+        }
+    });
+    // 前段顺序与后端排名一致, 无数据队伍顺延编号
+    allEntries.forEach(function(e, i) { e.rank = i + 1; });
+    return allEntries;
+}
+
 async function loadLeaderboardForPopup() {
     try {
         var comps = await api('/competitions');
@@ -457,34 +490,20 @@ async function loadLeaderboardForPopup() {
         var activeComp = comps.find(function(c) { return c.status === 'active'; }) || comps[0];
         var entries = await api('/leaderboard/' + activeComp.id + '/team');
         var teams = await api('/teams');
-        var entryMap = {};
-        entries.forEach(function(e) { entryMap[e.team_id] = e; });
-        // All teams with logo go into leaderboard
-        var allEntries = [];
-        teams.forEach(function(t) {
-            if (t.logo_url) {
-                var e = entryMap[t.id];
-                allEntries.push({
-                    team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
-                    rank: 0, prev_rank: 0,
-                    wins: e ? e.wins : 0, losses: e ? e.losses : 0,
-                    draws: e ? e.draws : 0, net_wins: e ? e.net_wins : 0
-                });
-            }
-        });
-        // Recalculate ranks
-        allEntries.sort(function(a, b) { return b.wins - a.wins || b.net_wins - a.net_wins || a.draws - b.draws; });
-        allEntries.forEach(function(e, i) { e.rank = i + 1; });
+        var allEntries = buildLeaderboardView(entries, teams);
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
         renderLeaderboard(allEntries, activeComp.id, compOpts);
     } catch (e) {}
 }
 
 function renderLeaderboard(entries, compId, compOpts) {
+    var isAdmin = currentUser && currentUser.is_admin;
     var h = '<div style="padding:0 16px 12px">';
     h += '<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">';
     h += '<div id="lbCompSelect" style="flex:1"></div>';
-    h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
+    if (isAdmin) {
+        h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
+    }
     h += '</div>';
     if (entries.length === 0) {
         h += '<div style="padding:30px;text-align:center;color:#86868b;font-size:15px">\u6682\u65E0\u79EF\u5206\u6570\u636E\uFF0C\u70B9\u51FB\u53F3\u4E0A\u89D2 + \u6DFB\u52A0\u6218\u961F</div>';
@@ -499,7 +518,7 @@ function renderLeaderboard(entries, compId, compOpts) {
             var nwStr = nw > 0 ? '+' + nw : String(nw);
             var change = e.prev_rank > 0 ? e.prev_rank - e.rank : 0;
             var changeIcon = change > 0 ? '<span style="color:#4caf50">\u25B2' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">\u25BC' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
-            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';border-radius:12px;margin-bottom:6px;cursor:pointer" onclick="editLBEntry(' + e.team_id + ',' + compId + ')">';
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';border-radius:12px;margin-bottom:6px' + (isAdmin ? ';cursor:pointer' : '') + '"' + (isAdmin ? ' onclick="editLBEntry(' + e.team_id + ',' + compId + ')"' : '') + '>';
             h += '<span style="font-size:18px;font-weight:700;color:' + rankColor + ';width:24px;text-align:center">' + e.rank + '</span>';
             if (e.team_logo) h += '<img src="' + e.team_logo + '" style="width:28px;height:28px;border-radius:6px;object-fit:contain;background:#f2f3f5">';
             h += '<span style="font-size:16px;font-weight:500;color:#1a1a1a;flex:1">' + (e.team_name || '?') + '</span>';
@@ -526,22 +545,7 @@ async function loadLeaderboardByComp(compId) {
         var entries = await api('/leaderboard/' + compId + '/team');
         var teams = await api('/teams');
         var comps = await api('/competitions');
-        var entryMap = {};
-        entries.forEach(function(e) { entryMap[e.team_id] = e; });
-        var allEntries = [];
-        teams.forEach(function(t) {
-            if (t.logo_url) {
-                var e = entryMap[t.id];
-                allEntries.push({
-                    team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
-                    rank: 0, prev_rank: 0,
-                    wins: e ? e.wins : 0, losses: e ? e.losses : 0,
-                    draws: e ? e.draws : 0, net_wins: e ? e.net_wins : 0
-                });
-            }
-        });
-        allEntries.sort(function(a, b) { return b.wins - a.wins || b.net_wins - a.net_wins || a.draws - b.draws; });
-        allEntries.forEach(function(e, i) { e.rank = i + 1; });
+        var allEntries = buildLeaderboardView(entries, teams);
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
         renderLeaderboard(allEntries, compId, compOpts);
     } catch (e) {}
@@ -555,7 +559,7 @@ async function addLBEntry(compId) {
         {key:'team_id', label:'\u9009\u62E9\u6218\u961F', type:'select', options: teamOpts},
         {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue:'0'},
         {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue:'0'},
-        {key:'net_wins', label:'\u5C0F\u5C40\u51C0\u80DC', type:'number', defaultValue:'0'},
+        {key:'net_wins', label:'\u51C0\u80DC\u5C40', type:'number', defaultValue:'0'},
         {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue:'0'}
     ]);
     if (!result) return;
@@ -577,7 +581,7 @@ async function editLBEntry(teamId, compId) {
     var result = await miuiPromptMulti([
         {key:'wins', label:'\u80DC\u5229\u573A\u6570', type:'number', defaultValue: String(entry.wins)},
         {key:'losses', label:'\u5931\u8D25\u573A\u6570', type:'number', defaultValue: String(entry.losses)},
-        {key:'net_wins', label:'\u5C0F\u5C40\u51C0\u80DC', type:'number', defaultValue: String(entry.net_wins)},
+        {key:'net_wins', label:'\u51C0\u80DC\u5C40', type:'number', defaultValue: String(entry.net_wins)},
         {key:'draws', label:'\u5E73\u5C40\u8BB0\u5F55', type:'number', defaultValue: String(entry.draws)}
     ]);
     if (!result) return;
@@ -596,6 +600,7 @@ async function editLBEntry(teamId, compId) {
 
 // ========== 比赛录入比分 ==========
 async function openMatchScore() {
+    if (!currentUser || !currentUser.is_admin) { showToast('\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650', 'error'); return; }
     var input = document.createElement('input');
     input.type = 'date';
     input.style.display = 'none';
@@ -635,19 +640,22 @@ async function loadMatchScores(compId, date) {
         var existingScores = [];
         try { var resp = await fetch(API_BASE + '/leaderboard/' + compId + '/match-scores?date=' + date, { headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) } }); existingScores = await resp.json(); } catch (e) {}
         var scoreMap = {};
-        existingScores.forEach(function(s) { scoreMap[s.home_team_id + '_' + s.away_team_id] = s; });
+        existingScores.forEach(function(s) {
+            scoreMap[s.home_team_id + '_' + s.away_team_id] = s;
+            scoreMap[s.away_team_id + '_' + s.home_team_id] = s;  // 主客颠倒也能匹配到同一场比赛
+        });
         var h = '<div style="padding:0 16px 12px">';
         h += '<div style="font-size:14px;color:#86868b;margin-bottom:10px">' + date + ' \u7684\u6BD4\u8D5B</div>';
         if (dayMatches.length > 0) {
             dayMatches.forEach(function(m) {
                 var homeId = teamNameToId[m.home_team] || teamNameToId[(m.home_team||'').toLowerCase().trim()] || 0;
                 var awayId = teamNameToId[m.away_team] || teamNameToId[(m.away_team||'').toLowerCase().trim()] || 0;
-                var score = scoreMap[homeId + '_' + awayId] || {};
+                var score = normalizeScore(scoreMap[homeId + '_' + awayId], homeId);
                 var bg = score.is_settled ? '#f5f5f5' : '#e8f4fd';
                 h += '<div style="background:' + bg + ';border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="editMatchScoreByTeams(' + homeId + ',' + awayId + ',\'' + date + '\')">';
                 h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
                 h += '<span style="font-size:18px;font-weight:600">' + (m.home_team||'?') + '</span>';
-                var scoreText = ((score.home_wins||0) + ':' + (score.home_draws||0) + ':' + (score.away_wins||0));
+                var scoreText = matchScoreText(score);
                 h += '<span style="font-size:22px;font-weight:700;color:#333;margin:0 12px">' + scoreText + '</span>';
                 h += '<span style="font-size:18px;font-weight:600">' + (m.away_team||'?') + '</span>';
                 h += '</div>';
@@ -667,6 +675,33 @@ async function loadMatchScores(compId, date) {
     } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
 }
 
+// 若记录的主客顺序与赛程相反, 翻转字段使显示与赛程一致
+function normalizeScore(s, homeId) {
+    if (!s || !s.id) return {};
+    if (s.home_team_id === homeId) return s;
+    var r = Object.assign({}, s);
+    ['bo1', 'bo2', 'bo3', 'bo4'].forEach(function(k) {
+        var h = r[k + '_home']; r[k + '_home'] = r[k + '_away']; r[k + '_away'] = h;
+    });
+    var t;
+    t = r.home_wins; r.home_wins = r.away_wins; r.away_wins = t;
+    t = r.home_net; r.home_net = r.away_net; r.away_net = t;
+    t = r.home_draws; r.home_draws = r.away_draws; r.away_draws = t;
+    return r;
+}
+
+// 列表展示用局比分(如2:0), 打过加赛则附加标注
+function matchScoreText(s) {
+    var gwH = 0, gwA = 0, hasOT = false;
+    for (var b = 1; b <= 3; b++) {
+        var hv = s['bo' + b + '_home'] || 0, av = s['bo' + b + '_away'] || 0;
+        if (hv === 0 && av === 0) continue;
+        if (hv > av) gwH++; else if (av > hv) gwA++;
+    }
+    if ((s.bo4_home || 0) + (s.bo4_away || 0) > 0) hasOT = true;
+    return gwH + ':' + gwA + (hasOT ? '+\u52A0\u8D5B' : '');
+}
+
 async function editMatchScoreByTeams(homeId, awayId, date) {
     var scores = [];
     try {
@@ -675,10 +710,16 @@ async function editMatchScoreByTeams(homeId, awayId, date) {
         });
         scores = await resp.json();
     } catch (e) {}
-    var existing = scores.find(function(s) { return s.home_team_id === homeId && s.away_team_id === awayId; });
+    var existing = scores.find(function(s) {
+        return (s.home_team_id === homeId && s.away_team_id === awayId) ||
+               (s.home_team_id === awayId && s.away_team_id === homeId);
+    });
     var scoreId;
     if (existing) {
         scoreId = existing.id;
+        // 以记录中的主客顺序打开弹窗, 保证比分写入正确的队伍
+        homeId = existing.home_team_id;
+        awayId = existing.away_team_id;
     } else {
         try {
             var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores', {
@@ -706,6 +747,7 @@ function openScoreDialog(scoreId, homeId, awayId) {
 }
 
 async function renderScoreDialog(scoreId, homeId, awayId) {
+    var overlay = document.getElementById('scoreDialogOverlay');
     var score = null;
     try {
         var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores/' + scoreId, {
@@ -718,28 +760,16 @@ async function renderScoreDialog(scoreId, homeId, awayId) {
 
     var bo1H = -1, bo1A = -1, bo2H = -1, bo2A = -1, bo3H = -1, bo3A = -1, otH = -1, otA = -1;
     if (score && score.id) {
-        bo1H = score.bo1_home; bo1A = score.bo1_away;
-        bo2H = score.bo2_home; bo2A = score.bo2_away;
-        bo3H = score.bo3_home; bo3A = score.bo3_away;
-        otH = score.bo4_home || -1; otA = score.bo4_away || -1;
+        var total = score.bo1_home + score.bo1_away + score.bo2_home + score.bo2_away + score.bo3_home + score.bo3_away;
+        if (total > 0) {
+            bo1H = score.bo1_home; bo1A = score.bo1_away;
+            bo2H = score.bo2_home; bo2A = score.bo2_away;
+            bo3H = score.bo3_home; bo3A = score.bo3_away;
+        }
+        if (score.bo4_home + score.bo4_away > 0) { otH = score.bo4_home; otA = score.bo4_away; }
+        if (score.ot_winner_team_id) overlay._otWinner = Number(score.ot_winner_team_id);
     }
 
-    var bo1Filled = bo1H >= 0 && bo1A >= 0;
-    var bo2Filled = bo2H >= 0 && bo2A >= 0;
-    var bo3Filled = bo3H >= 0 && bo3A >= 0;
-    // BO3 input enabled when BO1+BO2 filled and no team won 2 BOs
-    var hw2 = 0, aw2 = 0;
-    if (bo1H > bo1A) hw2++; else if (bo1A > bo1H) aw2++;
-    if (bo2H > bo2A) hw2++; else if (bo2A > bo2H) aw2++;
-    var bo3Enabled = bo1Filled && bo2Filled && !(hw2 >= 2 || aw2 >= 2);
-    // OT input enabled when BO3 filled and no team won 2 BOs total
-    var hw3 = 0, aw3 = 0;
-    [[bo1H,bo1A],[bo2H,bo2A],[bo3H,bo3A]].forEach(function(r) {
-        if (r[0] > r[1]) hw3++; else if (r[1] > r[0]) aw3++;
-    });
-    var otEnabled = bo3Filled && !(hw3 >= 2 || aw3 >= 2);
-
-    var overlay = document.getElementById('scoreDialogOverlay');
     overlay._scoreId = scoreId;
     var h = '<div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s">';
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
@@ -747,12 +777,89 @@ async function renderScoreDialog(scoreId, homeId, awayId) {
     h += '<span onclick="doSaveAndClose()" style="font-size:22px;color:#667eea;cursor:pointer">&#x2713;</span>';
     h += '</div>';
     h += renderBORow('BO1', 1, bo1H, bo1A, false);
-    h += renderBORow('BO2', 2, bo2H, bo2A, false);
-    h += renderBORow('BO3', 3, bo3H, bo3A, false);
-    h += renderBORow('OT', 4, otH, otA, false);
-    h += '<div style="font-size:11px;color:#aaa;text-align:center;margin-top:4px">\u524D\u9762=\u4E3B\u961F\u6293\u51E0\u4E2A \u540E\u9762=\u5BA2\u961F\u6293\u51E0\u4E2A</div>';
+    h += renderBORow('BO2', 2, bo2H, bo2A, true);
+    h += renderBORow('BO3', 3, bo3H, bo3A, true);
+    h += renderBORow('OT', 4, otH, otA, true);
+    h += '<div id="boSummary" style="font-size:12px;color:#3478f6;text-align:center;margin-top:4px;min-height:16px"></div>';
+    h += '<div style="font-size:11px;color:#aaa;text-align:center;margin-top:2px">\u524D\u9762=\u4E3B\u961F\u6293\u51E0\u4E2A \u540E\u9762=\u5BA2\u961F\u6293\u51E0\u4E2A</div>';
     h += '</div>';
     overlay.innerHTML = h;
+    updateBOStates();
+}
+
+var _boScoreMap = {4: [5,0], 3: [3,1], 2: [2,2], 1: [1,3], 0: [0,5]};
+
+function readBOValues(boNum) {
+    var hEl = document.getElementById('bo' + boNum + 'Home');
+    var aEl = document.getElementById('bo' + boNum + 'Away');
+    if (!hEl || !aEl) return [-1, -1];
+    return [parseInt(hEl.value), parseInt(aEl.value)];
+}
+
+function isBOFilled(v) { return v[0] >= 0 && v[1] >= 0; }
+
+// 计算当前录入状态: 局胜场/总积分 + 各行可用性 (官方: 2胜即结束; 未分胜负比总积分; 总分相同才加赛)
+function updateBOStates() {
+    var overlay = document.getElementById('scoreDialogOverlay');
+    if (!overlay) return;
+    var v1 = readBOValues(1), v2 = readBOValues(2), v3 = readBOValues(3), v4 = readBOValues(4);
+    var bo1F = isBOFilled(v1), bo2F = isBOFilled(v2), bo3F = isBOFilled(v3);
+    var hw = 0, aw = 0, tp = 0, ta = 0;
+    [v1, v2, v3].forEach(function(r) {
+        if (!isBOFilled(r)) return;
+        if (r[0] > r[1]) hw++; else if (r[1] > r[0]) aw++;
+        tp += (_boScoreMap[r[0]] || [0,0])[0] + (_boScoreMap[r[1]] || [0,0])[1];
+        ta += (_boScoreMap[r[0]] || [0,0])[1] + (_boScoreMap[r[1]] || [0,0])[0];
+    });
+    var decided = hw >= 2 || aw >= 2;
+    var bo2Enabled = bo1F;
+    var bo3Enabled = bo1F && bo2F && !decided;
+    var otStage = bo3F && !decided && tp === ta;  // 总积分相同才需要加赛
+    var otEnabled = otStage;
+    setBORowEnabled(2, bo2Enabled);
+    setBORowEnabled(3, bo3Enabled);
+    setBORowEnabled(4, otEnabled);
+    overlay._otStage = otStage;
+    // 各局半场比分展示
+    [1, 2, 3, 4].forEach(function(n) {
+        var r = readBOValues(n);
+        var el = document.getElementById('bo' + n + 'Result');
+        if (!el) return;
+        if (!isBOFilled(r)) { el.textContent = '--'; return; }
+        var hR = _boScoreMap[r[0]] || [0, 0];
+        var aR = _boScoreMap[r[1]] || [0, 0];
+        el.textContent = hR[0] + ':' + hR[1] + ' / ' + aR[1] + ':' + aR[0];
+    });
+    // 总积分提示
+    var sumEl = document.getElementById('boSummary');
+    if (sumEl) {
+        var homeName = _currentTeamMap[overlay._homeId] || '主队';
+        var awayName = _currentTeamMap[overlay._awayId] || '客队';
+        if (decided) {
+            sumEl.textContent = (hw >= 2 ? homeName : awayName) + ' 已胜2局，比赛结束';
+        } else if (bo3F) {
+            if (tp !== ta) {
+                sumEl.textContent = '总积分 ' + tp + ':' + ta + '，' + (tp > ta ? homeName : awayName) + '凭总积分获胜（无需加赛）';
+            } else {
+                sumEl.textContent = '总积分 ' + tp + ':' + ta + '，平局，进入加赛';
+            }
+        } else if (bo1F) {
+            sumEl.textContent = '总积分 ' + tp + ':' + ta;
+        } else {
+            sumEl.textContent = '';
+        }
+    }
+}
+
+function setBORowEnabled(boNum, enabled) {
+    var row = document.getElementById('boRow' + boNum);
+    if (!row) return;
+    row.style.opacity = enabled ? '1' : '0.5';
+    row.style.background = enabled ? '#f8f9fa' : '#e0e0e0';
+    var hEl = document.getElementById('bo' + boNum + 'Home');
+    var aEl = document.getElementById('bo' + boNum + 'Away');
+    if (hEl) hEl.disabled = !enabled;
+    if (aEl) aEl.disabled = !enabled;
 }
 
 function renderBORow(label, boNum, homeScore, awayScore, disabled) {
@@ -766,13 +873,13 @@ function renderBORow(label, boNum, homeScore, awayScore, disabled) {
     for (var v = 0; v <= 4; v++) {
         opts2 += '<option value="' + v + '"' + (awayScore === v ? ' selected' : '') + '>' + v + '</option>';
     }
-    var scoreMap = {4: [5,0], 3: [3,1], 2: [2,2], 1: [1,3], 0: [0,5]};
+    var scoreMap = _boScoreMap;
     var hResult = homeScore >= 0 ? (scoreMap[homeScore] || [0,0]) : [0,0];
     var aResult = awayScore >= 0 ? (scoreMap[awayScore] || [0,0]) : [0,0];
     var overlay = document.getElementById('scoreDialogOverlay');
     var homeName = _currentTeamMap[overlay._homeId] || '\u4E3B\u961F';
     var awayName = _currentTeamMap[overlay._awayId] || '\u5BA2\u961F';
-    var h = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;padding:8px;background:' + bg + ';border-radius:10px;opacity:' + (disabled ? '0.5' : '1') + '">';
+    var h = '<div id="boRow' + boNum + '" style="display:flex;align-items:center;gap:4px;margin-bottom:8px;padding:8px;background:' + bg + ';border-radius:10px;opacity:' + (disabled ? '0.5' : '1') + '">';
     h += '<span style="font-size:14px;font-weight:600;width:36px">' + label + '</span>';
     h += '<select id="bo' + boNum + 'Home" onchange="calcBO(' + boNum + ')" ' + dis + ' style="width:42px;padding:5px;border:1px solid #e8edf5;border-radius:8px;text-align:center;font-size:13px;background:#fff">' + opts + '</select>';
     h += '<span style="font-size:11px;color:#86868b">' + homeName + '\u6293</span>';
@@ -784,50 +891,16 @@ function renderBORow(label, boNum, homeScore, awayScore, disabled) {
     return h;
 }
 function calcBO(boNum) {
-    var hVal = parseInt(document.getElementById('bo' + boNum + 'Home').value);
-    var aVal = parseInt(document.getElementById('bo' + boNum + 'Away').value);
-    if (hVal < 0 || aVal < 0) {
-        document.getElementById('bo' + boNum + 'Result').textContent = '--';
-        return;
+    updateBOStates();
+    var overlay = document.getElementById('scoreDialogOverlay');
+    if (boNum === 4 && overlay._otStage) {
+        var ot = readBOValues(4);
+        if (isBOFilled(ot) && ot[0] === ot[1]) {
+            // 加赛平局 -> 人工选定获胜方
+            if (!overlay._otWinner) { showOTWinnerDialog(); return; }  // 等用户选完胜者后再save
+        }
     }
-    var scoreMap = {4: [5,0], 3: [3,1], 2: [2,2], 1: [1,3], 0: [0,5]};
-    var hResult = scoreMap[hVal] || [0, 0];
-    var aResult = scoreMap[aVal] || [0, 0];
-    document.getElementById('bo' + boNum + 'Result').textContent = hResult[0] + ':' + hResult[1] + ' / ' + aResult[0] + ':' + aResult[1];
     saveScore();
-    // OT平局检测
-    if (boNum === 4) {
-        var totalHome = 0, totalAway = 0;
-        for (var i = 1; i <= 3; i++) {
-            var shEl = document.getElementById('bo' + i + 'Home');
-            var saEl = document.getElementById('bo' + i + 'Away');
-            if (shEl && saEl) {
-                var sv = parseInt(shEl.value);
-                var av = parseInt(saEl.value);
-                if (sv >= 0 && av >= 0) {
-                    var sr = scoreMap[sv] || [0,0];
-                    var ar = scoreMap[av] || [0,0];
-                    totalHome += sr[0];
-                    totalAway += ar[0];
-                }
-            }
-        }
-        var thEl = document.getElementById('bo4Home');
-        var taEl = document.getElementById('bo4Away');
-        if (thEl && taEl) {
-            var thv = parseInt(thEl.value);
-            var tav = parseInt(taEl.value);
-            if (thv >= 0 && tav >= 0) {
-                var thr = scoreMap[thv] || [0,0];
-                var tar = scoreMap[tav] || [0,0];
-                totalHome += thr[0];
-                totalAway += tar[0];
-            }
-        }
-        if (totalHome === totalAway && (hVal >= 0 || aVal >= 0)) {
-            showOTWinnerDialog();
-        }
-    }
 }
 
 function showOTWinnerDialog() {
@@ -847,7 +920,7 @@ function pickOTWinner(teamId) {
     var dialog = document.getElementById('otWinnerDialog');
     if (dialog) dialog.remove();
     var overlay = document.getElementById('scoreDialogOverlay');
-    overlay._otWinner = teamId;
+    overlay._otWinner = parseInt(teamId);  // 转为整数, 后端按数字比较队伍ID
     saveScore();
 }
 

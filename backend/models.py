@@ -167,4 +167,5 @@ class MatchScore(db.Model):
     home_draws = db.Column(db.Integer, default=0)
     away_draws = db.Column(db.Integer, default=0)
     is_settled = db.Column(db.Boolean, default=False)
+    ot_winner_team_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
