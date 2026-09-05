@@ -936,6 +936,8 @@ def import_data():
         Bet.query.delete()
         User.query.delete()
         db.session.commit()
+        # 性能: 一次性内存比对, 避免逐行查库(跨国数据库逐行往返会超时)
+        users_by_openid = {}
         for u_data in data.get('users', []):
             user = User(id=u_data['id'], openid=u_data['openid'])
             db.session.add(user)
@@ -947,33 +949,43 @@ def import_data():
             user.password = u_data.get('password', '')
             user.avatar_url = u_data.get('avatar_url', '')
             user.rules_viewed = u_data.get('rules_viewed', False)
+            users_by_openid[user.openid] = user
         # 导入者保持超级管理员(旧版本备份没有is_superadmin字段也不会丢权限)
         if importer_openid:
-            imp = User.query.filter_by(openid=importer_openid).first()
-            if imp:
-                imp.is_superadmin = True
-            else:
-                db.session.add(User(openid=importer_openid, nickname='admin', coins=0,
-                                    is_admin=True, is_superadmin=True, rules_viewed=True))
+            imp = users_by_openid.get(importer_openid)
+            if imp is None:
+                imp = User(openid=importer_openid, nickname='admin', coins=0,
+                           is_admin=True, is_superadmin=True, rules_viewed=True)
+                db.session.add(imp)
+                users_by_openid[importer_openid] = imp
+            imp.is_superadmin = True
         db.session.commit()
+        teams_by_id = {t.id: t for t in Team.query.all()}
+        teams_by_name = {}
+        for t_ in teams_by_id.values():
+            teams_by_name.setdefault(t_.name, t_)
         for t_data in data.get('teams', []):
-            team = db.session.get(Team, t_data['id'])
-            if not team:
-                team = Team.query.filter_by(name=t_data.get('name', '')).first()
+            team = teams_by_id.get(t_data['id']) or teams_by_name.get(t_data.get('name', ''))
             if not team:
                 team = Team(id=t_data['id'])
+                teams_by_id[team.id] = team
                 db.session.add(team)
             team.name = t_data.get('name', '')
+            teams_by_name[team.name] = team
             team.logo_url = t_data.get('logo_url', '')
         db.session.commit()
+        comps_by_id = {c.id: c for c in Competition.query.all()}
+        comps_by_name = {}
+        for c_ in comps_by_id.values():
+            comps_by_name.setdefault(c_.name, c_)
         for c_data in data.get('competitions', []):
-            comp = db.session.get(Competition, c_data['id'])
-            if not comp:
-                comp = Competition.query.filter_by(name=c_data.get('name', '')).first()
+            comp = comps_by_id.get(c_data['id']) or comps_by_name.get(c_data.get('name', ''))
             if not comp:
                 comp = Competition(id=c_data['id'])
+                comps_by_id[comp.id] = comp
                 db.session.add(comp)
             comp.name = c_data.get('name', '')
+            comps_by_name[comp.name] = comp
             comp.year = c_data.get('year')
             comp.season = c_data.get('season', '')
             comp.status = c_data.get('status', 'active')
@@ -1003,6 +1015,11 @@ def import_data():
                     db.session.delete(m)
             db.session.commit()
         with db.session.no_autoflush:
+            # 预加载已有比赛(id与match_code两个索引), 避免逐行查询
+            matches_by_id = {m.id: m for m in Match.query.all()}
+            matches_by_code = {}
+            for m_ in matches_by_id.values():
+                matches_by_code.setdefault(m_.match_code, m_)
             # 预计算每个赛事+周的day_number→序号映射
             day_seq_map = {}
             for m_data in data.get('matches', []):
@@ -1021,11 +1038,10 @@ def import_data():
             for key in day_seq_map:
                 day_seq_map[key] = sorted(day_seq_map[key])
             for m_data in data.get('matches', []):
-                match = db.session.get(Match, m_data['id'])
-                if not match:
-                    match = Match.query.filter_by(match_code=m_data.get('match_code', '')).first()
+                match = matches_by_id.get(m_data['id']) or matches_by_code.get(m_data.get('match_code', ''))
                 if not match:
                     match = Match(id=m_data['id'])
+                    matches_by_id[match.id] = match
                     db.session.add(match)
                 match.competition_id = m_data.get('competition_id')
                 match.week_number = m_data.get('week_number')
@@ -1054,43 +1070,53 @@ def import_data():
                 else:
                     match.match_code = m_data.get('match_code', '')
             db.session.commit()
+        questions_by_id = {q.id: q for q in Question.query.all()}
+        questions_by_code = {}
+        for q_ in questions_by_id.values():
+            questions_by_code.setdefault(q_.question_code, q_)
         for q_data in data.get('questions', []):
-            q = db.session.get(Question, q_data['id'])
-            if not q:
-                q = Question.query.filter_by(question_code=q_data.get('question_code', '')).first()
+            q = questions_by_id.get(q_data['id']) or questions_by_code.get(q_data.get('question_code', ''))
             if not q:
                 q = Question(id=q_data['id'])
+                questions_by_id[q.id] = q
                 db.session.add(q)
             q.question_code = q_data.get('question_code', '')
+            questions_by_code[q.question_code] = q
             q.question_text = q_data.get('question_text', '')
             q.match_id = q_data.get('match_id')
             q.status = q_data.get('status', 'active')
             q.correct_option_id = q_data.get('correct_option_id')
         db.session.commit()
+        options_by_id = {o.id: o for o in Option.query.all()}
         for o_data in data.get('options', []):
-            opt = db.session.get(Option, o_data['id'])
+            opt = options_by_id.get(o_data['id'])
             if not opt:
                 opt = Option(id=o_data['id'])
+                options_by_id[opt.id] = opt
                 db.session.add(opt)
             opt.question_id = o_data.get('question_id')
             opt.option_text = o_data.get('option_text', '')
             opt.base_rate = o_data.get('base_rate', 2.0)
             opt.total_coins = o_data.get('total_coins', 0)
         db.session.commit()
+        bets_by_id = {b.id: b for b in Bet.query.all()}
         for b_data in data.get('bets', []):
-            bet = db.session.get(Bet, b_data['id'])
+            bet = bets_by_id.get(b_data['id'])
             if not bet:
                 bet = Bet(id=b_data['id'])
+                bets_by_id[bet.id] = bet
                 db.session.add(bet)
             bet.user_id = b_data.get('user_id')
             bet.question_id = b_data.get('question_id')
             bet.option_id = b_data.get('option_id')
             bet.coins = b_data.get('coins', 0)
         db.session.commit()
+        prizes_by_id = {p.id: p for p in Prize.query.all()}
         for p_data in data.get('prizes', []):
-            prize = db.session.get(Prize, p_data['id'])
+            prize = prizes_by_id.get(p_data['id'])
             if not prize:
                 prize = Prize(id=p_data['id'])
+                prizes_by_id[prize.id] = prize
                 db.session.add(prize)
             prize.competition_id = p_data.get('competition_id')
             prize.name = p_data.get('name', '')
@@ -1101,10 +1127,12 @@ def import_data():
             prize.creator_id = p_data.get('creator_id')
         db.session.commit()
         from models import Livestream, LeaderboardEntry, MatchScore
+        livestreams_by_id = {l.id: l for l in Livestream.query.all()}
         for l_data in data.get('livestreams', []):
-            ls = db.session.get(Livestream, l_data['id'])
+            ls = livestreams_by_id.get(l_data['id'])
             if not ls:
                 ls = Livestream(id=l_data['id'])
+                livestreams_by_id[ls.id] = ls
                 db.session.add(ls)
             ls.name = l_data.get('name', '')
             ls.intro = l_data.get('intro', '')
@@ -1115,10 +1143,13 @@ def import_data():
             ls.creator_id = l_data.get('creator_id')
             ls.sort_order = l_data.get('sort_order', 0)
         db.session.commit()
+        lb_by_key = {(e.competition_id, e.team_id): e for e in LeaderboardEntry.query.all()}
         for e_data in data.get('leaderboard', []):
-            e = LeaderboardEntry.query.filter_by(competition_id=e_data.get('competition_id'), team_id=e_data.get('team_id')).first()
+            key = (e_data.get('competition_id'), e_data.get('team_id'))
+            e = lb_by_key.get(key)
             if not e:
-                e = LeaderboardEntry(id=e_data['id'], competition_id=e_data.get('competition_id'), team_id=e_data.get('team_id'))
+                e = LeaderboardEntry(id=e_data['id'], competition_id=key[0], team_id=key[1])
+                lb_by_key[key] = e
                 db.session.add(e)
             e.wins = e_data.get('wins', 0)
             e.losses = e_data.get('losses', 0)
@@ -1127,10 +1158,12 @@ def import_data():
             e.rank = e_data.get('rank', 0)
             e.prev_rank = e_data.get('prev_rank', 0)
         db.session.commit()
+        scores_by_id = {s.id: s for s in MatchScore.query.all()}
         for s_data in data.get('match_scores', []):
-            s = db.session.get(MatchScore, s_data['id'])
+            s = scores_by_id.get(s_data['id'])
             if not s:
                 s = MatchScore(id=s_data['id'])
+                scores_by_id[s.id] = s
                 db.session.add(s)
             s.competition_id = s_data.get('competition_id')
             s.match_date = s_data.get('match_date', '')
