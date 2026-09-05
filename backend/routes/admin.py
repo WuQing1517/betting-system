@@ -855,7 +855,7 @@ def delete_prize(prize_id):
 @superadmin_required
 def export_data():
     """导出所有数据为JSON"""
-    from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog
+    from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore
     data = {
         'version': 2,
         'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
@@ -866,6 +866,14 @@ def export_data():
         'options': [{'id': o.id, 'question_id': o.question_id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins} for o in Option.query.all()],
         'bets': [{'id': b.id, 'user_id': b.user_id, 'question_id': b.question_id, 'option_id': b.option_id, 'coins': b.coins} for b in Bet.query.all()],
         'prizes': [{'id': p.id, 'competition_id': p.competition_id, 'name': p.name, 'quantity': p.quantity, 'condition': p.condition, 'provider': p.provider, 'notes': p.notes, 'creator_id': p.creator_id} for p in Prize.query.all()],
+        'livestreams': [{'id': l.id, 'name': l.name, 'intro': l.intro, 'platform': l.platform, 'room_id': l.room_id, 'url': l.url, 'cover_url': l.cover_url, 'creator_id': l.creator_id, 'sort_order': l.sort_order} for l in Livestream.query.all()],
+        'leaderboard': [{'id': e.id, 'competition_id': e.competition_id, 'team_id': e.team_id, 'wins': e.wins, 'losses': e.losses, 'draws': e.draws, 'net_wins': e.net_wins, 'rank': e.rank, 'prev_rank': e.prev_rank} for e in LeaderboardEntry.query.all()],
+        'match_scores': [{'id': s.id, 'competition_id': s.competition_id, 'match_date': s.match_date, 'home_team_id': s.home_team_id, 'away_team_id': s.away_team_id,
+                          'bo1_home': s.bo1_home, 'bo1_away': s.bo1_away, 'bo2_home': s.bo2_home, 'bo2_away': s.bo2_away,
+                          'bo3_home': s.bo3_home, 'bo3_away': s.bo3_away, 'bo4_home': s.bo4_home, 'bo4_away': s.bo4_away,
+                          'ot_winner_team_id': s.ot_winner_team_id, 'home_wins': s.home_wins, 'away_wins': s.away_wins,
+                          'home_net': s.home_net, 'away_net': s.away_net, 'home_draws': s.home_draws, 'away_draws': s.away_draws,
+                          'is_settled': s.is_settled} for s in MatchScore.query.all()],
         'logs': [{'id': l.id, 'user_id': l.user_id, 'nickname': l.nickname, 'action': l.action, 'detail': l.detail, 'created_at': str(l.created_at) if l.created_at else None} for l in OperationLog.query.order_by(OperationLog.id.desc()).limit(500).all()]
     }
     from flask import Response
@@ -879,11 +887,14 @@ def import_data():
     try:
         data = request.get_json()
         from datetime import date as date_type
+        # 用户按备份的显式id重建, 保证bets等表中的user_id引用一致
+        # (需先删除bets: PostgreSQL外键约束, 且bets随后会按原id重新导入)
+        Bet.query.delete()
+        User.query.delete()
+        db.session.commit()
         for u_data in data.get('users', []):
-            user = User.query.filter_by(openid=u_data['openid']).first()
-            if not user:
-                user = User(openid=u_data['openid'])
-                db.session.add(user)
+            user = User(id=u_data['id'], openid=u_data['openid'])
+            db.session.add(user)
             user.nickname = u_data.get('nickname', '')
             user.cn = u_data.get('cn', '')
             user.coins = u_data.get('coins', 5000)
@@ -976,7 +987,7 @@ def import_data():
                 match.home_team = m_data.get('home_team', '')
                 match.away_team = m_data.get('away_team', '')
                 match.status = m_data.get('status', 'active')
-                key = (m_data.get('competition_id'), m.week_number)
+                key = (m_data.get('competition_id'), m_data.get('week_number'))
                 day_list = day_seq_map.get(key, [])
                 day_seq = day_list.index(match.day_number) + 1 if match.day_number in day_list else 1
                 if sd and backup_version < 2:
@@ -1036,7 +1047,65 @@ def import_data():
             prize.notes = p_data.get('notes', '')
             prize.creator_id = p_data.get('creator_id')
         db.session.commit()
-        return jsonify({'message': '\u5BFC\u5165\u6210\u529F'})
+        from models import Livestream, LeaderboardEntry, MatchScore
+        for l_data in data.get('livestreams', []):
+            ls = db.session.get(Livestream, l_data['id'])
+            if not ls:
+                ls = Livestream(id=l_data['id'])
+                db.session.add(ls)
+            ls.name = l_data.get('name', '')
+            ls.intro = l_data.get('intro', '')
+            ls.platform = l_data.get('platform', '')
+            ls.room_id = l_data.get('room_id', '')
+            ls.url = l_data.get('url', '')
+            ls.cover_url = l_data.get('cover_url', '')
+            ls.creator_id = l_data.get('creator_id')
+            ls.sort_order = l_data.get('sort_order', 0)
+        db.session.commit()
+        for e_data in data.get('leaderboard', []):
+            e = LeaderboardEntry.query.filter_by(competition_id=e_data.get('competition_id'), team_id=e_data.get('team_id')).first()
+            if not e:
+                e = LeaderboardEntry(id=e_data['id'], competition_id=e_data.get('competition_id'), team_id=e_data.get('team_id'))
+                db.session.add(e)
+            e.wins = e_data.get('wins', 0)
+            e.losses = e_data.get('losses', 0)
+            e.draws = e_data.get('draws', 0)
+            e.net_wins = e_data.get('net_wins', 0)
+            e.rank = e_data.get('rank', 0)
+            e.prev_rank = e_data.get('prev_rank', 0)
+        db.session.commit()
+        for s_data in data.get('match_scores', []):
+            s = db.session.get(MatchScore, s_data['id'])
+            if not s:
+                s = MatchScore(id=s_data['id'])
+                db.session.add(s)
+            s.competition_id = s_data.get('competition_id')
+            s.match_date = s_data.get('match_date', '')
+            s.home_team_id = s_data.get('home_team_id')
+            s.away_team_id = s_data.get('away_team_id')
+            for k in ['bo1', 'bo2', 'bo3', 'bo4']:
+                setattr(s, k + '_home', s_data.get(k + '_home', 0))
+                setattr(s, k + '_away', s_data.get(k + '_away', 0))
+            s.ot_winner_team_id = s_data.get('ot_winner_team_id')
+            s.home_wins = s_data.get('home_wins', 0)
+            s.away_wins = s_data.get('away_wins', 0)
+            s.home_net = s_data.get('home_net', 0)
+            s.away_net = s_data.get('away_net', 0)
+            s.home_draws = s_data.get('home_draws', 0)
+            s.away_draws = s_data.get('away_draws', 0)
+            s.is_settled = s_data.get('is_settled', False)
+        db.session.commit()
+        # PostgreSQL: 导入用了显式主键, 必须重置序列, 否则新记录会主键冲突
+        if db.engine.dialect.name == 'postgresql':
+            from sqlalchemy import text
+            for model in [User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore]:
+                table = model.__tablename__
+                db.session.execute(text(
+                    "SELECT setval(pg_get_serial_sequence('" + table + "', 'id'), "
+                    "GREATEST((SELECT COALESCE(MAX(id), 0) FROM " + table + "), 1))"
+                ))
+            db.session.commit()
+        return jsonify({'message': '导入成功'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

@@ -60,18 +60,14 @@ def create_app():
         # 自动添加缺失列(兼容SQLite和PostgreSQL)
         from sqlalchemy import text, inspect
         engine = db.engine
-        dialect = engine.dialect.name
 
         def add_column_if_missing(table, column, col_def):
             """安全添加列, 已存在则跳过"""
             try:
-                if dialect == 'sqlite':
-                    cols = [r[1] for r in engine.execute(text(f"PRAGMA table_info({table})")).fetchall()]
-                else:
-                    cols = [c['name'] for c in inspect(engine).get_columns(table)]
+                cols = [c['name'] for c in inspect(engine).get_columns(table)]
                 if column not in cols:
-                    engine.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
-                    db.session.commit()
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
             except Exception:
                 pass
 
