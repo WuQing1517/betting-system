@@ -931,6 +931,27 @@ def import_data():
         importer = User.query.get(int(uid)) if uid and uid.isdigit() else None
         if importer:
             importer_openid = importer.openid
+
+        # SQLite时代的脏数据清洗: 整数字段可能存了空字符串等非数值内容
+        def _int(v, default=0):
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                return default
+
+        def _int_opt(v):
+            if v in (None, ''):
+                return None
+            try:
+                return int(v)
+            except (TypeError, ValueError):
+                return None
+
+        def _float(v, default=0.0):
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return default
         # 用户按备份的显式id重建, 保证bets等表中的user_id引用一致
         # (需先删除bets: PostgreSQL外键约束, 且bets随后会按原id重新导入)
         Bet.query.delete()
@@ -943,7 +964,7 @@ def import_data():
             db.session.add(user)
             user.nickname = u_data.get('nickname', '')
             user.cn = u_data.get('cn', '')
-            user.coins = u_data.get('coins', 5000)
+            user.coins = _int(u_data.get('coins'), 5000)
             user.is_admin = u_data.get('is_admin', False)
             user.is_superadmin = bool(u_data.get('is_superadmin', False))
             user.password = u_data.get('password', '')
@@ -988,7 +1009,7 @@ def import_data():
                 db.session.add(comp)
             comp.name = c_data.get('name', '')
             comps_by_name[comp.name] = comp
-            comp.year = c_data.get('year')
+            comp.year = _int_opt(c_data.get('year'))
             comp.season = c_data.get('season', '')
             comp.status = c_data.get('status', 'active')
             sd = c_data.get('start_date')
@@ -1025,8 +1046,8 @@ def import_data():
             # 预计算每个赛事+周的day_number→序号映射
             day_seq_map = {}
             for m_data in data.get('matches', []):
-                cid = m_data.get('competition_id')
-                wk = m_data.get('week_number')
+                cid = _int_opt(m_data.get('competition_id'))
+                wk = _int_opt(m_data.get('week_number'))
                 dn = m_data.get('day_number')
                 if backup_version < 2:
                     sd = comp_start_dates.get(cid)
@@ -1040,28 +1061,29 @@ def import_data():
             for key in day_seq_map:
                 day_seq_map[key] = sorted(day_seq_map[key])
             for m_data in data.get('matches', []):
-                if m_data.get('competition_id') and m_data['competition_id'] not in comps_by_id:
-                    skipped.append(f"比赛{m_data['id']}引用了不存在的赛事{m_data['competition_id']}")
+                cid = _int_opt(m_data.get('competition_id'))
+                if cid is not None and cid not in comps_by_id:
+                    skipped.append(f"比赛{m_data['id']}引用了不存在的赛事{cid}")
                     continue
                 match = matches_by_id.get(m_data['id']) or matches_by_code.get(m_data.get('match_code', ''))
                 if not match:
                     match = Match(id=m_data['id'])
                     matches_by_id[match.id] = match
                     db.session.add(match)
-                match.competition_id = m_data.get('competition_id')
-                match.week_number = m_data.get('week_number')
+                match.competition_id = cid
+                match.week_number = _int_opt(m_data.get('week_number'))
                 old_day = m_data.get('day_number')
-                sd = comp_start_dates.get(m_data.get('competition_id'))
+                sd = comp_start_dates.get(cid)
                 if old_day and sd and backup_version < 2:
                     start_wd = sd.weekday()
                     match.day_number = ((old_day - 1 + start_wd) % 7) + 1
                 else:
-                    match.day_number = old_day
-                match.match_number = m_data.get('match_number')
+                    match.day_number = _int_opt(old_day)
+                match.match_number = _int_opt(m_data.get('match_number'))
                 match.home_team = m_data.get('home_team', '')
                 match.away_team = m_data.get('away_team', '')
                 match.status = m_data.get('status', 'active')
-                key = (m_data.get('competition_id'), m_data.get('week_number'))
+                key = (cid, match.week_number)
                 day_list = day_seq_map.get(key, [])
                 day_seq = day_list.index(match.day_number) + 1 if match.day_number in day_list else 1
                 if sd and backup_version < 2:
@@ -1081,8 +1103,9 @@ def import_data():
         for q_ in questions_by_id.values():
             questions_by_code.setdefault(q_.question_code, q_)
         for q_data in data.get('questions', []):
-            if q_data.get('match_id') and q_data['match_id'] not in matches_by_id:
-                skipped.append(f"题目{q_data['id']}引用了不存在的比赛{q_data['match_id']}")
+            q_match = _int_opt(q_data.get('match_id'))
+            if q_match is not None and q_match not in matches_by_id:
+                skipped.append(f"题目{q_data['id']}引用了不存在的比赛{q_match}")
                 continue
             q = questions_by_id.get(q_data['id']) or questions_by_code.get(q_data.get('question_code', ''))
             if not q:
@@ -1092,9 +1115,9 @@ def import_data():
             q.question_code = q_data.get('question_code', '')
             questions_by_code[q.question_code] = q
             q.question_text = q_data.get('question_text', '')
-            q.match_id = q_data.get('match_id')
+            q.match_id = q_match
             q.status = q_data.get('status', 'active')
-            q.correct_option_id = q_data.get('correct_option_id')
+            q.correct_option_id = _int_opt(q_data.get('correct_option_id'))
         db.session.commit()
         options_by_id = {o.id: o for o in Option.query.all()}
         for o_data in data.get('options', []):
@@ -1109,8 +1132,8 @@ def import_data():
                 db.session.add(opt)
             opt.question_id = o_data.get('question_id')
             opt.option_text = o_data.get('option_text', '')
-            opt.base_rate = o_data.get('base_rate', 2.0)
-            opt.total_coins = o_data.get('total_coins', 0)
+            opt.base_rate = _float(o_data.get('base_rate'), 2.0)
+            opt.total_coins = _int(o_data.get('total_coins'), 0)
         db.session.commit()
         users_by_id = {u.id: u for u in User.query.all()}
         bets_by_id = {b.id: b for b in Bet.query.all()}
@@ -1128,26 +1151,27 @@ def import_data():
             bet.user_id = b_data.get('user_id')
             bet.question_id = b_data.get('question_id')
             bet.option_id = b_data.get('option_id')
-            bet.coins = b_data.get('coins', 0)
+            bet.coins = _int(b_data.get('coins'), 0)
         db.session.commit()
         comps_all = {c.id for c in Competition.query.all()}
         prizes_by_id = {p.id: p for p in Prize.query.all()}
         for p_data in data.get('prizes', []):
-            if p_data.get('competition_id') and p_data['competition_id'] not in comps_all:
-                skipped.append(f"奖品{p_data['id']}引用了不存在的赛事{p_data['competition_id']}")
+            prize_competition = _int_opt(p_data.get('competition_id'))
+            if prize_competition is not None and prize_competition not in comps_all:
+                skipped.append(f"奖品{p_data['id']}引用了不存在的赛事{prize_competition}")
                 continue
             prize = prizes_by_id.get(p_data['id'])
             if not prize:
                 prize = Prize(id=p_data['id'])
                 prizes_by_id[prize.id] = prize
                 db.session.add(prize)
-            prize.competition_id = p_data.get('competition_id')
+            prize.competition_id = prize_competition
             prize.name = p_data.get('name', '')
-            prize.quantity = p_data.get('quantity', 1)
+            prize.quantity = _int(p_data.get('quantity'), 1)
             prize.condition = p_data.get('condition', '')
             prize.provider = p_data.get('provider', '')
             prize.notes = p_data.get('notes', '')
-            prize.creator_id = p_data.get('creator_id')
+            prize.creator_id = _int_opt(p_data.get('creator_id'))
         db.session.commit()
         from models import Livestream, LeaderboardEntry, MatchScore
         livestreams_by_id = {l.id: l for l in Livestream.query.all()}
@@ -1178,12 +1202,12 @@ def import_data():
                 e = LeaderboardEntry(id=e_data['id'], competition_id=key[0], team_id=key[1])
                 lb_by_key[key] = e
                 db.session.add(e)
-            e.wins = e_data.get('wins', 0)
-            e.losses = e_data.get('losses', 0)
-            e.draws = e_data.get('draws', 0)
-            e.net_wins = e_data.get('net_wins', 0)
-            e.rank = e_data.get('rank', 0)
-            e.prev_rank = e_data.get('prev_rank', 0)
+            e.wins = _int(e_data.get('wins'), 0)
+            e.losses = _int(e_data.get('losses'), 0)
+            e.draws = _int(e_data.get('draws'), 0)
+            e.net_wins = _int(e_data.get('net_wins'), 0)
+            e.rank = _int(e_data.get('rank'), 0)
+            e.prev_rank = _int(e_data.get('prev_rank'), 0)
         db.session.commit()
         scores_by_id = {s.id: s for s in MatchScore.query.all()}
         for s_data in data.get('match_scores', []):
@@ -1195,21 +1219,21 @@ def import_data():
                 s = MatchScore(id=s_data['id'])
                 scores_by_id[s.id] = s
                 db.session.add(s)
-            s.competition_id = s_data.get('competition_id')
+            s.competition_id = _int_opt(s_data.get('competition_id'))
             s.match_date = s_data.get('match_date', '')
-            s.home_team_id = s_data.get('home_team_id')
-            s.away_team_id = s_data.get('away_team_id')
+            s.home_team_id = _int_opt(s_data.get('home_team_id'))
+            s.away_team_id = _int_opt(s_data.get('away_team_id'))
             for k in ['bo1', 'bo2', 'bo3', 'bo4']:
-                setattr(s, k + '_home', s_data.get(k + '_home', 0))
-                setattr(s, k + '_away', s_data.get(k + '_away', 0))
-            s.ot_winner_team_id = s_data.get('ot_winner_team_id')
-            s.home_wins = s_data.get('home_wins', 0)
-            s.away_wins = s_data.get('away_wins', 0)
-            s.home_net = s_data.get('home_net', 0)
-            s.away_net = s_data.get('away_net', 0)
-            s.home_draws = s_data.get('home_draws', 0)
-            s.away_draws = s_data.get('away_draws', 0)
-            s.is_settled = s_data.get('is_settled', False)
+                setattr(s, k + '_home', _int(s_data.get(k + '_home'), 0))
+                setattr(s, k + '_away', _int(s_data.get(k + '_away'), 0))
+            s.ot_winner_team_id = _int_opt(s_data.get('ot_winner_team_id'))
+            s.home_wins = _int(s_data.get('home_wins'), 0)
+            s.away_wins = _int(s_data.get('away_wins'), 0)
+            s.home_net = _int(s_data.get('home_net'), 0)
+            s.away_net = _int(s_data.get('away_net'), 0)
+            s.home_draws = _int(s_data.get('home_draws'), 0)
+            s.away_draws = _int(s_data.get('away_draws'), 0)
+            s.is_settled = bool(s_data.get('is_settled', False))
         db.session.commit()
         # PostgreSQL: 导入用了显式主键, 必须重置序列, 否则新记录会主键冲突
         if db.engine.dialect.name == 'postgresql':
