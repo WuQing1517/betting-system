@@ -1173,7 +1173,7 @@ def import_data():
             prize.notes = p_data.get('notes', '')
             prize.creator_id = _int_opt(p_data.get('creator_id'))
         db.session.commit()
-        from models import Livestream, LeaderboardEntry, MatchScore
+        from models import Livestream, LeaderboardEntry, MatchScore, OperationLog
         livestreams_by_id = {l.id: l for l in Livestream.query.all()}
         for l_data in data.get('livestreams', []):
             ls = livestreams_by_id.get(l_data['id'])
