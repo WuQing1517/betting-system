@@ -272,7 +272,35 @@ async function login() {
         localStorage.setItem('user', JSON.stringify(data));
         showToast('\u767B\u5F55\u6210\u529F', 'success');
         initHomePage();
+        if (currentUser.need_setup) showSuperadminSetup();
     } catch (e) { showToast(e.message, 'error'); }
+}
+
+// 超级管理员默认账号(admin/admin)首次登录强制修改, 修改后不再提示
+async function showSuperadminSetup() {
+    var result = await miuiPromptMulti([
+        {key: 'username', label: '\u65B0\u8D26\u53F7 (\u81F3\u5C112\u4F4D)', defaultValue: 'admin'},
+        {key: 'password', label: '\u65B0\u5BC6\u7801 (\u81F3\u5C114\u4F4D)', type: 'password', defaultValue: ''},
+        {key: 'cn', label: 'CN', defaultValue: (currentUser && currentUser.cn) || ''}
+    ]);
+    if (!result) return;  // 取消则下次登录/刷新会再次提示
+    if (!result.username || result.username.trim().length < 2 || !result.password || result.password.length < 4) {
+        showToast('\u8D26\u53F7\u81F3\u5C112\u4F4D\u3001\u5BC6\u7801\u81F3\u5C114\u4F4D', 'error');
+        showSuperadminSetup();
+        return;
+    }
+    try {
+        var resp = await api('/admin/setup-superadmin', 'PUT', {
+            username: result.username.trim(), password: result.password, cn: (result.cn || '').trim()
+        });
+        Object.assign(currentUser, resp.user);
+        currentUser.need_setup = false;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        showToast('\u7BA1\u7406\u5458\u8D26\u53F7\u5DF2\u66F4\u65B0', 'success');
+    } catch (e) {
+        showToast(e.message, 'error');
+        showSuperadminSetup();
+    }
 }
 
 async function register() {
@@ -1711,7 +1739,7 @@ async function loadAdminUsers() {
         var isSuper = currentUser && currentUser.is_superadmin;
         var h = '<div class="admin-section">';
         users.forEach(function(u) {
-            var isTargetSuper = u.openid === 'dev_wuqing';
+            var isTargetSuper = u.is_superadmin;
             h += '<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:8px">';
             h += '<div style="display:flex;justify-content:space-between;align-items:center">';
             h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (u.nickname || '\u672A\u547D\u540D') + (isTargetSuper ? ' <span style="font-size:11px;color:#3478f6;background:#e8f4fd;padding:2px 6px;border-radius:4px">\u8D85\u7EA7\u7BA1\u7406</span>' : '') + (u.is_admin && !isTargetSuper ? ' <span style="font-size:11px;color:#f57c00;background:#fff8e1;padding:2px 6px;border-radius:4px">\u7BA1\u7406\u5458</span>' : '') + '</div>';
@@ -2310,4 +2338,4 @@ async function showBetDetail(qid) {
     } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
 }
 
-window.onload = function() { if (currentUser) initHomePage(); };
+window.onload = function() { if (currentUser) { initHomePage(); if (currentUser.need_setup) showSuperadminSetup(); } };

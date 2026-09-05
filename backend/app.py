@@ -75,12 +75,20 @@ def create_app():
         add_column_if_missing('match_scores', 'bo4_home', 'INTEGER DEFAULT 0')
         add_column_if_missing('match_scores', 'bo4_away', 'INTEGER DEFAULT 0')
         add_column_if_missing('match_scores', 'ot_winner_team_id', 'INTEGER')
+        add_column_if_missing('users', 'is_superadmin',
+                              'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
 
         # 确保超级管理员账号存在
+        # 全新部署: 默认账号 admin/admin, 首次登录会强制提示修改
+        # 旧部署升级: 已存在的 dev_wuqing 自动继承超级管理员权限
         from models import User
-        if not User.query.filter_by(openid='dev_wuqing').first():
-            admin = User(openid='dev_wuqing', password='adminwq', nickname='雾清', cn='WuQing', coins=999999, is_admin=True, rules_viewed=True)
-            db.session.add(admin)
+        if not User.query.filter_by(is_superadmin=True).first():
+            legacy = User.query.filter_by(openid='dev_wuqing').first()
+            if legacy:
+                legacy.is_superadmin = True
+            else:
+                db.session.add(User(openid='dev_admin', password='admin', nickname='admin', cn='',
+                                    coins=999999, is_admin=True, is_superadmin=True, rules_viewed=True))
             db.session.commit()
 
     return app

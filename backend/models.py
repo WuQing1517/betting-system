@@ -14,6 +14,7 @@ class User(db.Model):
     cn = db.Column(db.String(64))
     coins = db.Column(db.Integer, default=5000)
     is_admin = db.Column(db.Boolean, default=False)
+    is_superadmin = db.Column(db.Boolean, default=False)  # 超级管理员标识(修改账号后依然保留权限)
     rules_viewed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

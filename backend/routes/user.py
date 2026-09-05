@@ -27,7 +27,8 @@ def get_profile():
         'cn': user.cn,
         'coins': user.coins,
         'is_admin': user.is_admin,
-        'is_superadmin': user.openid == 'dev_wuqing',
+        'is_superadmin': bool(user.is_superadmin),
+        'need_setup': bool(user.is_superadmin) and user.openid == 'dev_admin' and (user.password or '') == 'admin',
         'rules_viewed': user.rules_viewed
     })
 

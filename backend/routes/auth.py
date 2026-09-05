@@ -6,9 +6,13 @@ from config import Config
 auth_bp = Blueprint('auth', __name__)
 
 MAIN_ADMIN = {
-    'username': 'wuqing',
-    'password': 'adminwq'
+    'username': 'admin',
+    'password': 'admin'
 }
+
+def _is_default_superadmin(user):
+    """是否仍在使用默认超管账号(用于触发首次修改提示)"""
+    return user.openid == 'dev_admin' and (user.password or '') == 'admin'
 
 @auth_bp.route('/dev-login', methods=['POST'])
 def dev_login():
@@ -42,7 +46,8 @@ def dev_login():
         'cn': user.cn,
         'coins': user.coins,
         'is_admin': user.is_admin,
-        'is_superadmin': user.openid == 'dev_wuqing',
+        'is_superadmin': bool(user.is_superadmin),
+        'need_setup': bool(user.is_superadmin) and _is_default_superadmin(user),
         'rules_viewed': user.rules_viewed
     })
 
@@ -83,7 +88,8 @@ def dev_register():
         'cn': user.cn,
         'coins': user.coins,
         'is_admin': user.is_admin,
-        'is_superadmin': user.openid == 'dev_wuqing',
+        'is_superadmin': bool(user.is_superadmin),
+        'need_setup': False,
         'rules_viewed': user.rules_viewed
     })
 
@@ -113,7 +119,7 @@ def admin_login():
 
     openid = 'dev_' + username
     user = User.query.filter_by(openid=openid).first()
-    if user and user.is_admin:
+    if user and user.is_admin and user.password and user.password == password:
         return jsonify({
             'success': True,
             'is_main_admin': False,
@@ -133,6 +139,8 @@ def admin_get_users():
         'cn': u.cn,
         'coins': u.coins,
         'is_admin': u.is_admin,
+        'openid': u.openid,
+        'is_superadmin': bool(u.is_superadmin),
         'created_at': u.created_at.isoformat() if u.created_at else None
     } for u in users])
 

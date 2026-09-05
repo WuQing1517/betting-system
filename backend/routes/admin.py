@@ -31,11 +31,42 @@ def superadmin_required(f):
             return jsonify({'error': '缺少用户ID'}), 400
 
         user = User.query.get(int(user_id))
-        if not user or user.openid != 'dev_wuqing':
+        if not user or not user.is_superadmin:
             return jsonify({'error': '需要超级管理员权限'}), 403
 
         return f(*args, **kwargs)
     return decorated_function
+
+@admin_bp.route('/setup-superadmin', methods=['PUT'])
+@superadmin_required
+def setup_superadmin():
+    """超级管理员首次登录修改默认账号/密码/CN (修改后不再提示)"""
+    user_id = request.headers.get('X-User-Id')
+    me = User.query.get(int(user_id))
+    if not me:
+        return jsonify({'error': '用户不存在'}), 404
+    data = request.get_json()
+    username = (data.get('username') or '').strip()
+    password = (data.get('password') or '').strip()
+    cn = (data.get('cn') or '').strip()
+    if len(username) < 2:
+        return jsonify({'error': '账号至少2个字符'}), 400
+    if len(password) < 4:
+        return jsonify({'error': '密码至少4位'}), 400
+    new_openid = 'dev_' + username
+    exists = User.query.filter_by(openid=new_openid).first()
+    if exists and exists.id != me.id:
+        return jsonify({'error': '该账号已被使用'}), 400
+    me.openid = new_openid
+    me.password = password
+    me.cn = cn
+    me.is_superadmin = True
+    db.session.commit()
+    return jsonify({
+        'message': 'OK',
+        'user': {'user_id': me.id, 'openid': me.openid, 'nickname': me.nickname,
+                 'cn': me.cn, 'is_superadmin': True, 'need_setup': False}
+    })
 
 # 文件上传
 @admin_bp.route('/upload', methods=['POST'])
@@ -145,9 +176,9 @@ def delete_user(user_id):
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
 
-    # 不能删除主管理员
-    if user.openid == 'dev_wuqing':
-        return jsonify({'error': '不能删除主管理员'}), 400
+    # 不能删除超级管理员
+    if user.is_superadmin:
+        return jsonify({'error': '不能删除超级管理员'}), 400
 
     # 删除该用户户的投注记录
     Bet.query.filter_by(user_id=user_id).delete()
@@ -826,7 +857,7 @@ def update_prize(prize_id):
     prize = Prize.query.get(prize_id)
     if not prize:
         return jsonify({'error': 'Prize not found'}), 404
-    is_superadmin = user and user.openid == 'dev_wuqing'
+    is_superadmin = bool(user and user.is_superadmin)
     if not is_superadmin and prize.creator_id != user_id:
         return jsonify({'error': '\u53EA\u80FD\u7F16\u8F91\u81EA\u5DF1\u6DFB\u52A0\u7684\u5956\u54C1'}), 403
     data = request.get_json()
@@ -844,7 +875,7 @@ def delete_prize(prize_id):
     prize = Prize.query.get(prize_id)
     if not prize:
         return jsonify({'error': 'Prize not found'}), 404
-    is_superadmin = user and user.openid == 'dev_wuqing'
+    is_superadmin = bool(user and user.is_superadmin)
     if not is_superadmin and prize.creator_id != user_id:
         return jsonify({'error': '\u53EA\u80FD\u5220\u9664\u81EA\u5DF1\u6DFB\u52A0\u7684\u5956\u54C1'}), 403
     db.session.delete(prize)
@@ -858,7 +889,7 @@ def export_data():
     from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore
     data = {
         'version': 2,
-        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
+        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
@@ -887,6 +918,12 @@ def import_data():
     try:
         data = request.get_json()
         from datetime import date as date_type
+        # 记录导入者身份: 用户表会被重建, 导入者必须保留超级管理员权限
+        importer_openid = None
+        uid = request.headers.get('X-User-Id')
+        importer = User.query.get(int(uid)) if uid and uid.isdigit() else None
+        if importer:
+            importer_openid = importer.openid
         # 用户按备份的显式id重建, 保证bets等表中的user_id引用一致
         # (需先删除bets: PostgreSQL外键约束, 且bets随后会按原id重新导入)
         Bet.query.delete()
@@ -899,9 +936,18 @@ def import_data():
             user.cn = u_data.get('cn', '')
             user.coins = u_data.get('coins', 5000)
             user.is_admin = u_data.get('is_admin', False)
+            user.is_superadmin = bool(u_data.get('is_superadmin', False))
             user.password = u_data.get('password', '')
             user.avatar_url = u_data.get('avatar_url', '')
             user.rules_viewed = u_data.get('rules_viewed', False)
+        # 导入者保持超级管理员(旧版本备份没有is_superadmin字段也不会丢权限)
+        if importer_openid:
+            imp = User.query.filter_by(openid=importer_openid).first()
+            if imp:
+                imp.is_superadmin = True
+            else:
+                db.session.add(User(openid=importer_openid, nickname='admin', coins=0,
+                                    is_admin=True, is_superadmin=True, rules_viewed=True))
         db.session.commit()
         for t_data in data.get('teams', []):
             team = db.session.get(Team, t_data['id'])
