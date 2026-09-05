@@ -8,6 +8,9 @@ class Config:
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    # 使用psycopg3驱动: psycopg2在Python 3.13+/新版环境无预编译包
+    if db_url and db_url.startswith('postgresql://'):
+        db_url = db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
     SQLALCHEMY_DATABASE_URI = db_url or f'sqlite:///{os.path.join(BASE_DIR, "betting.db")}'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
