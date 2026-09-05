@@ -32,7 +32,7 @@ class User(db.Model):
     openid = db.Column(db.String(128), unique=True, nullable=False)
     password = db.Column(db.String(128), default='')
     nickname = db.Column(db.String(64))
-    avatar_url = db.Column(db.String(256))
+    avatar_url = db.Column(db.Text)  # base64图片可能很大, 用Text
     cn = db.Column(db.String(64))
     coins = db.Column(db.Integer, default=5000)
     is_admin = db.Column(db.Boolean, default=False)
@@ -47,7 +47,7 @@ class Team(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True, nullable=False)
-    logo_url = db.Column(db.String(256))
+    logo_url = db.Column(db.Text)  # base64图片可能很大, 用Text
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Competition(db.Model):

@@ -78,6 +78,18 @@ def create_app():
         add_column_if_missing('users', 'is_superadmin',
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
 
+        # base64图片存库: PostgreSQL下把图片列拓宽为TEXT (SQLite不校验长度无需处理)
+        if engine.dialect.name != 'sqlite':
+            insp = inspect(engine)
+            for table, column in [('users', 'avatar_url'), ('teams', 'logo_url')]:
+                try:
+                    cols = {c['name']: c for c in insp.get_columns(table)}
+                    if column in cols and 'VARCHAR' in str(cols[column]['type']).upper():
+                        with engine.begin() as conn:
+                            conn.execute(text(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"))
+                except Exception:
+                    pass
+
         # 确保超级管理员账号存在
         # 全新部署: 默认账号 admin/admin, 首次登录会强制提示修改
         # 旧部署升级: 已存在的 dev_wuqing 自动继承超级管理员权限
