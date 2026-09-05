@@ -1040,6 +1040,9 @@ def import_data():
             for key in day_seq_map:
                 day_seq_map[key] = sorted(day_seq_map[key])
             for m_data in data.get('matches', []):
+                if m_data.get('competition_id') and m_data['competition_id'] not in comps_by_id:
+                    skipped.append(f"比赛{m_data['id']}引用了不存在的赛事{m_data['competition_id']}")
+                    continue
                 match = matches_by_id.get(m_data['id']) or matches_by_code.get(m_data.get('match_code', ''))
                 if not match:
                     match = Match(id=m_data['id'])
@@ -1072,11 +1075,15 @@ def import_data():
                 else:
                     match.match_code = m_data.get('match_code', '')
             db.session.commit()
+        skipped = []
         questions_by_id = {q.id: q for q in Question.query.all()}
         questions_by_code = {}
         for q_ in questions_by_id.values():
             questions_by_code.setdefault(q_.question_code, q_)
         for q_data in data.get('questions', []):
+            if q_data.get('match_id') and q_data['match_id'] not in matches_by_id:
+                skipped.append(f"题目{q_data['id']}引用了不存在的比赛{q_data['match_id']}")
+                continue
             q = questions_by_id.get(q_data['id']) or questions_by_code.get(q_data.get('question_code', ''))
             if not q:
                 q = Question(id=q_data['id'])
@@ -1091,6 +1098,10 @@ def import_data():
         db.session.commit()
         options_by_id = {o.id: o for o in Option.query.all()}
         for o_data in data.get('options', []):
+            # 跳过孤儿选项(引用的题目已不存在的历史残留数据)
+            if o_data.get('question_id') not in questions_by_id:
+                skipped.append(f"选项{o_data['id']}引用了不存在的题目{o_data.get('question_id')}")
+                continue
             opt = options_by_id.get(o_data['id'])
             if not opt:
                 opt = Option(id=o_data['id'])
@@ -1101,8 +1112,14 @@ def import_data():
             opt.base_rate = o_data.get('base_rate', 2.0)
             opt.total_coins = o_data.get('total_coins', 0)
         db.session.commit()
+        users_by_id = {u.id: u for u in User.query.all()}
         bets_by_id = {b.id: b for b in Bet.query.all()}
         for b_data in data.get('bets', []):
+            # 跳过孤儿投注(引用的题目/选项/用户已不存在)
+            if b_data.get('question_id') not in questions_by_id or b_data.get('option_id') not in options_by_id \
+                    or (b_data.get('user_id') and b_data['user_id'] not in users_by_id):
+                skipped.append(f"投注{b_data['id']}引用的对象已不存在(题目{b_data.get('question_id')})")
+                continue
             bet = bets_by_id.get(b_data['id'])
             if not bet:
                 bet = Bet(id=b_data['id'])
@@ -1113,8 +1130,12 @@ def import_data():
             bet.option_id = b_data.get('option_id')
             bet.coins = b_data.get('coins', 0)
         db.session.commit()
+        comps_all = {c.id for c in Competition.query.all()}
         prizes_by_id = {p.id: p for p in Prize.query.all()}
         for p_data in data.get('prizes', []):
+            if p_data.get('competition_id') and p_data['competition_id'] not in comps_all:
+                skipped.append(f"奖品{p_data['id']}引用了不存在的赛事{p_data['competition_id']}")
+                continue
             prize = prizes_by_id.get(p_data['id'])
             if not prize:
                 prize = Prize(id=p_data['id'])
@@ -1145,9 +1166,13 @@ def import_data():
             ls.creator_id = l_data.get('creator_id')
             ls.sort_order = l_data.get('sort_order', 0)
         db.session.commit()
+        teams_all = {t.id for t in Team.query.all()}
         lb_by_key = {(e.competition_id, e.team_id): e for e in LeaderboardEntry.query.all()}
         for e_data in data.get('leaderboard', []):
             key = (e_data.get('competition_id'), e_data.get('team_id'))
+            if key[1] not in teams_all or (key[0] and key[0] not in comps_all):
+                skipped.append(f"积分条目{e_data['id']}引用的队伍或赛事不存在")
+                continue
             e = lb_by_key.get(key)
             if not e:
                 e = LeaderboardEntry(id=e_data['id'], competition_id=key[0], team_id=key[1])
@@ -1162,6 +1187,9 @@ def import_data():
         db.session.commit()
         scores_by_id = {s.id: s for s in MatchScore.query.all()}
         for s_data in data.get('match_scores', []):
+            if (s_data.get('home_team_id') not in teams_all or s_data.get('away_team_id') not in teams_all):
+                skipped.append(f"比分{s_data['id']}引用的队伍不存在")
+                continue
             s = scores_by_id.get(s_data['id'])
             if not s:
                 s = MatchScore(id=s_data['id'])
@@ -1193,7 +1221,7 @@ def import_data():
                     "GREATEST((SELECT COALESCE(MAX(id), 0) FROM " + table + "), 1))"
                 ))
             db.session.commit()
-        return jsonify({'message': '导入成功'})
+        return jsonify({'message': '导入成功', 'skipped_count': len(skipped), 'skipped': skipped[:20]})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
