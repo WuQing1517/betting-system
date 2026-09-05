@@ -3,6 +3,28 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+def resolve_image_url(url):
+    """图片地址解析: data URI或http(s)完整地址原样返回, 相对路径拼接服务器地址"""
+    if not url:
+        return ''
+    if url.startswith(('http://', 'https://', 'data:')):
+        return url
+    from config import Config
+    return Config.SERVER_URL + url
+
+def detect_image_mime(data, ext):
+    """按文件头识别图片真实类型, 识别不出时回退扩展名 (扩展名经常与实际内容不符)"""
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'image/png'
+    if data[:3] == b'\xff\xd8\xff':
+        return 'image/jpeg'
+    if data[:4] == b'GIF8':
+        return 'image/gif'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return {'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif', '.webp': 'image/webp'}.get(ext, 'image/png')
+
 class User(db.Model):
     __tablename__ = 'users'
 

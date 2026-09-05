@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify, current_app
 from config import Config
-from models import db, User
+from models import db, User, resolve_image_url, detect_image_mime
+import base64
 import os
 import uuid
 
@@ -17,7 +18,7 @@ def get_profile():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    avatar_url = user.avatar_url if user.avatar_url and user.avatar_url.startswith('http') else (Config.SERVER_URL + user.avatar_url if user.avatar_url else '')
+    avatar_url = resolve_image_url(user.avatar_url)
 
     return jsonify({
         'user_id': user.id,
@@ -102,18 +103,15 @@ def upload_avatar():
     if ext not in allowed_extensions:
         return jsonify({'error': 'Invalid file type'}), 400
 
-    filename = uuid.uuid4().hex + ext
-    upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
-
-    file.save(filepath)
-
-    url = '/uploads/avatars/' + filename
-    user.avatar_url = Config.SERVER_URL + url
+    # 图片以base64存入数据库, 跟随数据库持久化(不写本地磁盘)
+    data = file.read()
+    if len(data) > 300 * 1024:
+        return jsonify({'error': '图片大小不能超过300KB'}), 400
+    mime = detect_image_mime(data, ext)
+    user.avatar_url = 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode())
     db.session.commit()
 
-    response = jsonify({'url': url})
+    response = jsonify({'url': user.avatar_url})
     response.headers['Content-Type'] = 'application/json'
     return response
 

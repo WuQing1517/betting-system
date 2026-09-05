@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
-from models import db, User, Team, Competition, Match, Question, Option, Bet
+from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, detect_image_mime
 from config import Config
 from functools import wraps
+import base64
 import os
 import uuid
 
@@ -240,17 +241,15 @@ def upload_team_logo(team_id):
     if ext not in allowed_extensions:
         return jsonify({'error': '文文件类型不支持'}), 400
 
-    filename = uuid.uuid4().hex + ext
-    upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'teams')
-    os.makedirs(upload_folder, exist_ok=True)
-    filepath = os.path.join(upload_folder, filename)
-    file.save(filepath)
-
-    url = '/uploads/teams/' + filename
-    team.logo_url = Config.SERVER_URL + url
+    # 图片以base64存入数据库, 跟随数据库持久化(不写本地磁盘)
+    data = file.read()
+    if len(data) > 300 * 1024:
+        return jsonify({'error': '图片大小不能超过300KB'}), 400
+    mime = detect_image_mime(data, ext)
+    team.logo_url = 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode())
     db.session.commit()
 
-    return jsonify({'url': url})
+    return jsonify({'url': team.logo_url})
 
 @admin_bp.route('/teams/<int:team_id>', methods=['PUT'])
 @admin_required
