@@ -954,7 +954,9 @@ def import_data():
         if importer_openid:
             imp = users_by_openid.get(importer_openid)
             if imp is None:
-                imp = User(openid=importer_openid, nickname='admin', coins=0,
+                # 显式分配不冲突的id: 序列可能因历史导入错位, 自动取值会撞已有主键
+                max_id = max([u_data['id'] for u_data in data.get('users', [])] or [0])
+                imp = User(id=max_id + 1, openid=importer_openid, nickname='admin', coins=0,
                            is_admin=True, is_superadmin=True, rules_viewed=True)
                 db.session.add(imp)
                 users_by_openid[importer_openid] = imp
