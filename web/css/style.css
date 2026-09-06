@@ -95,9 +95,10 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .edit-form { margin: 0 16px; padding: 16px; background: #fff; border-radius: 14px; }
 
 /* 管理后台 */
-.admin-tabs { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 2px; background: rgba(255,255,255,0.55); backdrop-filter: saturate(180%) blur(28px); -webkit-backdrop-filter: saturate(180%) blur(28px); border: 0.5px solid rgba(255,255,255,0.65); border-radius: 26px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 6px 10px; z-index: 101; }
+.admin-tabs { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; width: min(430px, calc(100% - 28px)); background: rgba(255,255,255,0.55); backdrop-filter: saturate(180%) blur(28px); -webkit-backdrop-filter: saturate(180%) blur(28px); border: 0.5px solid rgba(255,255,255,0.65); border-radius: 26px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 8px 12px; z-index: 101; }
+.admin-tabs .tab { flex: 1; }
 #adminContent { padding-bottom: 96px; }
-.admin-tabs .tab { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 12px; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
+.admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
 .admin-tabs .tab i { font-size: 21px; line-height: 1; transition: all 0.25s; }
 .admin-tabs .tab .tab-label { display: none; font-size: 10px; font-weight: 600; white-space: nowrap; }
 .admin-tabs .tab.active { color: #3478f6; background: rgba(52,120,246,0.1); }
@@ -174,6 +175,13 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 
 /* 比赛分隔 */
 .match-divider { padding: 8px 16px; font-size: 13px; color: #3478f6; font-weight: 600; background: #f7f8fa; border-left: 3px solid #3478f6; margin: 8px 16px 4px; border-radius: 0 8px 8px 0; }
+
+/* 个人中心功能按钮 */
+.pf-btn { display:flex; align-items:center; gap:12px; width:100%; padding:15px 16px; background:#fff; border:none; border-radius:14px; font-size:15px; font-weight:500; color:#1a1a1a; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition: transform 0.15s; -webkit-tap-highlight-color:transparent; }
+.pf-btn i:first-child { font-size:20px; color:#3478f6; }
+.pf-btn span { flex:1; text-align:left; }
+.pf-btn i:last-child { font-size:18px; color:#c0c4cc; }
+.pf-btn:active { transform: scale(0.98); }
 
 /* 投注页option */
 .option-item { display: flex; justify-content: space-between; align-items: center; margin: 0 16px 8px; padding: 12px 14px; background: #fff; border-radius: 14px; }
