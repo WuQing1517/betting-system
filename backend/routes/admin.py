@@ -822,19 +822,21 @@ def settle_bets(question_id, correct_option_id):
 @admin_bp.route('/stats', methods=['GET'])
 @admin_required
 def get_stats():
-    """获取统计数据"""
-    total_users = User.query.count()
-    total_matches = Match.query.count()
-    total_questions = Question.query.count()
-    total_bets = Bet.query.count()
-    total_coins_bet = db.session.query(db.func.sum(Bet.coins)).scalar() or 0
-    
+    """获取统计数据 (单次往返: 跨洋数据库逐条COUNT会拖慢数秒)"""
+    from sqlalchemy import text
+    row = db.session.execute(text(
+        "SELECT (SELECT COUNT(*) FROM users) AS total_users, "
+        "(SELECT COUNT(*) FROM matches) AS total_matches, "
+        "(SELECT COUNT(*) FROM questions) AS total_questions, "
+        "(SELECT COUNT(*) FROM bets) AS total_bets, "
+        "(SELECT COALESCE(SUM(coins), 0) FROM bets) AS total_coins_bet"
+    )).one()
     return jsonify({
-        'total_users': total_users,
-        'total_matches': total_matches,
-        'total_questions': total_questions,
-        'total_bets': total_bets,
-        'total_coins_bet': total_coins_bet
+        'total_users': row.total_users,
+        'total_matches': row.total_matches,
+        'total_questions': row.total_questions,
+        'total_bets': row.total_bets,
+        'total_coins_bet': int(row.total_coins_bet or 0)
     })
 
 # 奖品管理
