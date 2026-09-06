@@ -93,7 +93,7 @@
         <div style="height:60px"></div>
     </div>
 
-    <div id="bottomBar" style="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:300px;background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border:0.5px solid rgba(0,0,0,0.06);border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,0.14);display:none;z-index:100;padding:4px 12px">
+    <div id="bottomBar" style="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:290px;background:rgba(255,255,255,0.55);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);border:0.5px solid rgba(255,255,255,0.65);border-radius:26px;box-shadow:0 8px 32px rgba(0,0,0,0.16);display:none;z-index:100;padding:5px 10px">
         <div class="bottom-bar-item" onclick="bottomTabClick('home',this)"><i class="ri-home-5-line"></i><span>首页</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('leaderboard',this)"><i class="ri-trophy-line"></i><span>排行榜</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('profile',this)"><i class="ri-user-3-line"></i><span>个人中心</span></div>
@@ -155,35 +155,12 @@
                 <span class="coins-label">币</span>
             </div>
         </div>
-        <div class="section-title">编辑资料</div>
-        <div class="edit-form">
-            <div class="form-group">
-                <label>昵称</label>
-                <input type="text" id="editNickname" placeholder="请输入昵称">
-            </div>
-            <div class="form-group">
-                <label>CN</label>
-                <input type="text" id="editCn" placeholder="请输入CN">
-            </div>
-            <button class="btn-primary" onclick="saveProfile()">保存</button>
+        <div class="section-title">账号设置</div>
+        <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px">
+            <button class="pf-btn" onclick="showEditProfileDialog()"><i class="ri-user-settings-line"></i><span>编辑资料</span><i class="ri-arrow-right-s-line"></i></button>
+            <button class="pf-btn" onclick="showChangePasswordDialog()"><i class="ri-lock-password-line"></i><span>修改密码</span><i class="ri-arrow-right-s-line"></i></button>
         </div>
-        <div class="section-title">修改密码</div>
-        <div class="edit-form">
-            <div class="form-group">
-                <label>原密码</label>
-                <input type="password" id="oldPassword" placeholder="请输入原密码">
-            </div>
-            <div class="form-group">
-                <label>新密码</label>
-                <input type="password" id="newPassword" placeholder="请输入新密码">
-            </div>
-            <div class="form-group">
-                <label>确认新密码</label>
-                <input type="password" id="confirmPassword" placeholder="请再次输入新密码">
-            </div>
-            <button class="btn-primary" onclick="changePassword()">修改密码</button>
-        </div>
-        <div style="height:60px"></div>
+        <div style="height:70px"></div>
     </div>
 
     <div id="adminPage" class="page">
