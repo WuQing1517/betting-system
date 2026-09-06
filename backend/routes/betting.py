@@ -444,8 +444,12 @@ def set_team_filter(competition_id):
         i = parse_user_id(t)
         if i:
             ids.append(i)
+    # 只保留真实存在的队伍id, 避免外键错误
+    from models import Team
+    valid_ids = {t.id for t in Team.query.all()}
+    ids = [i for i in dict.fromkeys(ids) if i in valid_ids]
     StandingsTeamFilter.query.filter_by(competition_id=competition_id).delete()
-    for tid in dict.fromkeys(ids):
+    for tid in ids:
         db.session.add(StandingsTeamFilter(competition_id=competition_id, team_id=tid))
     db.session.commit()
     return jsonify({'message': 'OK', 'team_ids': ids})
