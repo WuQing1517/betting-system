@@ -3,3 +3,4 @@ backend/__pycache__/
 backend/uploads/
 .vscode/
 *.pyc
+backend/*backup*.json
