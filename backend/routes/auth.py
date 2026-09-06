@@ -146,13 +146,27 @@ def admin_get_users():
 
 @auth_bp.route('/admin/user/<int:user_id>/admin', methods=['PUT'])
 def admin_toggle_admin(user_id):
-    """设置/取消管理员权限"""
+    """设置/取消管理员权限 (is_superadmin仅超级管理员可调整)"""
     data = request.get_json()
-    is_admin = data.get('is_admin', False)
+    is_admin = bool(data.get('is_admin', False))
 
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
+
+    # 超管标识调整: 仅超级管理员可操作, 且不能自降/清空最后一名
+    if 'is_superadmin' in data:
+        uid = request.headers.get('X-User-Id')
+        operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
+        if not operator or not operator.is_superadmin:
+            return jsonify({'error': '需要超级管理员权限'}), 403
+        if not data['is_superadmin']:
+            if user.id == operator.id:
+                return jsonify({'error': '不能取消自己的超级管理员'}), 400
+            others = User.query.filter(User.is_superadmin == True, User.id != user.id).count()
+            if others == 0:
+                return jsonify({'error': '至少保留一名超级管理员'}), 400
+            user.is_superadmin = False
 
     user.is_admin = is_admin
     db.session.commit()
