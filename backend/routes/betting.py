@@ -237,10 +237,13 @@ def get_question_bets(question_id):
     if not question:
         return jsonify({'error': 'Question not found'}), 404
     bets = Bet.query.filter_by(question_id=question_id).all()
+    # 预加载用户与选项, 避免逐行查询(跨洋数据库会拖慢数秒)
+    users_by_id = {u.id: u for u in User.query.filter(User.id.in_([b.user_id for b in bets])).all()} if bets else {}
+    options_by_id = {o.id: o for o in Option.query.filter(Option.id.in_([b.option_id for b in bets])).all()} if bets else {}
     result = []
     for b in bets:
-        user = User.query.get(b.user_id)
-        option = Option.query.get(b.option_id)
+        user = users_by_id.get(b.user_id)
+        option = options_by_id.get(b.option_id)
         result.append({
             'user_id': b.user_id,
             'nickname': user.nickname if user else 'Unknown',
@@ -256,13 +259,12 @@ def get_pending_coins():
     user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
-    bets = Bet.query.filter(Bet.user_id == user_id).all()
-    pending = 0
-    for b in bets:
-        q = Question.query.get(b.question_id)
-        if q and q.status in ['active', 'closed']:
-            pending += b.coins
-    return jsonify({'pending_coins': pending})
+    # 单次JOIN聚合(逐条查询在跨洋数据库上会拖到十几秒, 堵死唯一的worker)
+    from sqlalchemy import func
+    total = db.session.query(func.coalesce(func.sum(Bet.coins), 0)).join(
+        Question, Question.id == Bet.question_id
+    ).filter(Bet.user_id == user_id, Question.status.in_(['active', 'closed'])).scalar()
+    return jsonify({'pending_coins': int(total or 0)})
 
 @betting_bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
