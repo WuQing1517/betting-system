@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, json
 from config import Config
 from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url
 from datetime import date, timedelta
@@ -35,6 +35,46 @@ def get_competition_matches(competition_id):
         'home_logo': resolve_image_url(team_logos.get(m.home_team)),
         'away_logo': resolve_image_url(team_logos.get(m.away_team))
     } for m in matches])
+
+@betting_bp.route('/debug/full-steps', methods=['GET'])
+def debug_full_steps():
+    """临时调试: 分步执行/full流程, 报告失败阶段 (用后即删)"""
+    out = {}
+    try:
+        competition = Competition.query.get(1)
+        out['1_赛事'] = competition.name if competition else 'None'
+        matches = Match.query.filter_by(competition_id=1).order_by(Match.week_number, Match.day_number, Match.match_number).all()
+        out['2_比赛数'] = len(matches)
+        teams = Team.query.all()
+        team_logos = {t.name: t.logo_url for t in teams}
+        out['3_队伍数'] = len(teams)
+        logos = [make_logo_safe(team_logos.get(m.home_team)) for m in matches[:3]]
+        out['4_样例logo'] = [l[:30] if l else l for l in logos]
+        match_ids = [m.id for m in matches]
+        questions = Question.query.filter(Question.match_id.in_(match_ids)).all()
+        out['5_题目数'] = len(questions)
+        question_ids = [q.id for q in questions]
+        options = Option.query.filter(Option.question_id.in_(question_ids)).all()
+        out['6_选项数'] = len(options)
+        bets = Bet.query.filter(Bet.question_id.in_(question_ids)).all()
+        out['7_投注数'] = len(bets)
+        sd = competition.start_date
+        out['8_起始日期'] = str(sd)
+        from datetime import timedelta
+        dates = [(m.week_number, m.day_number, (sd + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))).isoformat() if sd else None) for m in matches[:3]]
+        out['9_日期计算'] = dates
+        out['10_json序列化'] = len(json.dumps({'ok': True}))
+    except Exception as e:
+        import traceback
+        out['错误'] = traceback.format_exc()[-800:]
+    return jsonify(out)
+
+def make_logo_safe(url):
+    from routes.betting import resolve_image_url
+    try:
+        return resolve_image_url(url)
+    except Exception as e:
+        return 'ERR:' + str(e)
 
 @betting_bp.route('/competitions/<int:competition_id>/full', methods=['GET'])
 def get_competition_full(competition_id):
