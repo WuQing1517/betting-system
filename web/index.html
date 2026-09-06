@@ -125,7 +125,10 @@
     <div id="leaderboardPage" class="page">
         <nav class="navbar">
             <span class="nav-title">排行榜</span>
-            <span></span>
+            <div class="nav-right">
+                <span id="navAdminLb" class="nav-link" onclick="showAdmin()" style="display:none"><i class="ri-dashboard-3-line" style="font-size:20px;color:#3478f6"></i></span>
+                <span class="nav-link" onclick="switchAccount()" style="color:#e74c3c"><i class="ri-logout-box-r-line" style="font-size:20px"></i></span>
+            </div>
         </nav>
         <div style="height:10px"></div>
         <div id="leaderboardList"></div>
@@ -135,7 +138,10 @@
     <div id="profilePage" class="page">
         <nav class="navbar">
             <span class="nav-title">个人中心</span>
-            <span></span>
+            <div class="nav-right">
+                <span id="navAdminPf" class="nav-link" onclick="showAdmin()" style="display:none"><i class="ri-dashboard-3-line" style="font-size:20px;color:#3478f6"></i></span>
+                <span class="nav-link" onclick="switchAccount()" style="color:#e74c3c"><i class="ri-logout-box-r-line" style="font-size:20px"></i></span>
+            </div>
         </nav>
         <div class="profile-card" onclick="uploadAvatar()" style="cursor:pointer">
             <div class="profile-avatar" id="profileAvatar">?</div>

@@ -353,6 +353,10 @@ function updateUserInfo() {
         document.getElementById('navAdmin').style.display = 'inline';
         var btnScore = document.getElementById('btnMatchScore');
         if (btnScore) btnScore.style.display = 'flex';
+        ['navAdminLb', 'navAdminPf'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'inline';
+        });
     }
     loadPendingCoins();
 }
