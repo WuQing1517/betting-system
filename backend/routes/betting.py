@@ -473,7 +473,7 @@ def get_competition_leaderboard(competition_id):
 
 def _require_admin():
     user_id = parse_user_id(request.headers.get('X-User-Id'))
-    user = User.query.get(int(user_id)) if user_id and user_id.isdigit() else None
+    user = User.query.get(user_id) if user_id else None
     if not user or not user.is_admin:
         return None
     return user
