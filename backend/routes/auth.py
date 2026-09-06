@@ -149,28 +149,31 @@ def admin_get_users():
 
 @auth_bp.route('/admin/user/<int:user_id>/admin', methods=['PUT'])
 def admin_toggle_admin(user_id):
-    """设置/取消管理员权限 (is_superadmin仅超级管理员可调整)"""
+    """用户管理开关 (字段可选, 传哪个改哪个): is_admin / is_superadmin / is_debug"""
     data = request.get_json()
-    is_admin = bool(data.get('is_admin', False))
+    uid = request.headers.get('X-User-Id')
+    operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
 
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
 
+    is_admin_change = 'is_admin' in data
+    super_change = 'is_superadmin' in data
+    debug_change = 'is_debug' in data
+    if not (is_admin_change or super_change or debug_change):
+        return jsonify({'error': '缺少要修改的字段'}), 400
+
     # 调试标签: 仅超级管理员可调整, 不能给自己打
-    if 'is_debug' in data:
-        uid = request.headers.get('X-User-Id')
-        op = User.query.get(int(uid)) if uid and uid.isdigit() else None
-        if not op or not op.is_superadmin:
+    if debug_change:
+        if not operator or not operator.is_superadmin:
             return jsonify({'error': '需要超级管理员权限'}), 403
-        if user.id == op.id:
+        if user.id == operator.id:
             return jsonify({'error': '不能给自己设置调试标签'}), 400
         user.is_debug = bool(data['is_debug'])
 
-    # 超管标识调整: 仅超级管理员可操作, 且不能自降/清空最后一名
-    if 'is_superadmin' in data:
-        uid = request.headers.get('X-User-Id')
-        operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
+    # 超管标识: 仅超级管理员可操作, 不能自降/清空最后一名
+    if super_change:
         if not operator or not operator.is_superadmin:
             return jsonify({'error': '需要超级管理员权限'}), 403
         if not data['is_superadmin']:
@@ -179,9 +182,14 @@ def admin_toggle_admin(user_id):
             others = User.query.filter(User.is_superadmin == True, User.id != user.id).count()
             if others == 0:
                 return jsonify({'error': '至少保留一名超级管理员'}), 400
-            user.is_superadmin = False
+            user.is_superadmin = bool(data['is_superadmin'])
 
-    user.is_admin = is_admin
+    # 管理员开关: 超管或管理员都可操作(出题组工作台原行为)
+    if is_admin_change:
+        if not operator or not (operator.is_superadmin or operator.is_admin):
+            return jsonify({'error': '需要管理员权限'}), 403
+        user.is_admin = bool(data['is_admin'])
+
     db.session.commit()
 
     return jsonify({

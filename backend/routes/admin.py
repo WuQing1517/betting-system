@@ -150,18 +150,15 @@ def update_user_coins(user_id):
 @admin_bp.route('/users/<int:user_id>/admin', methods=['PUT'])
 @superadmin_required
 def toggle_admin(user_id):
-    """设置/取消管理员 (可选传递is_superadmin调整超管标识)"""
+    """用户管理开关 (字段可选, 传哪个改哪个): is_admin / is_superadmin / is_debug"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
 
     data = request.get_json()
     is_admin = data.get('is_admin')
-
-    if is_admin is None:
-        return jsonify({'error': '缺少is_admin参数'}), 400
-
     operator_id = request.headers.get('X-User-Id')
+
     if 'is_superadmin' in data:
         if not data['is_superadmin']:
             if str(user.id) == operator_id:
@@ -171,8 +168,15 @@ def toggle_admin(user_id):
                 return jsonify({'error': '至少保留一名超级管理员'}), 400
             user.is_superadmin = False
 
-    user.is_admin = is_admin
+    if 'is_debug' in data:
+        if str(user.id) == operator_id:
+            return jsonify({'error': '不能给自己设置调试标签'}), 400
+        user.is_debug = bool(data['is_debug'])
+
+    if is_admin is not None:
+        user.is_admin = is_admin
     db.session.commit()
+    return jsonify({'message': 'OK', 'is_admin': user.is_admin, 'is_superadmin': user.is_superadmin, 'is_debug': user.is_debug})
     admin_user = User.query.get(int(request.headers.get('X-User-Id')))
     from routes.betting import log_operation
     log_operation(admin_user.id, '\u8BBE\u7F6E\u7BA1\u7406\u5458' if is_admin else '\u53D6\u6D88\u7BA1\u7406\u5458', f'\u7528\u6237{user.nickname}({user_id})')
