@@ -143,6 +143,7 @@ def admin_get_users():
         'is_admin': u.is_admin,
         'openid': u.openid,
         'is_superadmin': bool(u.is_superadmin),
+        'is_debug': bool(u.is_debug),
         'created_at': u.created_at.isoformat() if u.created_at else None
     } for u in users])
 
