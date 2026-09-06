@@ -93,7 +93,7 @@
         <div style="height:60px"></div>
     </div>
 
-    <div id="bottomBar" style="position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.85);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:0.5px solid rgba(0,0,0,0.06);display:none;z-index:100;padding-bottom:env(safe-area-inset-bottom)">
+    <div id="bottomBar" style="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:300px;background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border:0.5px solid rgba(0,0,0,0.06);border-radius:24px;box-shadow:0 8px 30px rgba(0,0,0,0.14);display:none;z-index:100;padding:4px 12px">
         <div class="bottom-bar-item" onclick="bottomTabClick('home',this)"><i class="ri-home-5-line"></i><span>首页</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('leaderboard',this)"><i class="ri-trophy-line"></i><span>排行榜</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('profile',this)"><i class="ri-user-3-line"></i><span>个人中心</span></div>
