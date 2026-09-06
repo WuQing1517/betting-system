@@ -1829,10 +1829,7 @@ async function toggleAdmin(uid, isA) {
 
 async function toggleDebug(uid, flag) {
     try {
-        var users = await api('/admin/users');
-        var u = null;
-        for (var i = 0; i < users.length; i++) { if (users[i].id === uid) { u = users[i]; break; } }
-        await api('/admin/users/' + uid + '/admin', 'PUT', { is_admin: u ? u.is_admin : false, is_superadmin: false, is_debug: flag });
+        await api('/admin/users/' + uid + '/admin', 'PUT', { is_debug: flag });
         showToast(flag ? '\u5DF2\u8BBE\u4E3A\u8C03\u8BD5\u8D26\u53F7' : '\u5DF2\u53D6\u6D88\u8C03\u8BD5\u6807\u7B7E', 'success');
         loadAdminUsers();
     } catch (e) { showToast(e.message, 'error'); }
