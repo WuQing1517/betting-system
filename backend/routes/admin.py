@@ -150,7 +150,7 @@ def update_user_coins(user_id):
 @admin_bp.route('/users/<int:user_id>/admin', methods=['PUT'])
 @superadmin_required
 def toggle_admin(user_id):
-    """设置/取消管理员"""
+    """设置/取消管理员 (可选传递is_superadmin调整超管标识)"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
@@ -160,6 +160,16 @@ def toggle_admin(user_id):
 
     if is_admin is None:
         return jsonify({'error': '缺少is_admin参数'}), 400
+
+    operator_id = request.headers.get('X-User-Id')
+    if 'is_superadmin' in data:
+        if not data['is_superadmin']:
+            if str(user.id) == operator_id:
+                return jsonify({'error': '不能取消自己的超级管理员'}), 400
+            others = User.query.filter(User.is_superadmin == True, User.id != user.id).count()
+            if others == 0:
+                return jsonify({'error': '至少保留一名超级管理员'}), 400
+            user.is_superadmin = False
 
     user.is_admin = is_admin
     db.session.commit()
