@@ -9,7 +9,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .nav-right { display: flex; gap: 16px; font-size: 14px; }
 .nav-link { cursor: pointer; color: #3478f6; font-weight: 400; }
 .nav-link:hover { opacity: 0.7; }
-.back-btn { cursor: pointer; font-size: 17px; color: #3478f6; font-weight: 400; }
+.back-btn { cursor: pointer; font-size: 26px; color: #1a1a1a; font-weight: 400; display: inline-flex; align-items: center; }
 
 /* 非首页导航栏居中 */
 .navbar-center { justify-content: center; }
