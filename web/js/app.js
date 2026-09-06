@@ -1799,7 +1799,7 @@ async function loadAdminTeams() {
         var h = '<div class="admin-section">';
         h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="addTeam()" title="\u6DFB\u52A0\u961F\u4F0D"><i class="ri-add-circle-line"></i></button>';
         teams.forEach(function(t) {
-            var logoUrl = t.logo_url ? (t.logo_url.startsWith('http') ? t.logo_url : 'http://106.53.67.7' + t.logo_url) : '';
+            var logoUrl = t.logo_url || '';  // 相对地址(/api/img/...或/uploads/...)按当前站点解析, 不再拼接旧域名
             h += '<div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">';
             if (logoUrl) h += '<img src="' + logoUrl + '" style="height:36px;width:36px;object-fit:contain;border-radius:8px;flex-shrink:0">';
             else h += '<div style="height:36px;width:36px;background:#f2f3f5;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#86868b;flex-shrink:0"><i class="ri-team-line"></i></div>';
