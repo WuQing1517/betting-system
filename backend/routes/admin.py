@@ -1193,7 +1193,11 @@ def import_data():
             prize.notes = p_data.get('notes', '')
             prize.creator_id = _int_opt(p_data.get('creator_id'))
         db.session.commit()
-        from models import Livestream, LeaderboardEntry, MatchScore, OperationLog
+        from models import Livestream, LeaderboardEntry, MatchScore, OperationLog, StandingsTeamFilter as _STF
+        _STF.query.delete()
+        for f_data in data.get('team_filter', []):
+            db.session.add(_STF(competition_id=f_data.get('competition_id'), team_id=f_data.get('team_id')))
+        db.session.commit()
         livestreams_by_id = {l.id: l for l in Livestream.query.all()}
         for l_data in data.get('livestreams', []):
             ls = livestreams_by_id.get(l_data['id'])

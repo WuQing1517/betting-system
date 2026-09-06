@@ -426,6 +426,30 @@ def delete_livestream(ls_id):
     return jsonify({'message': 'OK'})
 
 # ========== 积分榜 ==========
+@betting_bp.route('/leaderboard/<int:competition_id>/team-filter', methods=['GET'])
+def get_team_filter(competition_id):
+    from models import StandingsTeamFilter
+    rows = StandingsTeamFilter.query.filter_by(competition_id=competition_id).all()
+    return jsonify({'team_ids': [r.team_id for r in rows]})
+
+@betting_bp.route('/leaderboard/<int:competition_id>/team-filter', methods=['PUT'])
+def set_team_filter(competition_id):
+    """筛选积分榜展示的队伍 (管理员); 筛选列表为空 = 显示全部"""
+    from models import StandingsTeamFilter
+    if not _require_admin():
+        return jsonify({'error': '需要管理员权限'}), 403
+    data = request.get_json()
+    ids = []
+    for t in (data.get('team_ids') or []):
+        i = parse_user_id(t)
+        if i:
+            ids.append(i)
+    StandingsTeamFilter.query.filter_by(competition_id=competition_id).delete()
+    for tid in dict.fromkeys(ids):
+        db.session.add(StandingsTeamFilter(competition_id=competition_id, team_id=tid))
+    db.session.commit()
+    return jsonify({'message': 'OK', 'team_ids': ids})
+
 @betting_bp.route('/leaderboard/<int:competition_id>/team', methods=['GET'])
 def get_competition_leaderboard(competition_id):
     from models import LeaderboardEntry, Team

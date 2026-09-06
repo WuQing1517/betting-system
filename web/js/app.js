@@ -473,6 +473,8 @@ async function loadRecentSchedule() {
 }
 
 // ========== 积分榜 ==========
+var _lbFilterIds = [];
+var _lbAllTeams = [];
 function openLeaderboard() {
     document.getElementById('leaderboardOverlay').style.display = 'flex';
     loadLeaderboardForPopup();
@@ -483,7 +485,8 @@ function closeLeaderboard() {
 }
 
 // 组装弹窗积分榜数据: 有排名数据的按后端排序(含相互战绩)展示, 无比赛数据的队伍附在最后
-function buildLeaderboardView(entries, teams) {
+function buildLeaderboardView(entries, teams, filterIds) {
+    filterIds = filterIds || [];
     var entryMap = {};
     entries.forEach(function(e) { entryMap[e.team_id] = e; });
     var allEntries = [];
@@ -491,6 +494,7 @@ function buildLeaderboardView(entries, teams) {
         var t = null;
         for (var i = 0; i < teams.length; i++) { if (teams[i].id === e.team_id) { t = teams[i]; break; } }
         if (t && t.logo_url) {
+            if (filterIds.length && filterIds.indexOf(e.team_id) < 0) return;
             allEntries.push({
                 team_id: e.team_id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
                 rank: e.rank, prev_rank: e.prev_rank,
@@ -500,6 +504,7 @@ function buildLeaderboardView(entries, teams) {
     });
     teams.forEach(function(t) {
         if (t.logo_url && !entryMap[t.id]) {
+            if (filterIds.length && filterIds.indexOf(t.id) < 0) return;
             allEntries.push({
                 team_id: t.id, team_name: t.name, team_logo: t.logo_url.startsWith('http') ? t.logo_url : ('' + t.logo_url),
                 rank: 0, prev_rank: 0, wins: 0, losses: 0, draws: 0, net_wins: 0
@@ -518,7 +523,10 @@ async function loadLeaderboardForPopup() {
         var activeComp = comps.find(function(c) { return c.status === 'active'; }) || comps[0];
         var entries = await api('/leaderboard/' + activeComp.id + '/team');
         var teams = await api('/teams');
-        var allEntries = buildLeaderboardView(entries, teams);
+        var filterResp = await api('/leaderboard/' + activeComp.id + '/team-filter');
+        _lbFilterIds = filterResp.team_ids || [];
+        _lbAllTeams = teams;
+        var allEntries = buildLeaderboardView(entries, teams, _lbFilterIds);
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
         renderLeaderboard(allEntries, activeComp.id, compOpts);
     } catch (e) {}
@@ -530,6 +538,7 @@ function renderLeaderboard(entries, compId, compOpts) {
     h += '<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">';
     h += '<div id="lbCompSelect" style="flex:1"></div>';
     if (isAdmin) {
+        h += '<button class="admin-btn" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0;margin-right:8px" onclick="showTeamFilterDialog()" title="筛选积分榜队伍"><i class="ri-filter-3-line"></i></button>';
         h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0" onclick="addLBEntry(' + compId + ')" title="\u6DFB\u52A0\u6218\u961F"><i class="ri-add-line"></i></button>';
     }
     h += '</div>';
@@ -568,12 +577,61 @@ function renderLeaderboard(entries, compId, compOpts) {
     }
 }
 
+async function showTeamFilterDialog() {
+    var compId = getMiuiSelectValue('lbCompSelect');
+    if (!compId) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
+    var teams = await api('/teams');
+    var selected = (_lbFilterIds || []).slice();
+    var overlay = document.createElement('div');
+    overlay.id = 'teamFilterOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center';
+    var rows = teams.map(function(t) {
+        var checked = selected.indexOf(t.id) >= 0 ? ' checked' : '';
+        var logo = t.logo_url ? '<img src="' + t.logo_url + '" style="height:26px;width:26px;object-fit:contain;border-radius:6px;background:#f2f3f5">' : '<span style="height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;background:#f2f3f5;border-radius:6px"><i class="ri-team-line"></i></span>';
+        return '<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8f9fa;border-radius:10px;margin-bottom:6px;cursor:pointer">' +
+            '<input type="checkbox" class="tfTeam" value="' + t.id + '"' + checked + ' style="width:18px;height:18px">' + logo +
+            '<span style="font-size:14px;color:#1a1a1a;flex:1">' + t.name + '</span></label>';
+    }).join('');
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:18px;width:88%;max-width:360px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">' +
+        '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u7B5B\u9009\u79EF\u5206\u699C\u961F\u4F0D</div>' +
+        '<div style="font-size:12px;color:#86868b;margin-bottom:10px">\u52FE\u9009\u7684\u961F\u4F0D\u624D\u4F1A\u663E\u793A\u5728\u79EF\u5206\u699C\u5185\uFF1B\u4E00\u4E2A\u90FD\u4E0D\u52FE = \u663E\u793A\u5168\u90E8</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '<button class="admin-btn btn-sm" style="flex:1;padding:8px" onclick="tfSelectAll(true)">\u5168\u9009</button>' +
+        '<button class="admin-btn btn-sm" style="flex:1;padding:8px" onclick="tfSelectAll(false)">\u6E05\u7A7A</button></div>' +
+        '<div id="tfList" style="max-height:46vh;overflow-y:auto">' + rows + '</div>' +
+        '<div style="display:flex;gap:10px;margin-top:12px">' +
+        '<button class="admin-btn" style="flex:1;padding:10px" onclick="document.getElementById(\'teamFilterOverlay\').remove()">\u53D6\u6D88</button>' +
+        '<button class="admin-btn" style="flex:2;padding:10px;background:#3478f6;color:#fff;border:none;border-radius:10px" onclick="tfSave()">\u4FDD\u5B58</button></div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+}
+
+function tfSelectAll(all) {
+    document.querySelectorAll('#tfList .tfTeam').forEach(function(c) { c.checked = all; });
+}
+
+async function tfSave() {
+    var ids = Array.from(document.querySelectorAll('#teamFilterOverlay .tfTeam:checked')).map(function(c) { return parseInt(c.value); });
+    var compId = getMiuiSelectValue('lbCompSelect');
+    if (!compId) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
+    try {
+        await api('/leaderboard/' + compId + '/team-filter', 'PUT', { team_ids: ids });
+        showToast(ids.length ? '\u7B5B\u9009\u5DF2\u4FDD\u5B58\uFF0C\u5171' + ids.length + '\u652F\u961F\u4F0D' : '\u5DF2\u6E05\u9664\u7B5B\u9009\uFF0C\u663E\u793A\u5168\u90E8\u961F\u4F0D', 'success');
+        document.getElementById('teamFilterOverlay').remove();
+        loadLeaderboardByComp(compId);
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+
 async function loadLeaderboardByComp(compId) {
     try {
         var entries = await api('/leaderboard/' + compId + '/team');
         var teams = await api('/teams');
         var comps = await api('/competitions');
-        var allEntries = buildLeaderboardView(entries, teams);
+        var filterResp = await api('/leaderboard/' + compId + '/team-filter');
+        _lbFilterIds = filterResp.team_ids || [];
+        _lbAllTeams = teams;
+        var allEntries = buildLeaderboardView(entries, teams, _lbFilterIds);
         var compOpts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
         renderLeaderboard(allEntries, compId, compOpts);
     } catch (e) {}
