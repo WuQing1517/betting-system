@@ -5,9 +5,11 @@ from config import Config
 
 auth_bp = Blueprint('auth', __name__)
 
+import os
+
 MAIN_ADMIN = {
-    'username': 'admin',
-    'password': 'admin'
+    'username': os.environ.get('ADMIN_USERNAME') or 'admin',
+    'password': os.environ.get('ADMIN_PASSWORD') or 'admin'
 }
 
 def _is_default_superadmin(user):

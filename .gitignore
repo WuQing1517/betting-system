@@ -4,3 +4,4 @@ backend/uploads/
 .vscode/
 *.pyc
 backend/*backup*.json
+backend/pre_*.json
