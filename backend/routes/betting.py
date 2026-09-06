@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify, json
+from flask import Blueprint, request, jsonify, json, Response, redirect
+import base64
 from config import Config
-from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url
+from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, parse_user_id, image_output_url
 from datetime import date, timedelta
 from models import OperationLog
 
@@ -21,72 +22,68 @@ def get_competitions():
 @betting_bp.route('/teams', methods=['GET'])
 def get_teams():
     teams = Team.query.all()
-    return jsonify([{'id': t.id, 'name': t.name, 'logo_url': t.logo_url or ''} for t in teams])
+    return jsonify([{'id': t.id, 'name': t.name, 'logo_url': image_output_url('teams', t.id, t.logo_url)} for t in teams])
 
 @betting_bp.route('/competitions/<int:competition_id>/matches', methods=['GET'])
 def get_competition_matches(competition_id):
     matches = Match.query.filter_by(competition_id=competition_id).order_by(Match.week_number, Match.day_number, Match.match_number).all()
     teams = Team.query.all()
-    team_logos = {t.name: t.logo_url for t in teams}
+    team_logos = {t.name: t for t in teams}
+
+    def logo_of(name):
+        t = team_logos.get(name)
+        return image_output_url('teams', t.id, t.logo_url) if t else ''
+
     return jsonify([{
         'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id,
         'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number,
         'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status,
-        'home_logo': resolve_image_url(team_logos.get(m.home_team)),
-        'away_logo': resolve_image_url(team_logos.get(m.away_team))
+        'home_logo': logo_of(m.home_team),
+        'away_logo': logo_of(m.away_team)
     } for m in matches])
 
-@betting_bp.route('/debug/full-steps', methods=['GET'])
-def debug_full_steps():
-    """临时调试: 分步执行/full流程, 报告失败阶段 (用后即删)"""
-    out = {}
-    try:
-        competition = Competition.query.get(1)
-        out['1_赛事'] = competition.name if competition else 'None'
-        matches = Match.query.filter_by(competition_id=1).order_by(Match.week_number, Match.day_number, Match.match_number).all()
-        out['2_比赛数'] = len(matches)
-        teams = Team.query.all()
-        team_logos = {t.name: t.logo_url for t in teams}
-        out['3_队伍数'] = len(teams)
-        logos = [make_logo_safe(team_logos.get(m.home_team)) for m in matches[:3]]
-        out['4_样例logo'] = [l[:30] if l else l for l in logos]
-        match_ids = [m.id for m in matches]
-        questions = Question.query.filter(Question.match_id.in_(match_ids)).all()
-        out['5_题目数'] = len(questions)
-        question_ids = [q.id for q in questions]
-        options = Option.query.filter(Option.question_id.in_(question_ids)).all()
-        out['6_选项数'] = len(options)
-        bets = Bet.query.filter(Bet.question_id.in_(question_ids)).all()
-        out['7_投注数'] = len(bets)
-        sd = competition.start_date
-        out['8_起始日期'] = str(sd)
-        from datetime import timedelta
-        dates = [(m.week_number, m.day_number, (sd + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))).isoformat() if sd else None) for m in matches[:3]]
-        out['9_日期计算'] = dates
-        out['10_json序列化'] = len(json.dumps({'ok': True}))
-    except Exception as e:
-        import traceback
-        out['错误'] = traceback.format_exc()[-800:]
-    return jsonify(out)
+def _serve_data_uri_image(url):
+    """base64图片解码输出(带浏览器缓存); 非data地址跳转原目标"""
+    if url and url.startswith('data:'):
+        try:
+            header, b64 = url.split(',', 1)
+            mime = header.split(':')[1].split(';')[0]
+            resp = Response(base64.b64decode(b64), mimetype=mime)
+            resp.headers['Cache-Control'] = 'public, max-age=86400'
+            return resp
+        except Exception:
+            pass
+    if url and url.startswith(('http://', 'https://')):
+        return redirect(url)
+    if url:
+        return redirect(resolve_image_url(url))
+    return jsonify({'error': 'No image'}), 404
 
-def make_logo_safe(url):
-    from routes.betting import resolve_image_url
-    try:
-        return resolve_image_url(url)
-    except Exception as e:
-        return 'ERR:' + str(e)
+@betting_bp.route('/img/teams/<int:team_id>')
+def team_image(team_id):
+    team = db.session.get(Team, team_id)
+    if not team or not team.logo_url:
+        return jsonify({'error': 'No image'}), 404
+    return _serve_data_uri_image(team.logo_url)
+
+@betting_bp.route('/img/users/<int:user_id>')
+def user_image(user_id):
+    user = db.session.get(User, user_id)
+    if not user or not user.avatar_url:
+        return jsonify({'error': 'No image'}), 404
+    return _serve_data_uri_image(user.avatar_url)
 
 @betting_bp.route('/competitions/<int:competition_id>/full', methods=['GET'])
 def get_competition_full(competition_id):
     competition = Competition.query.get(competition_id)
     if not competition:
         return jsonify({'error': 'Competition not found'}), 404
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     matches = Match.query.filter_by(competition_id=competition_id).order_by(Match.week_number, Match.day_number, Match.match_number).all()
     teams = Team.query.all()
-    team_logos = {t.name: t.logo_url for t in teams}
-    def make_logo(url):
-        return resolve_image_url(url)
+    team_logos = {t.name: t for t in teams}
+    def make_logo(t):
+        return image_output_url('teams', t.id, t.logo_url) if t else ''
     weekday_names = ['\u5468\u4E00', '\u5468\u4E8C', '\u5468\u4E09', '\u5468\u56DB', '\u5468\u4E94', '\u5468\u516D', '\u5468\u65E5']
     match_ids = [m.id for m in matches]
     all_questions = Question.query.filter(Question.match_id.in_(match_ids)).all() if match_ids else []
@@ -136,7 +133,7 @@ def get_match(match_code):
     match = Match.query.filter_by(match_code=match_code).first()
     if not match:
         return jsonify({'error': 'Match not found'}), 404
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     questions = Question.query.filter_by(match_id=match.id).all()
     question_ids = [q.id for q in questions]
     all_options = Option.query.filter(Option.question_id.in_(question_ids)).all() if question_ids else []
@@ -167,7 +164,7 @@ def get_question(question_code):
     question = Question.query.filter_by(question_code=question_code).first()
     if not question:
         return jsonify({'error': 'Question not found'}), 404
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     options = Option.query.filter_by(question_id=question.id).all()
     total_coins = sum(o.total_coins for o in options)
     options_data = []
@@ -183,7 +180,7 @@ def get_question(question_code):
 
 @betting_bp.route('/bets', methods=['POST'])
 def place_bet():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
     user = User.query.get(user_id)
@@ -256,7 +253,7 @@ def get_question_bets(question_id):
 
 @betting_bp.route('/pending-coins', methods=['GET'])
 def get_pending_coins():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
     bets = Bet.query.filter(Bet.user_id == user_id).all()
@@ -270,7 +267,7 @@ def get_pending_coins():
 @betting_bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
     users = User.query.order_by(User.coins.desc()).limit(100).all()
-    return jsonify([{'rank': i + 1, 'user_id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'avatar_url': resolve_image_url(u.avatar_url)} for i, u in enumerate(users)])
+    return jsonify([{'rank': i + 1, 'user_id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'avatar_url': image_output_url('users', u.id, u.avatar_url)} for i, u in enumerate(users)])
 
 @betting_bp.route('/prizes', methods=['GET'])
 def get_prizes():
@@ -370,7 +367,7 @@ def get_livestreams():
 @betting_bp.route('/admin/livestreams', methods=['POST'])
 def create_livestream():
     from models import Livestream, db
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     user = User.query.get(int(user_id)) if user_id else None
     if not user or not user.is_admin:
         return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
@@ -394,7 +391,7 @@ def create_livestream():
 @betting_bp.route('/admin/livestreams/<int:ls_id>', methods=['PUT'])
 def update_livestream(ls_id):
     from models import Livestream, db
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     user = User.query.get(int(user_id)) if user_id else None
     if not user or not user.is_admin:
         return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
@@ -415,7 +412,7 @@ def update_livestream(ls_id):
 @betting_bp.route('/admin/livestreams/<int:ls_id>', methods=['DELETE'])
 def delete_livestream(ls_id):
     from models import Livestream, db
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     user = User.query.get(int(user_id)) if user_id else None
     if not user or not user.is_admin:
         return jsonify({'error': '\u9700\u8981\u7BA1\u7406\u5458\u6743\u9650'}), 403
@@ -437,7 +434,7 @@ def get_competition_leaderboard(competition_id):
         result.append({
             'id': e.id, 'team_id': e.team_id,
             'team_name': team.name if team else '',
-            'team_logo': resolve_image_url(team.logo_url),
+            'team_logo': image_output_url('teams', team.id, team.logo_url) if team else '',
             'rank': e.rank, 'prev_rank': e.prev_rank,
             'wins': e.wins, 'losses': e.losses,
             'draws': e.draws, 'net_wins': e.net_wins
@@ -445,7 +442,7 @@ def get_competition_leaderboard(competition_id):
     return jsonify(result)
 
 def _require_admin():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     user = User.query.get(int(user_id)) if user_id and user_id.isdigit() else None
     if not user or not user.is_admin:
         return None

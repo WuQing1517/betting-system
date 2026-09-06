@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify, current_app
 from config import Config
-from models import db, User, resolve_image_url, detect_image_mime
+from models import db, User, resolve_image_url, detect_image_mime, parse_user_id, image_output_url
 import base64
 import os
 import uuid
@@ -10,7 +10,7 @@ user_bp = Blueprint('user', __name__)
 
 @user_bp.route('/user/profile', methods=['GET'])
 def get_profile():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 
@@ -18,7 +18,7 @@ def get_profile():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    avatar_url = resolve_image_url(user.avatar_url)
+    avatar_url = image_output_url('users', user.id, user.avatar_url)
 
     return jsonify({
         'user_id': user.id,
@@ -35,7 +35,7 @@ def get_profile():
 
 @user_bp.route('/user/profile', methods=['PUT'])
 def update_profile():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 
@@ -59,7 +59,7 @@ def update_profile():
 
 @user_bp.route('/user/password', methods=['PUT'])
 def change_password():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 
@@ -83,7 +83,7 @@ def change_password():
 
 @user_bp.route('/user/avatar', methods=['POST'])
 def upload_avatar():
-    user_id = request.headers.get('X-User-Id') or request.form.get('user_id')
+    user_id = parse_user_id(request.headers.get('X-User-Id')) or parse_user_id(request.form.get('user_id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 
@@ -111,13 +111,13 @@ def upload_avatar():
     user.avatar_url = 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode())
     db.session.commit()
 
-    response = jsonify({'url': user.avatar_url})
+    response = jsonify({'url': f'/api/img/users/{user.id}'})
     response.headers['Content-Type'] = 'application/json'
     return response
 
 @user_bp.route('/user/rules-viewed', methods=['PUT'])
 def mark_rules_viewed():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 
@@ -130,7 +130,7 @@ def mark_rules_viewed():
 
 @user_bp.route('/user/coin-history', methods=['GET'])
 def get_coin_history():
-    user_id = request.headers.get('X-User-Id')
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
 

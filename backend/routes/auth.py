@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify
-from models import db, User, resolve_image_url
+from models import db, User, resolve_image_url, image_output_url
 from config import Config
 
 auth_bp = Blueprint('auth', __name__)
@@ -36,7 +36,7 @@ def dev_login():
     if user.password != password:
         return jsonify({'error': '密码码错误误'}), 401
 
-    avatar_url = resolve_image_url(user.avatar_url)
+    avatar_url = image_output_url('users', user.id, user.avatar_url)
 
     return jsonify({
         'user_id': user.id,
@@ -78,7 +78,7 @@ def dev_register():
     db.session.add(user)
     db.session.commit()
 
-    avatar_url = resolve_image_url(user.avatar_url)
+    avatar_url = image_output_url('users', user.id, user.avatar_url)
 
     return jsonify({
         'user_id': user.id,

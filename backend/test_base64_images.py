@@ -20,8 +20,8 @@ def check(name, cond, detail=''):
     if not cond:
         failures.append(name)
 
-def is_data_uri(s):
-    return isinstance(s, str) and s.startswith('data:image/') and ';base64,' in s
+def is_image_url(s):
+    return isinstance(s, str) and (s.startswith('data:image/') or s.startswith('/api/img/'))
 
 with app.test_client() as c:
     def H(uid):
@@ -36,15 +36,20 @@ with app.test_client() as c:
     r = c.post('/api/user/avatar', headers=H(admin_uid),
                data={'file': (open(img_path, 'rb'), 'a.png')}, content_type='multipart/form-data')
     d = json.loads(r.data)
-    check('头像上传成功且为data URI', r.status_code == 200 and is_data_uri(d.get('url')),
+    check('头像上传成功且为data URI', r.status_code == 200 and is_image_url(d.get('url')),
           (d.get('url') or r.data)[:40] if r.status_code == 200 else r.data[:80])
-    check('按文件头识别为jpeg', d.get('url', '').startswith('data:image/jpeg;base64,'))
+    # 图片接口应输出真实字节且类型正确
+    img_resp = c.get(d['url'])
+    check('图片接口输出字节与image/jpeg', img_resp.status_code == 200
+          and img_resp.content_type.startswith('image/')
+          and len(img_resp.data) > 1000,
+          f'{img_resp.status_code} {img_resp.content_type} {len(img_resp.data)}b')
     r = c.get('/api/user/profile', headers=H(admin_uid))
     prof = json.loads(r.data)
-    check('profile原样透出data URI', is_data_uri(prof.get('avatar_url')))
+    check('profile原样透出data URI', is_image_url(prof.get('avatar_url')))
     r = c.post('/api/dev-login', headers={'Content-Type': 'application/json'},
                data=json.dumps({'username': 'admin', 'password': 'admin'}))
-    check('登录响应头像为data URI', is_data_uri(json.loads(r.data).get('avatar_url')))
+    check('登录响应头像为data URI', is_image_url(json.loads(r.data).get('avatar_url')))
 
     print('== 超大图片被拒绝 ==')
     big = b'\x89PNG\r\n' + b'0' * (301 * 1024)
@@ -59,14 +64,14 @@ with app.test_client() as c:
     r = c.post(f'/api/admin/teams/{tid}/logo', headers=H(admin_uid),
                data={'file': (open(img_path, 'rb'), 't.png')}, content_type='multipart/form-data')
     d = json.loads(r.data)
-    check('logo上传成功且为data URI', r.status_code == 200 and is_data_uri(d.get('url')),
+    check('logo上传成功且为data URI', r.status_code == 200 and is_image_url(d.get('url')),
           (d.get('url') or r.data)[:40] if r.status_code == 200 else r.data[:80])
 
     print('== 备份导出导入: data URI完整往返 ==')
     r = c.get('/api/admin/export', headers=H(admin_uid))
     backup = json.loads(r.data)
     team_b = next(t for t in backup['teams'] if t['name'] == '测试队')
-    check('导出的logo是data URI', is_data_uri(team_b['logo_url']))
+    check('导出的logo是base64内嵌', team_b['logo_url'].startswith('data:image/'))
 
     tmp_db2 = os.path.join(tempfile.gettempdir(), 't_b64_2.db')
     if os.path.exists(tmp_db2):

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app
-from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, detect_image_mime
+from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, detect_image_mime, parse_user_id, image_output_url
 from config import Config
 from functools import wraps
 import base64
@@ -206,7 +206,7 @@ def get_teams():
     return jsonify([{
         'id': t.id,
         'name': t.name,
-        'logo_url': t.logo_url,
+        'logo_url': image_output_url('teams', t.id, t.logo_url),
         'created_at': t.created_at.isoformat()
     } for t in teams])
 
@@ -259,7 +259,7 @@ def upload_team_logo(team_id):
     team.logo_url = 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode())
     db.session.commit()
 
-    return jsonify({'url': team.logo_url})
+    return jsonify({'url': f'/api/img/teams/{team.id}'})
 
 @admin_bp.route('/teams/<int:team_id>', methods=['PUT'])
 @admin_required

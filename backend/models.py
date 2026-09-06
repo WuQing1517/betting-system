@@ -12,6 +12,21 @@ def resolve_image_url(url):
     from config import Config
     return Config.SERVER_URL + url
 
+def image_output_url(kind, obj_id, url):
+    """接口输出的图片地址: base64图片走轻量图片接口(浏览器可缓存), 其余原样解析"""
+    if url and url.startswith('data:'):
+        return f'/api/img/{kind}/{obj_id}'
+    return resolve_image_url(url)
+
+def parse_user_id(v):
+    """请求头用户ID转int (psycopg3严格类型: 字符串与整型列比较会报错)"""
+    if v is None:
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
 def detect_image_mime(data, ext):
     """按文件头识别图片真实类型, 识别不出时回退扩展名 (扩展名经常与实际内容不符)"""
     if data[:8] == b'\x89PNG\r\n\x1a\n':
