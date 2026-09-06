@@ -1800,10 +1800,11 @@ async function loadAdminUsers() {
             var isTargetSuper = u.is_superadmin;
             h += '<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:8px">';
             h += '<div style="display:flex;justify-content:space-between;align-items:center">';
-            h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (u.nickname || '\u672A\u547D\u540D') + (isTargetSuper ? ' <span style="font-size:11px;color:#3478f6;background:#e8f4fd;padding:2px 6px;border-radius:4px">\u8D85\u7EA7\u7BA1\u7406</span>' : '') + (u.is_admin && !isTargetSuper ? ' <span style="font-size:11px;color:#f57c00;background:#fff8e1;padding:2px 6px;border-radius:4px">\u7BA1\u7406\u5458</span>' : '') + '</div>';
+            h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (u.nickname || '\u672A\u547D\u540D') + (isTargetSuper ? ' <span style="font-size:11px;color:#3478f6;background:#e8f4fd;padding:2px 6px;border-radius:4px">\u8D85\u7EA7\u7BA1\u7406</span>' : '') + (u.is_admin && !isTargetSuper ? ' <span style="font-size:11px;color:#f57c00;background:#fff8e1;padding:2px 6px;border-radius:4px">\u7BA1\u7406\u5458</span>' : '') + (u.is_debug ? ' <span style="font-size:11px;color:#7b1fa2;background:#f3e5f5;padding:2px 6px;border-radius:4px">\u8C03\u8BD5</span>' : '') + '</div>';
             h += '<div style="font-size:12px;color:#86868b;margin-top:2px">CN: ' + (u.cn || '-') + ' | \u5E01: ' + u.coins + '</div></div>';
             h += '<div style="display:flex;gap:6px;flex-shrink:0">';
             if (isSuper && !isTargetSuper) {
+                h += '<button class="admin-btn ' + (u.is_debug ? 'btn-success' : 'btn-danger') + '" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="toggleDebug(' + u.id + ',' + (u.is_debug ? 'false' : 'true') + ')" title="' + (u.is_debug ? '\u53D6\u6D88\u8C03\u8BD5\u6807\u7B7E' : '\u8BBE\u4E3A\u8C03\u8BD5\u8D26\u53F7') + '"><i class="ri-bug-line"></i></button>';
                 h += '<button class="admin-btn ' + (u.is_admin ? 'btn-danger' : 'btn-success') + '" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="toggleAdmin(' + u.id + ',' + !u.is_admin + ')" title="' + (u.is_admin ? '\u53D6\u6D88\u7BA1\u7406' : '\u8BBE\u4E3A\u7BA1\u7406') + '">' + (u.is_admin ? '<i class="ri-shield-cross-line"></i>' : '<i class="ri-shield-user-line"></i>') + '</button>';
                 h += '<button class="admin-btn btn-danger" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteUserWeb(' + u.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
             }
@@ -1824,6 +1825,17 @@ async function deleteUserWeb(uid) {
 async function toggleAdmin(uid, isA) {
     try { await api('/admin/users/' + uid + '/admin', 'PUT', { is_admin: isA }); showToast('\u6210\u529F', 'success'); loadAdminUsers(); }
     catch (e) { showToast(e.message, 'error'); }
+}
+
+async function toggleDebug(uid, flag) {
+    try {
+        var users = await api('/admin/users');
+        var u = null;
+        for (var i = 0; i < users.length; i++) { if (users[i].id === uid) { u = users[i]; break; } }
+        await api('/admin/users/' + uid + '/admin', 'PUT', { is_admin: u ? u.is_admin : false, is_superadmin: false, is_debug: flag });
+        showToast(flag ? '\u5DF2\u8BBE\u4E3A\u8C03\u8BD5\u8D26\u53F7' : '\u5DF2\u53D6\u6D88\u8C03\u8BD5\u6807\u7B7E', 'success');
+        loadAdminUsers();
+    } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function adjustCoins(uid) {

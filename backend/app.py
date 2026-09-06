@@ -77,6 +77,8 @@ def create_app():
         add_column_if_missing('match_scores', 'ot_winner_team_id', 'INTEGER')
         add_column_if_missing('users', 'is_superadmin',
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
+        add_column_if_missing('users', 'is_debug',
+                              'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
 
         # base64图片存库: PostgreSQL下把图片列拓宽为TEXT (SQLite不校验长度无需处理)
         if engine.dialect.name != 'sqlite':

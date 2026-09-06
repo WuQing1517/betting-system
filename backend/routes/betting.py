@@ -186,6 +186,8 @@ def place_bet():
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
+    if user.is_debug:
+        return jsonify({'error': '调试账号不能投币'}), 403
     data = request.get_json()
     question_id = data.get('question_id')
     option_id = data.get('option_id')
@@ -268,7 +270,8 @@ def get_pending_coins():
 
 @betting_bp.route('/leaderboard', methods=['GET'])
 def get_leaderboard():
-    users = User.query.order_by(User.coins.desc()).limit(100).all()
+    # 调试账号不参与排行榜
+    users = User.query.filter(User.is_debug.isnot(True)).order_by(User.coins.desc()).limit(100).all()
     return jsonify([{'rank': i + 1, 'user_id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'avatar_url': image_output_url('users', u.id, u.avatar_url)} for i, u in enumerate(users)])
 
 @betting_bp.route('/prizes', methods=['GET'])

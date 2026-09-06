@@ -813,6 +813,8 @@ def settle_bets(question_id, correct_option_id):
     # 增加用户户币数
     for bet in winning_bets:
         user = User.query.get(bet.user_id)
+        if user and user.is_debug:
+            continue  # 调试账号不参与结算
         winnings = int(bet.coins * actual_rate)
         user.coins += winnings
         from routes.betting import log_operation
@@ -908,7 +910,7 @@ def export_data():
     from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore
     data = {
         'version': 2,
-        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
+        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'is_debug': u.is_debug, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
@@ -987,6 +989,7 @@ def import_data():
             user.coins = _int(u_data.get('coins'), 5000)
             user.is_admin = u_data.get('is_admin', False)
             user.is_superadmin = bool(u_data.get('is_superadmin', False))
+            user.is_debug = bool(u_data.get('is_debug', False))
             user.password = u_data.get('password', '')
             user.avatar_url = u_data.get('avatar_url', '')
             user.rules_viewed = u_data.get('rules_viewed', False)

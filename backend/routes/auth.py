@@ -156,6 +156,16 @@ def admin_toggle_admin(user_id):
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
 
+    # 调试标签: 仅超级管理员可调整, 不能给自己打
+    if 'is_debug' in data:
+        uid = request.headers.get('X-User-Id')
+        op = User.query.get(int(uid)) if uid and uid.isdigit() else None
+        if not op or not op.is_superadmin:
+            return jsonify({'error': '需要超级管理员权限'}), 403
+        if user.id == op.id:
+            return jsonify({'error': '不能给自己设置调试标签'}), 400
+        user.is_debug = bool(data['is_debug'])
+
     # 超管标识调整: 仅超级管理员可操作, 且不能自降/清空最后一名
     if 'is_superadmin' in data:
         uid = request.headers.get('X-User-Id')
