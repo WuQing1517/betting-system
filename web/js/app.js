@@ -349,16 +349,15 @@ function updateUserInfo() {
     } else {
         avatar.textContent = (currentUser.nickname || '?')[0].toUpperCase();
     }
-    if (currentUser.is_admin) {
-        document.getElementById('navAdmin').style.display = 'inline';
-        var btnScore = document.getElementById('btnMatchScore');
-        if (btnScore) btnScore.style.display = 'flex';
-        ['navAdminLb', 'navAdminPf'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = 'inline';
-        });
-    }
+    var isAdminUser = !!currentUser.is_admin;
+    ['navAdmin', 'navAdminLb', 'navAdminPf'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = isAdminUser ? 'inline' : 'none';
+    });
+    var btnScore = document.getElementById('btnMatchScore');
+    if (btnScore) btnScore.style.display = isAdminUser ? 'flex' : 'none';
     loadPendingCoins();
+    loadCoinDeltas();
 }
 
 async function loadPendingCoins() {
@@ -366,6 +365,33 @@ async function loadPendingCoins() {
         var data = await api('/pending-coins');
         var el = document.getElementById('pendingCoins');
         if (el) el.textContent = data.pending_coins || 0;
+    } catch (e) {}
+}
+
+// 币数增减: 今日 + 上次比赛日 (纯符号数字, 绿增红减)
+async function loadCoinDeltas() {
+    try {
+        var d = await api('/user/coin-stats');
+        var group = document.getElementById('deltaGroup');
+        var tEl = document.getElementById('todayDelta');
+        var lEl = document.getElementById('lastMatchDelta');
+        if (!group || !tEl || !lEl) return;
+        function fmt(v) {
+            if (v === null || v === undefined) return null;
+            return (v > 0 ? '+' : '') + v;
+        }
+        var t = fmt(d.today_delta), l = fmt(d.last_match_delta);
+        if (t === null && l === null) { group.style.display = 'none'; return; }
+        group.style.display = 'flex';
+        if (t !== null) {
+            tEl.textContent = t;
+            tEl.style.color = d.today_delta > 0 ? '#6fe08b' : (d.today_delta < 0 ? '#ff8a8a' : 'inherit');
+        } else { tEl.textContent = '—'; tEl.style.opacity = .4; }
+        if (l !== null) {
+            lEl.textContent = l;
+            lEl.style.color = d.last_match_delta > 0 ? '#6fe08b' : (d.last_match_delta < 0 ? '#ff8a8a' : 'inherit');
+        } else { lEl.textContent = '—'; lEl.style.opacity = .4; }
+        if (d.last_match_date) lEl.title = '上次比赛日 ' + d.last_match_date;
     } catch (e) {}
 }
 
@@ -1364,82 +1390,75 @@ async function loadCoinHistory() {
 function drawCoinChart(data) {
     var canvas = document.getElementById('coinChart');
     if (!canvas || !data || data.length < 2) {
-        if (canvas) { var ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('\u6682\u65E0\u7ED3\u7B97\u6570\u636E', canvas.width / 2, canvas.height / 2); }
+        if (canvas) { var c0 = canvas.getContext('2d'); c0.clearRect(0, 0, canvas.width, canvas.height); c0.fillStyle = '#b9c0cc'; c0.font = '14px -apple-system,sans-serif'; c0.textAlign = 'center'; c0.fillText('\u6682\u65E0\u7ED3\u7B97\u6570\u636E', canvas.width / 2, canvas.height / 2); }
         return;
     }
-    var pts = data.length > 7 ? data.slice(data.length - 7) : data;
+    var pts = data.slice(Math.max(data.length - 10, 0));
     var dpr = 2;
-    canvas.width = 720 * dpr;
-    canvas.height = 400 * dpr;
-    canvas.style.width = '100%';
-    canvas.style.height = 'auto';
+    canvas.width = 720 * dpr; canvas.height = 400 * dpr;
+    canvas.style.width = '100%'; canvas.style.height = 'auto';
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     var w = 720, h = 400;
-    var pad = {top: 50, right: 40, bottom: 50, left: 60};
+    var pad = { top: 56, right: 44, bottom: 56, left: 44 };
     ctx.clearRect(0, 0, w, h);
 
     var balances = pts.map(function(d) { return d.balance; });
-    var minB = Math.min.apply(null, balances);
-    var maxB = Math.max.apply(null, balances);
+    var minB = Math.min.apply(null, balances), maxB = Math.max.apply(null, balances);
     var range = maxB - minB;
-    if (range < 100) { minB -= 50; maxB += 50; range = maxB - minB; }
-    minB -= range * 0.15;
-    maxB += range * 0.15;
-    // 数据区域从left+gap开始，给第一个点留出间距
-    var dataLeft = pad.left + 30;
-    var chartW = w - dataLeft - pad.right, chartH = h - pad.top - pad.bottom;
+    if (range < 100) { minB -= 60; maxB += 60; range = maxB - minB; }
+    minB -= range * 0.18; maxB += range * 0.18;
+    var dataLeft = pad.left + 26, chartW = w - dataLeft - pad.right, chartH = h - pad.top - pad.bottom;
     function xPos(i) { return dataLeft + (i / Math.max(pts.length - 1, 1)) * chartW; }
     function yPos(v) { return pad.top + (1 - (v - minB) / (maxB - minB)) * chartH; }
 
-    // Y轴线（无刻度数字），向下延伸到X轴下方
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pad.left, pad.top - 10); ctx.lineTo(pad.left, h - pad.bottom + 15); ctx.stroke();
+    ctx.strokeStyle = '#eef1f5'; ctx.lineWidth = 1;
+    for (var g = 1; g <= 3; g++) {
+        var gy = pad.top + chartH * g / 4;
+        ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(w - pad.right, gy); ctx.stroke();
+    }
+    ctx.strokeStyle = '#dfe3ea';
+    ctx.beginPath(); ctx.moveTo(pad.left, h - pad.bottom); ctx.lineTo(w - pad.right, h - pad.bottom); ctx.stroke();
 
-    // X轴线，向左延伸到Y轴左侧
-    ctx.beginPath(); ctx.moveTo(pad.left - 15, h - pad.bottom); ctx.lineTo(w - pad.right, h - pad.bottom); ctx.stroke();
+    var grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+    grad.addColorStop(0, 'rgba(0, 47, 167, 0.14)');
+    grad.addColorStop(1, 'rgba(0, 47, 167, 0)');
+    ctx.beginPath();
+    ctx.moveTo(xPos(0), yPos(pts[0].balance));
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(xPos(i), yPos(pts[i].balance));
+    ctx.lineTo(xPos(pts.length - 1), h - pad.bottom);
+    ctx.lineTo(xPos(0), h - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
 
-    // 直线连接 - 按段着色
     for (var i = 1; i < pts.length; i++) {
+        var st = pts[i].status || pts[i - 1].status || 'pending';
         ctx.beginPath();
         ctx.moveTo(xPos(i - 1), yPos(pts[i - 1].balance));
         ctx.lineTo(xPos(i), yPos(pts[i].balance));
-        var st = pts[i].status || pts[i - 1].status || 'pending';
-        if (st === 'pending') {
-            ctx.strokeStyle = '#002FA7'; ctx.globalAlpha = 1;
-        } else {
-            ctx.strokeStyle = '#e74c3c'; ctx.globalAlpha = 1;
-        }
-        ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.strokeStyle = st === 'pending' ? '#002FA7' : '#e74c3c';
+        ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.stroke();
     }
-    ctx.globalAlpha = 1;
 
-    // dots + value labels
     for (var i = 0; i < pts.length; i++) {
+        if (i !== 0 && i !== pts.length - 1) continue;
         var px = xPos(i), py = yPos(pts[i].balance);
         var st = pts[i].status || 'pending';
-        var dotColor, textColor;
-        if (st === 'pending') {
-            dotColor = '#002FA7'; textColor = '#002FA7';
-        } else {
-            dotColor = '#e74c3c'; textColor = '#e74c3c';
-        }
-        // dot
-        ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
-        ctx.fillStyle = dotColor; ctx.fill();
-        // value below dot
-        ctx.fillStyle = textColor;
+        var col = st === 'pending' ? '#002FA7' : '#e74c3c';
+        ctx.beginPath(); ctx.arc(px, py, i === pts.length - 1 ? 5.5 : 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = col; ctx.stroke();
+        ctx.fillStyle = col;
         ctx.font = (i === pts.length - 1 ? 'bold ' : '') + '14px -apple-system,sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(Math.round(pts[i].balance), px, py + 18);
+        ctx.fillText(Math.round(pts[i].balance), px, py + (i === pts.length - 1 ? 22 : -14));
     }
-    ctx.globalAlpha = 1;
 
-    // x labels below values
-    ctx.fillStyle = '#999'; ctx.font = '12px -apple-system,sans-serif'; ctx.textAlign = 'center';
-    for (var i = 0; i < pts.length; i++) {
-        ctx.fillText(pts[i].date, xPos(i), h - pad.bottom + 20);
+    var step = Math.ceil(pts.length / 5);
+    ctx.fillStyle = '#9aa3af'; ctx.font = '12px -apple-system,sans-serif'; ctx.textAlign = 'center';
+    for (var i = 0; i < pts.length; i += step) {
+        ctx.fillText(pts[i].label || '', xPos(i), h - pad.bottom + 24);
     }
 }
 
