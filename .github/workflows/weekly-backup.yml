@@ -53,11 +53,11 @@ jobs:
           echo "PAT已配置"
 
       - name: 同步到PythonAnywhere备站
-        if: ${{ secrets.PA_URL != '' }}
         env:
           PA_URL: ${{ secrets.PA_URL }}
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
         run: |
+          if [ -z "$PA_URL" ]; then echo "未配置PA_URL, 跳过备站同步"; exit 0; fi
           RESP=$(curl -sS --retry 3 --retry-delay 30 --max-time 600 \
             -X POST -H "Content-Type: application/json" -H "X-Backup-Token: ${BACKUP_TOKEN}" \
             --data-binary @backup.json "${PA_URL}/api/admin/import")
