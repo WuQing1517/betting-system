@@ -12,6 +12,14 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
+      - name: 检查必需Secrets
+        run: |
+          missing=""
+          [ -z "${{ secrets.SITE_URL }}" ] && missing="$missing SITE_URL"
+          [ -z "${{ secrets.BACKUP_TOKEN }}" ] && missing="$missing BACKUP_TOKEN"
+          [ -n "$missing" ] && { echo "缺少Secrets:$missing - 请到 Settings → Secrets and variables → Actions 添加"; exit 1; }
+          echo "Secrets已配置"
+
       - name: 拉取备份数据
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
@@ -39,7 +47,13 @@ jobs:
           git commit -m "自动备份 ${DATE}" || echo "内容无变化，跳过提交"
           git push
 
+      - name: 检查备份仓库PAT
+        run: |
+          [ -z "${{ secrets.BACKUP_PAT }}" ] && { echo "缺少Secret: BACKUP_PAT"; exit 1; }
+          echo "PAT已配置"
+
       - name: 同步到PythonAnywhere备站
+        if: ${{ secrets.PA_URL != '' }}
         env:
           PA_URL: ${{ secrets.PA_URL }}
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
