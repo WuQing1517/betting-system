@@ -14,11 +14,13 @@ var questionDataCache = null;
 
 
 
-async function api(url, method, data) {
+async function api(url, method, data, extraHeaders) {
 
     var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
 
     if (currentUser) opts.headers['X-User-Id'] = String(currentUser.user_id || currentUser.id);
+
+    if (extraHeaders) Object.assign(opts.headers, extraHeaders);
 
     if (data) opts.body = JSON.stringify(data);
 
@@ -3625,6 +3627,10 @@ async function importData() {
 
         if (!(await miuiConfirm('\u5BFC\u5165\u5C06\u8986\u76D6\u73B0\u6709\u6570\u636E\uFF0C\u786E\u5B9A\uFF1F'))) return;
 
+        var pwd = await promptAdminPassword();
+
+        if (!pwd) return;
+
         try {
 
             showToast('\u5BFC\u5165\u4E2D...', 'success');
@@ -3635,7 +3641,7 @@ async function importData() {
 
                 method: 'POST',
 
-                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id), 'X-Admin-Password': pwd },
 
                 body: text
 
@@ -3689,39 +3695,33 @@ function switchAdminTab(tab, event) {
 
 
 
-function showConsolePasswordDialog() {
-    var overlay = document.createElement('div');
-    overlay.id = 'consolePwdOverlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:10003;display:flex;align-items:center;justify-content:center';
-    var glass = 'background:rgba(255,255,255,0.95);backdrop-filter:blur(28px);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:320px';
-    overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
-        '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u51FA\u9898\u7EC4\u5DE5\u4F5C\u53F0</div>' +
-        '<div style="font-size:12px;color:#86868b;margin-bottom:14px">\u8BF7\u8F93\u5165\u7BA1\u7406\u5BC6\u7801\u9A8C\u8BC1</div>' +
-        '<input id="consolePwd" type="password" placeholder="\u8BF7\u8F93\u5165\u7BA1\u7406\u5BC6\u7801" style="width:100%;padding:12px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none;margin-bottom:14px">' +
-        '<div style="display:flex;gap:10px">' +
-        '<button class="admin-btn" style="flex:1;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer" onclick="document.getElementById(\'consolePwdOverlay\').remove();goBack()">\u53D6\u6D88</button>' +
-        '<button class="admin-btn" style="flex:2;padding:11px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer" onclick="verifyConsolePwd()">\u786E\u8BA4</button></div>' +
-        '</div>';
-    document.body.appendChild(overlay);
-    setTimeout(function() { var inp = document.getElementById('consolePwd'); if (inp) inp.focus(); }, 100);
-}
-
-async function verifyConsolePwd() {
-    var pwd = document.getElementById('consolePwd') ? document.getElementById('consolePwd').value : '';
-    if (!pwd) { showToast('\u8BF7\u8F93\u5165\u5BC6\u7801', 'error'); return; }
-    try {
-        await api('/admin/verify-console', 'POST', { password: pwd });
-        window._consoleVerified = true;
-        document.getElementById('consolePwdOverlay').remove();
-        showPage('admin');
-        loadAdminStats();
-        switchAdminTab('users');
-        showToast('\u9A8C\u8BC1\u6210\u529F', 'success');
-    } catch (e) {
-        showToast(e.message || '\u5BC6\u7801\u9519\u8BEF', 'error');
+function promptAdminPassword() {
+    return new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.id = 'consolePwdOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:10003;display:flex;align-items:center;justify-content:center';
+        var glass = 'background:rgba(255,255,255,0.95);backdrop-filter:blur(28px);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:320px';
+        overlay.innerHTML = '<div style="' + glass + '">' +
+            '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u7BA1\u7406\u5BC6\u7801\u9A8C\u8BC1</div>' +
+            '<div style="font-size:12px;color:#86868b;margin-bottom:14px">\u6B64\u64CD\u4F5C\u9700\u8981\u9A8C\u8BC1\u7BA1\u7406\u5BC6\u7801</div>' +
+            '<input id="consolePwd" type="password" placeholder="\u8BF7\u8F93\u5165\u7BA1\u7406\u5BC6\u7801" style="width:100%;padding:12px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none;margin-bottom:14px">' +
+            '<div style="display:flex;gap:10px">' +
+            '<button class="admin-btn" id="pwdCancelBtn" style="flex:1;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer">\u53D6\u6D88</button>' +
+            '<button class="admin-btn" id="pwdOkBtn" style="flex:2;padding:11px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer">\u786E\u8BA4</button></div>' +
+            '</div>';
+        document.body.appendChild(overlay);
         var inp = document.getElementById('consolePwd');
-        if (inp) { inp.value = ''; inp.focus(); }
-    }
+        setTimeout(function() { if (inp) inp.focus(); }, 100);
+        inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('pwdOkBtn').click(); });
+        document.getElementById('pwdCancelBtn').onclick = function() { overlay.remove(); resolve(null); };
+        document.getElementById('pwdOkBtn').onclick = function() {
+            var pwd = inp.value;
+            if (!pwd) { showToast('\u8BF7\u8F93\u5165\u5BC6\u7801', 'error'); return; }
+            overlay.remove();
+            resolve(pwd);
+        };
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+    });
 }
 
 
@@ -3806,7 +3806,11 @@ async function deleteUserWeb(uid) {
 
     if (!(await miuiConfirm('\u786E\u5B9A\u5220\u9664\u8BE5\u7528\u6237\uFF1F\u6240\u6709\u6295\u6CE8\u8BB0\u5F55\u5C06\u4E00\u5E76\u5220\u9664'))) return;
 
-    try { await api('/admin/users/' + uid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); loadAdminUsers(); }
+    var pwd = await promptAdminPassword();
+
+    if (!pwd) return;
+
+    try { await api('/admin/users/' + uid, 'DELETE', null, { 'X-Admin-Password': pwd }); showToast('\u5220\u9664\u6210\u529F', 'success'); loadAdminUsers(); }
 
     catch (e) { showToast(e.message, 'error'); }
 
