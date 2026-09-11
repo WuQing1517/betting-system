@@ -14,6 +14,7 @@ jobs:
     steps:
       - name: 检查必需Secrets
         run: |
+          set -x
           missing=""
           [ -z "${{ secrets.SITE_URL }}" ] && missing="$missing SITE_URL"
           [ -z "${{ secrets.BACKUP_TOKEN }}" ] && missing="$missing BACKUP_TOKEN"
@@ -25,6 +26,7 @@ jobs:
           SITE_URL: ${{ secrets.SITE_URL }}
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
         run: |
+          set -x
           curl -sS --retry 4 --retry-delay 30 --max-time 300 \
             -H "X-Backup-Token: ${BACKUP_TOKEN}" \
             "${SITE_URL}/api/admin/export" -o backup.json
@@ -35,6 +37,7 @@ jobs:
         env:
           PAT: ${{ secrets.BACKUP_PAT }}
         run: |
+          set -x
           DATE=$(date -u +%Y-%m-%d)
           git clone --depth 1 "https://x-access-token:${PAT}@github.com/WuQing1517/betting-backup.git" repo
           cd repo
@@ -49,6 +52,7 @@ jobs:
 
       - name: 检查备份仓库PAT
         run: |
+          set -x
           [ -z "${{ secrets.BACKUP_PAT }}" ] && { echo "缺少Secret: BACKUP_PAT"; exit 1; }
           echo "PAT已配置"
 
@@ -57,6 +61,7 @@ jobs:
           PA_URL: ${{ secrets.PA_URL }}
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
         run: |
+          set -x
           if [ -z "$PA_URL" ]; then echo "未配置PA_URL, 跳过备站同步"; exit 0; fi
           RESP=$(curl -sS --retry 3 --retry-delay 30 --max-time 600 \
             -X POST -H "Content-Type: application/json" -H "X-Backup-Token: ${BACKUP_TOKEN}" \
