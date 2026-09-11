@@ -1,0 +1,34 @@
+name: PA保活
+
+on:
+  schedule:
+    - cron: '0 2 1 * *'   # 每月1号 UTC 02:00 = 北京时间10:00
+  workflow_dispatch: {}
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 访问PA站点保活
+        run: |
+          STATUS=$(curl -sS --max-time 60 -o /dev/null -w "%{http_code}" \
+            "https://wuqing.pythonanywhere.com/api/teams")
+          echo "PA状态码: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ PA站点异常(HTTP $STATUS), 请检查!"
+            exit 1
+          fi
+          echo "✅ PA保活成功"
+
+      - name: 重载PA WebApp(通过API)
+        if: ${{ secrets.PA_API_TOKEN != '' }}
+        env:
+          PA_API_TOKEN: ${{ secrets.PA_API_TOKEN }}
+          PA_USERNAME: wuqing
+        run: |
+          RESP=$(curl -sS --max-time 60 \
+            -H "Authorization: Token ${PA_API_TOKEN}" \
+            -X POST \
+            "https://www.pythonanywhere.com/api/v0/user/${PA_USERNAME}/webapps/wuqing.pythonanywhere.com/reload/")
+          echo "重载响应: $RESP"
+          echo "✅ PA WebApp已重载(重置3个月计时器)"
