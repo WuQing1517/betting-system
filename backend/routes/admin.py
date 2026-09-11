@@ -143,7 +143,7 @@ def update_user_coins(user_id):
     db.session.commit()
     admin_user = User.query.get(int(request.headers.get('X-User-Id')))
     from routes.betting import log_operation
-    log_operation(admin_user.id, '\u8C03\u5E01', f'\u7528\u6237{user.nickname}({user_id}) {action} {amount}\u5E01 \u7ED3\u679C{user.coins}\u5E01')
+    log_operation(admin_user.id, '\u8C03\u5E01', f'\u7528\u6237{user.nickname}({user_id}) {action} {amount}\u5E01 \u7ED3\u679C{user.coins}\u5E01', amount if action == 'add' else -amount)
     db.session.commit()
     return jsonify({'message': 'Coins updated', 'new_coins': user.coins})
 
@@ -613,12 +613,14 @@ def update_question(question_id):
 @admin_required
 def set_correct_answer(question_id):
     """设置正确答案"""
+    from routes.betting import log_operation
     question = Question.query.get(question_id)
     if not question:
         return jsonify({'error': '问题不存在在'}), 404
 
     data = request.get_json()
     option_id = data.get('option_id')
+    log_operation(int(request.headers.get('X-User-Id')), '设置答案', f'题目{question.question_code} 选项{option_id}')
 
     if not option_id:
         return jsonify({'error': '缺少option_id参数'}), 400
@@ -724,6 +726,10 @@ def toggle_question_close(question_id):
 @admin_required
 def delete_question(question_id):
     """删除问题"""
+    from routes.betting import log_operation
+    _q = Question.query.get(question_id)
+    if _q:
+        log_operation(int(request.headers.get('X-User-Id')), '\u5220\u9664\u9898\u76EE', f'\u9898\u76EE{_q.question_code}')
     question = Question.query.get(question_id)
     if not question:
         return jsonify({'error': '问题不存在在'}), 404
@@ -822,7 +828,7 @@ def settle_bets(question_id, correct_option_id):
         winnings = int(bet.coins * actual_rate)
         user.coins += winnings
         from routes.betting import log_operation
-        log_operation(bet.user_id, '\u6295\u5E01\u80DC\u5229', f'\u95EE\u9898{question_id} \u6295{bet.coins}\u5E01 \u83B7\u5F97{winnings}\u5E01')
+        log_operation(bet.user_id, '\u6295\u5E01\u80DC\u5229', f'\u95EE\u9898{question_id} \u6295{bet.coins}\u5E01 \u83B7\u5F97{winnings}\u5E01', winnings)
 
 # 数据统计
 @admin_bp.route('/stats', methods=['GET'])

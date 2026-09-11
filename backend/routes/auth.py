@@ -131,9 +131,26 @@ def admin_login():
 
     return jsonify({'success': False, 'error': '账号或密码码错误误'}), 401
 
+@auth_bp.route('/admin/verify-console', methods=['POST'])
+def verify_console_password():
+    """验证出题组工作台密码 (仅超管可用, 密码为ADMIN_PASSWORD环境变量)"""
+    uid = request.headers.get('X-User-Id')
+    operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
+    if not operator or not operator.is_superadmin:
+        return jsonify({'error': '需要超级管理员权限'}), 403
+    data = request.get_json()
+    pwd = data.get('password', '')
+    if pwd != MAIN_ADMIN['password']:
+        return jsonify({'error': '密码错误'}), 403
+    return jsonify({'message': 'OK'})
+
 @auth_bp.route('/admin/users', methods=['GET'])
 def admin_get_users():
-    """获取所有用户户列表"""
+    """获取所有用户户列表 (需管理员或超级管理员)"""
+    uid = request.headers.get('X-User-Id')
+    operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
+    if not operator or not (operator.is_superadmin or operator.is_admin):
+        return jsonify({'error': '需要管理员权限'}), 403
     users = User.query.all()
     return jsonify([{
         'id': u.id,
