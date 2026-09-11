@@ -144,6 +144,19 @@ def verify_console_password():
         return jsonify({'error': '密码错误'}), 403
     return jsonify({'message': 'OK'})
 
+@auth_bp.route('/admin/verify-sensitive', methods=['POST'])
+def verify_sensitive_operation():
+    """验证敏感操作密码 (导入备份/删除账号前必须通过)"""
+    uid = request.headers.get('X-User-Id')
+    operator = User.query.get(int(uid)) if uid and uid.isdigit() else None
+    if not operator or not operator.is_superadmin:
+        return jsonify({'error': '需要超级管理员权限'}), 403
+    data = request.get_json()
+    pwd = data.get('password', '')
+    if pwd != MAIN_ADMIN['password']:
+        return jsonify({'error': '密码错误'}), 403
+    return jsonify({'message': 'OK'})
+
 @auth_bp.route('/admin/users', methods=['GET'])
 def admin_get_users():
     """获取所有用户户列表 (需管理员或超级管理员)"""

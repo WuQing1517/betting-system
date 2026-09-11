@@ -3554,15 +3554,6 @@ async function showAdmin() {
 
 
 
-    // 超管需要验证出题组密码
-
-    if (currentUser.is_superadmin && !window._consoleVerified) {
-
-        showConsolePasswordDialog();
-
-        return;
-
-    }
 
     showPage('admin');
 
@@ -3788,7 +3779,6 @@ async function loadAdminUsers() {
 
             if (isSuper && !isTargetSuper) {
 
-                h += '<button class="admin-btn ' + (u.is_debug ? 'btn-success' : 'btn-danger') + '" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="toggleDebug(' + u.id + ',' + (u.is_debug ? 'false' : 'true') + ')" title="' + (u.is_debug ? '\u53D6\u6D88\u8C03\u8BD5\u6807\u7B7E' : '\u8BBE\u4E3A\u8C03\u8BD5\u8D26\u53F7') + '"><i class="ri-bug-line"></i></button>';
 
                 h += '<button class="admin-btn ' + (u.is_admin ? 'btn-danger' : 'btn-success') + '" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="toggleAdmin(' + u.id + ',' + !u.is_admin + ')" title="' + (u.is_admin ? '\u53D6\u6D88\u7BA1\u7406' : '\u8BBE\u4E3A\u7BA1\u7406') + '">' + (u.is_admin ? '<i class="ri-shield-cross-line"></i>' : '<i class="ri-shield-user-line"></i>') + '</button>';
 

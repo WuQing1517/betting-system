@@ -187,6 +187,12 @@ def toggle_admin(user_id):
 @superadmin_required
 def delete_user(user_id):
     """删除用户户"""
+    # 敏感操作: 校验管理密码
+    import os as _os
+    _admin_pwd = _os.environ.get('ADMIN_PASSWORD') or 'admin'
+    _req_pwd = request.headers.get('X-Admin-Password', '')
+    if _req_pwd != _admin_pwd:
+        return jsonify({'error': '管理密码错误'}), 403
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': '用户户不存在在'}), 404
@@ -945,6 +951,11 @@ def export_data():
 @admin_bp.route('/import', methods=['POST'])
 def import_data():
     """导入数据 (超级管理员登录 或 备份令牌X-Backup-Token)"""
+    import os as _os
+    _admin_pwd = _os.environ.get('ADMIN_PASSWORD') or 'admin'
+    _req_pwd = request.headers.get('X-Admin-Password', '')
+    if _req_pwd != _admin_pwd:
+        return jsonify({'error': '管理密码错误'}), 403
     try:
         data = request.get_json()
         from datetime import date as date_type
