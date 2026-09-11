@@ -6,10 +6,10 @@ from models import db, User, Team, Competition, Match, Question, Option, Bet, re
 from datetime import date, timedelta
 from models import OperationLog
 
-def log_operation(user_id, action, detail):
+def log_operation(user_id, action, detail, amount=None):
     from models import User
     u = User.query.get(user_id) if user_id else None
-    entry = OperationLog(user_id=user_id, nickname=u.nickname if u else '', action=action, detail=detail)
+    entry = OperationLog(user_id=user_id, nickname=u.nickname if u else '', action=action, detail=detail, change_amount=amount)
     db.session.add(entry)
 
 betting_bp = Blueprint('betting', __name__)
@@ -211,7 +211,7 @@ def place_bet():
             user.coins += existing_bet.coins
             option.total_coins -= existing_bet.coins
             db.session.delete(existing_bet)
-            log_operation(user_id, '\u6295\u5E01\u53D6\u6D88', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u9000\u56DE{existing_bet.coins}\u5E01')
+            log_operation(user_id, '\u6295\u5E01\u53D6\u6D88', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u9000\u56DE{existing_bet.coins}\u5E01', existing_bet.coins)
             db.session.commit()
             return jsonify({'message': 'Bet cancelled', 'new_coins': user.coins})
         diff = coins - existing_bet.coins
@@ -220,7 +220,7 @@ def place_bet():
         existing_bet.coins = coins
         option.total_coins += diff
         user.coins -= diff
-        log_operation(user_id, '\u6295\u5E01\u4FEE\u6539', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6539\u4E3A{coins}\u5E01')
+        log_operation(user_id, '\u6295\u5E01\u4FEE\u6539', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6539\u4E3A{coins}\u5E01', -(coins - existing_bet.coins))
         db.session.commit()
         return jsonify({'message': 'Bet updated', 'new_coins': user.coins})
     if user.coins < coins:
@@ -229,7 +229,7 @@ def place_bet():
     user.coins -= coins
     option.total_coins += coins
     db.session.add(bet)
-    log_operation(user_id, '\u6295\u5E01', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6295{coins}\u5E01')
+    log_operation(user_id, '\u6295\u5E01', f'\u95EE\u9898\u3010{question.question_text}\u3011\u9009\u9879\u3010{option.option_text}\u3011\u6295{coins}\u5E01', -coins)
     db.session.commit()
     return jsonify({'message': 'Bet placed'})
 
@@ -255,6 +255,47 @@ def get_question_bets(question_id):
             'coins': b.coins
         })
     return jsonify(result)
+
+@betting_bp.route('/user/coin-stats', methods=['GET'])
+def get_coin_stats():
+    """用户币数变动统计: 今日增减 + 上次比赛日增减 (按北京时间)"""
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
+    if not user_id:
+        return jsonify({'error': 'Missing user id'}), 400
+    from models import OperationLog
+    from datetime import timedelta
+    beijing_today = (datetime.utcnow() + timedelta(hours=8)).date()
+    since_utc = datetime.utcnow() - timedelta(days=30)
+    logs = OperationLog.query.filter(
+        OperationLog.user_id == user_id,
+        OperationLog.created_at >= since_utc,
+        OperationLog.change_amount.isnot(None)
+    ).all()
+    # 上次比赛日: 最近一个已到的比赛日(赛事起始日+周/天推算)
+    last_match_date = None
+    for m in Match.query.all():
+        if m.week_number is None or m.day_number is None or not m.competition_id:
+            continue
+        comp = Competition.query.get(m.competition_id)
+        if not comp or not comp.start_date:
+            continue
+        d = comp.start_date + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
+        if d <= beijing_today and (last_match_date is None or d > last_match_date):
+            last_match_date = d
+    today_delta = 0
+    last_match_delta = None
+    for lg in logs:
+        local_date = (lg.created_at + timedelta(hours=8)).date()
+        amt = lg.change_amount or 0
+        if local_date == beijing_today:
+            today_delta += amt
+        if last_match_date and local_date == last_match_date:
+            last_match_delta = (last_match_delta or 0) + amt
+    return jsonify({
+        'today_delta': today_delta,
+        'last_match_date': last_match_date.isoformat() if last_match_date else None,
+        'last_match_delta': last_match_delta
+    })
 
 @betting_bp.route('/pending-coins', methods=['GET'])
 def get_pending_coins():

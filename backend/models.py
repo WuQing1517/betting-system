@@ -153,6 +153,7 @@ class OperationLog(db.Model):
     nickname = db.Column(db.String(64))
     action = db.Column(db.String(64))
     detail = db.Column(db.Text)
+    change_amount = db.Column(db.Integer)  # 币数变动(正=增加,负=减少), 无变动为空
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Livestream(db.Model):
