@@ -569,8 +569,8 @@ def create_question():
     question_text = data.get('question_text')
     options = data.get('options')  # [{option_text, base_rate}]
     
-    if not all([match_id, question_text, options]) or len(options) < 2 or len(options) > 3:
-        return jsonify({'error': '输入内容无效'}), 400
+    if not all([match_id, question_text, options]) or len(options) < 2 or len(options) > 30:
+        return jsonify({'error': '问题内容不能为空, 选项需2-30个'}), 400
     
     # 获取比赛信息
     match = Match.query.get(match_id)
