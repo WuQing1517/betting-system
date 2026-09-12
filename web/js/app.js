@@ -1586,7 +1586,7 @@ function timedRowHtml(q) {
 
     }
 
-    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:6px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
+    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
 
     h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
 
@@ -1624,11 +1624,9 @@ async function loadTimedBets() {
 
     if (!list.length) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u9650\u65F6\u7ADE\u731C</div>'; return; }
 
-    var h = '<div style="margin:0 0 8px">';
+    var h = '';
 
     list.forEach(function(q) { h += timedRowHtml(q); });
-
-    h += '</div>';
 
     box.innerHTML = h;
 
