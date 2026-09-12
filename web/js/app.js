@@ -1392,7 +1392,9 @@ async function loadRecentSchedule() {
 
             comps.forEach(function(c) { if (c.is_default) defName = c.name; });
 
-            chip.textContent = defName ? '\u5f53\u524d\u8d5b\u7a0b\uff1a' + defName : '';
+            chip.textContent = defName;
+
+            chip.title = '\u5f53\u524d\u8d5b\u7a0b';
 
             chip.style.display = defName ? 'inline-block' : 'none';
 

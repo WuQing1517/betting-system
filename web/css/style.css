@@ -29,7 +29,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .link { text-align: center; margin-top: 16px; color: #3478f6; cursor: pointer; font-size: 14px; }
 
 /* 用户卡片 - MIUIX卡片风格 */
-.user-card { margin: 12px 16px; padding: 20px; background: linear-gradient(135deg, #3478f6 0%, #5b6abf 100%); border-radius: 16px; color: #FFD700; display: flex; justify-content: space-between; align-items: center; }
+.user-card { margin: 12px 16px; padding: 20px; background: linear-gradient(135deg, #3478f6 0%, #5b6abf 100%); border-radius: 16px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
 .user-info { display: flex; align-items: center; gap: 14px; }
 .user-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; }
 .user-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
@@ -163,6 +163,13 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* MIUIX日期时间选择器弹层 */
 .miui-dtp-roller { height: 100px; overflow-y: auto; scrollbar-width: none; position: relative; }
 .miui-dtp-roller::-webkit-scrollbar { display: none; }
+
+/* 导航栏当前赛程小框 */
+#defaultCompChip { display: none; font-size: 17px; font-weight: 600; color: #3478f6; background: #e8f4fd; border-radius: 10px; padding: 4px 14px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
+@media (max-width: 520px) {
+    #defaultCompChip { font-size: 13px; padding: 3px 10px; margin-left: 8px; max-width: 40vw; }
+    #homePage .nav-title { font-size: 15px; }
+}
 
 /* MIUIX自定义下拉框 */
 .miui-select { position: relative; flex: 1; }
