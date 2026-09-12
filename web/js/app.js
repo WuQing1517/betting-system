@@ -4485,11 +4485,11 @@ function switchAdminTab(tab, event) {
 
     document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
 
+    var names = { users: '\u7528\u6237', teams: '\u961F\u4F0D', matches: '\u8D5B\u7A0B', questions: '\u7ADE\u731C', logs: '\u65E5\u5FD7' };
+
     if (event && event.target) { var t = event.target.closest ? event.target.closest('.tab') : null; if (t) t.classList.add('active'); }
 
     else {
-
-        var names = { users: '\u7528\u6237', teams: '\u961F\u4F0D', matches: '\u8D5B\u7A0B', questions: '\u7ADE\u731C', logs: '\u65E5\u5FD7' };
 
         document.querySelectorAll('.admin-tabs .tab').forEach(function(t) { if (t.textContent.trim() === names[tab]) t.classList.add('active'); });
 
