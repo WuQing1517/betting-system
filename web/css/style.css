@@ -105,7 +105,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .home-btn:active { background:linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.08)); }
 
 /* 弹窗内按钮统一液态玻璃(不覆盖按钮自身颜色) */
-.dl-glass button { background:rgba(255,255,255,0.08);backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; transition:background 0.15s !important; }
+.dl-glass button { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; transition:background 0.15s !important; }
 .dl-glass button:hover { background: rgba(255,255,255,0.22) !important; }
 
 /* 管理后台 - iOS液态玻璃悬浮栏(高透+折射: 底下内容清晰可见并发生液态扭曲; 不支持url()滤镜的浏览器回退普通玻璃) */
@@ -183,7 +183,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 统一弹窗卡片 - iOS液态玻璃(与底栏一致: 高透+折射) */
 .dl-glass { background:linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.06));backdrop-filter:blur(3px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(3px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.40);border-left:1px solid rgba(255,255,255,0.25);border-right:1px solid rgba(255,255,255,0.10);border-bottom:1px solid rgba(255,255,255,0.05);border-radius:22px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06),0 6px 24px 0 rgba(0,0,0,0.06) }
 /* 弹窗内输入框/select 统一液态玻璃 */
-.dl-glass input, .dl-glass select { background:rgba(255,255,255,0.08);backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; color:#1a1a1a !important; }
+.dl-glass input, .dl-glass select { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; color:#1a1a1a !important; }
 
 /* 导航栏当前赛程小框 */
 #defaultCompChip { display: none; font-size: 17px; font-weight: 600; color: #3478f6; background: #e8f4fd; border-radius: 10px; padding: 4px 14px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
