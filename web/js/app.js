@@ -340,6 +340,292 @@ function getMiuiSelectValue(id) {
 
 
 
+// ========== MIUIX日期时间选择器 ==========
+
+var miuiDtpState = null;
+
+function openMiuiDatetimePicker(input) {
+
+    if (miuiDtpState && miuiDtpState.input === input) { closeMiuiDatetimePicker(); return; }
+
+    closeMiuiDatetimePicker();
+
+    var mode = input.getAttribute('data-mode') === 'date' ? 'date' : 'datetime';
+
+    var st = { input: input, mode: mode, year: null, month: null, day: null, hour: 12, minute: 0 };
+
+    var v = (input.value || '').trim();
+
+    if (v) {
+
+        var parts = v.split(' ');
+
+        var dp = parts[0].split('-');
+
+        if (dp.length === 3) { st.year = parseInt(dp[0]); st.month = parseInt(dp[1]) - 1; st.day = parseInt(dp[2]); }
+
+        if (mode === 'datetime' && parts[1]) {
+
+            var hm = parts[1].split(':');
+
+            st.hour = Math.min(23, parseInt(hm[0]) || 0);
+
+            st.minute = Math.min(59, parseInt(hm[1]) || 0);
+
+        }
+
+    }
+
+    if (st.year === null) { var now = new Date(); st.year = now.getFullYear(); st.month = now.getMonth(); }
+
+    miuiDtpState = st;
+
+    renderMiuiDtpPanel();
+
+    setTimeout(function() { document.addEventListener('click', miuiDtpOutsideClose, true); }, 0);
+
+}
+
+function miuiDtpOutsideClose(e) {
+
+    var panel = document.getElementById('miuiDtpPanel');
+
+    if (!panel || !miuiDtpState) return;
+
+    if (panel.contains(e.target) || e.target === miuiDtpState.input) return;
+
+    closeMiuiDatetimePicker();
+
+}
+
+function closeMiuiDatetimePicker() {
+
+    var p = document.getElementById('miuiDtpPanel');
+
+    if (p) p.remove();
+
+    document.removeEventListener('click', miuiDtpOutsideClose, true);
+
+    miuiDtpState = null;
+
+}
+
+function miuiDtpShiftMonth(delta) {
+
+    var st = miuiDtpState; if (!st) return;
+
+    st.month += delta;
+
+    if (st.month < 0) { st.month = 11; st.year--; }
+
+    if (st.month > 11) { st.month = 0; st.year++; }
+
+    var dim = new Date(st.year, st.month + 1, 0).getDate();
+
+    if (st.day > dim) st.day = dim;
+
+    renderMiuiDtpPanel();
+
+}
+
+function miuiDtpShiftYear(delta) {
+
+    var st = miuiDtpState; if (!st) return;
+
+    st.year += delta;
+
+    var dim = new Date(st.year, st.month + 1, 0).getDate();
+
+    if (st.day > dim) st.day = dim;
+
+    renderMiuiDtpPanel();
+
+}
+
+function miuiDtpPickDay(d) {
+
+    var st = miuiDtpState; if (!st) return;
+
+    st.day = d;
+
+    renderMiuiDtpPanel();
+
+}
+
+function miuiDtpSetTime(key, val) {
+
+    var st = miuiDtpState; if (!st) return;
+
+    st[key] = val;
+
+    renderMiuiDtpPanel();
+
+}
+
+function miuiDtpNudge(key, dir) {
+
+    var st = miuiDtpState; if (!st) return;
+
+    var max = key === 'hour' ? 23 : 59;
+
+    st[key] = (st[key] + dir + (max + 1)) % (max + 1);
+
+    renderMiuiDtpPanel();
+
+}
+
+function miuiDtpRoller(key, max, val) {
+
+    var items = '';
+
+    for (var i = 0; i <= max; i++) {
+
+        var disp = i < 10 ? '0' + i : '' + i;
+
+        items += '<div' + (i === val ? ' id="miuiDtpSel_' + key + '"' : '') + ' onclick="miuiDtpSetTime(\'' + key + '\',' + i + ')" style="padding:4px 10px;font-size:13px;border-radius:8px;cursor:pointer;text-align:center;' + (i === val ? 'background:#3478f6;color:#fff;font-weight:600' : 'color:#1a1a1a') + '">' + disp + '</div>';
+
+    }
+
+    var label = key === 'hour' ? '\u65f6' : '\u5206';
+
+    return '<div style="width:64px"><div style="text-align:center;color:#86868b;font-size:11px;margin-bottom:2px">' + label + '</div>'
+
+        + '<div onclick="miuiDtpNudge(\'' + key + '\',-1)" style="text-align:center;cursor:pointer;color:#86868b;line-height:1"><i class="ri-arrow-up-s-line"></i></div>'
+
+        + '<div id="miuiDtp_' + key + '" class="miui-dtp-roller">' + items + '</div>'
+
+        + '<div onclick="miuiDtpNudge(\'' + key + '\',1)" style="text-align:center;cursor:pointer;color:#86868b;line-height:1"><i class="ri-arrow-down-s-line"></i></div></div>';
+
+}
+
+function renderMiuiDtpPanel() {
+
+    var st = miuiDtpState; if (!st) return;
+
+    var old = document.getElementById('miuiDtpPanel');
+
+    var rect = st.input.getBoundingClientRect();
+
+    if (old) old.remove();
+
+    var navBtn = 'width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;color:#1a1a1a;background:#f2f3f5;font-style:normal';
+
+    var html = '<div id="miuiDtpPanel" style="position:fixed;z-index:10010;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:14px;width:280px;box-sizing:border-box;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
+
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+
+    html += '<i class="' + navBtn + '" onclick="miuiDtpShiftYear(-1)">&laquo;</i><i class="' + navBtn + '" onclick="miuiDtpShiftMonth(-1)"><i class="ri-arrow-left-s-line"></i></i>';
+
+    html += '<span style="font-size:14px;font-weight:600">' + st.year + '\u5e74' + (st.month + 1) + '\u6708</span>';
+
+    html += '<i class="' + navBtn + '" onclick="miuiDtpShiftMonth(1)"><i class="ri-arrow-right-s-line"></i></i><i class="' + navBtn + '" onclick="miuiDtpShiftYear(1)">&raquo;</i></div>';
+
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center">';
+
+    ['\u4e00', '\u4e8c', '\u4e09', '\u56db', '\u4e94', '\u516d', '\u65e5'].forEach(function(w) {
+
+        html += '<span style="font-size:11px;color:#86868b;padding:4px 0">' + w + '</span>';
+
+    });
+
+    var first = new Date(st.year, st.month, 1);
+
+    var offset = (first.getDay() + 6) % 7;
+
+    var dim = new Date(st.year, st.month + 1, 0).getDate();
+
+    for (var i = 0; i < offset; i++) html += '<span></span>';
+
+    for (var d = 1; d <= dim; d++) {
+
+        var sel = st.day === d;
+
+        html += '<span onclick="miuiDtpPickDay(' + d + ')" style="font-size:13px;padding:6px 0;border-radius:8px;cursor:pointer;' + (sel ? 'background:#3478f6;color:#fff;font-weight:600' : 'color:#1a1a1a') + '">' + d + '</span>';
+
+    }
+
+    html += '</div>';
+
+    if (st.mode === 'datetime') {
+
+        html += '<div style="display:flex;gap:10px;justify-content:center;margin-top:10px">';
+
+        html += miuiDtpRoller('hour', 23, st.hour);
+
+        html += '<span style="align-self:center;font-weight:600;padding-top:14px">:</span>';
+
+        html += miuiDtpRoller('minute', 59, st.minute);
+
+        html += '</div>';
+
+    }
+
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;border-top:0.5px solid #f2f3f5;padding-top:10px">';
+
+    html += '<button onclick="miuiDtpClear()" style="font-size:12px;color:#86868b;background:#f2f3f5;border:none;border-radius:8px;padding:6px 14px;cursor:pointer">\u6e05\u9664</button>';
+
+    html += '<button onclick="miuiDtpCommit()" style="font-size:13px;color:#fff;background:#3478f6;border:none;border-radius:10px;padding:7px 22px;cursor:pointer;font-weight:600">\u786e\u5b9a</button></div>';
+
+    html += '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    var panel = document.getElementById('miuiDtpPanel');
+
+    var left = Math.min(rect.left, window.innerWidth - panel.offsetWidth - 8);
+
+    var top = rect.bottom + 8;
+
+    if (top + panel.offsetHeight > window.innerHeight - 8) top = Math.max(8, rect.top - panel.offsetHeight - 8);
+
+    panel.style.left = Math.max(8, left) + 'px';
+
+    panel.style.top = top + 'px';
+
+    ['hour', 'minute'].forEach(function(k) {
+
+        var box = document.getElementById('miuiDtp_' + k);
+
+        var selEl = document.getElementById('miuiDtpSel_' + k);
+
+        if (box && selEl) box.scrollTop = selEl.offsetTop - box.clientHeight / 2 + selEl.clientHeight / 2;
+
+    });
+
+}
+
+function miuiDtpCommit() {
+
+    var st = miuiDtpState; if (!st) return;
+
+    if (!st.day) { closeMiuiDatetimePicker(); return; }
+
+    var val = st.year + '-' + String(st.month + 1).padStart(2, '0') + '-' + String(st.day).padStart(2, '0');
+
+    if (st.mode === 'datetime') val += ' ' + String(st.hour).padStart(2, '0') + ':' + String(st.minute).padStart(2, '0');
+
+    st.input.value = val;
+
+    st.input.dispatchEvent(new Event('change'));
+
+    closeMiuiDatetimePicker();
+
+}
+
+function miuiDtpClear() {
+
+    var st = miuiDtpState; if (!st) return;
+
+    st.input.value = '';
+
+    st.input.dispatchEvent(new Event('change'));
+
+    closeMiuiDatetimePicker();
+
+}
+
+
+
 // MIUIX弹窗组件
 
 function miuiAlert(msg) {
@@ -461,6 +747,10 @@ function miuiPromptMulti(fields) {
                     h += '<div id="miuiCustomWrap' + i + '" style="display:none;margin-top:8px"><input id="miuiCustomField' + i + '" type="text" placeholder="' + (f.customPlaceholder || '') + '" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
 
                 }
+
+            } else if (f.type === 'date') {
+
+                h += '<input id="miuiPromptField' + i + '" type="text" readonly class="miui-datetime" data-mode="date" placeholder="' + (f.placeholder || '') + '" value="' + (f.defaultValue || '') + '" onclick="openMiuiDatetimePicker(this)">';
 
             } else {
 
@@ -5180,7 +5470,7 @@ function buildAdminQuestionCard(q, isTimed) {
 
     var closeVal = q.close_time ? q.close_time.substring(0, 16).replace(' ', 'T') : '';
 
-    var closeCtrl = '<input type="datetime-local" class="miui-datetime-sm" value="' + closeVal + '" onchange="updateQuestionCloseTime(' + q.id + ', this)" title="\u5c01\u76d8\u65f6\u95f4, \u5230\u70b9\u81ea\u52a8\u5c01\u76d8; \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8">';
+    var closeCtrl = '<input type="text" readonly class="miui-datetime-sm" value="' + closeVal + '" placeholder="\u5c01\u76d8" onclick="openMiuiDatetimePicker(this)" onchange="updateQuestionCloseTime(' + q.id + ', this)" title="\u5c01\u76d8\u65f6\u95f4, \u5230\u70b9\u81ea\u52a8\u5c01\u76d8; \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8">';
 
     h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + sl + typeCtrl + closeCtrl + '</div>';
 
@@ -5451,7 +5741,7 @@ async function resetQuestionWeb(qid) { if (!(await miuiConfirm('\u91CD\u7F6E\u54
 
 function showAddQuestionDialog(matchId, matchDate) {
 
-    var defaultClose = matchDate ? matchDate + 'T23:00' : '';
+    var defaultClose = matchDate ? matchDate + ' 23:00' : '';
 
     var h = '<div id="addQuestionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
 
@@ -5477,7 +5767,7 @@ function showAddQuestionDialog(matchId, matchDate) {
 
     h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addq_close" type="datetime-local" class="miui-datetime" value="' + defaultClose + '" title="\u9ed8\u8ba4\u4e3a\u6bd4\u8d5b\u65e5 23:00, \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8"></div>';
+    h += '<input id="addq_close" type="text" readonly class="miui-datetime" value="' + defaultClose + '" placeholder="\u9ed8\u8ba4\u6bd4\u8d5b\u65e5 23:00" onclick="openMiuiDatetimePicker(this)" title="\u9ed8\u8ba4\u4e3a\u6bd4\u8d5b\u65e5 23:00, \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8"></div>';
 
     h += '<div id="addq_options">';
 
@@ -5591,11 +5881,11 @@ function showAddTimedQuestionDialog() {
 
     h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5F00\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addtq_open" type="datetime-local" class="miui-datetime"></div>';
+    h += '<input id="addtq_open" type="text" readonly class="miui-datetime" placeholder="\u9009\u62E9\u5F00\u76D8\u65F6\u95F4" onclick="openMiuiDatetimePicker(this)"></div>';
 
     h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addtq_close" type="datetime-local" class="miui-datetime"></div>';
+    h += '<input id="addtq_close" type="text" readonly class="miui-datetime" placeholder="\u9009\u62E9\u5C01\u76D8\u65F6\u95F4" onclick="openMiuiDatetimePicker(this)"></div>';
 
     h += '</div>';
 

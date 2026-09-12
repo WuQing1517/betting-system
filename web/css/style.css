@@ -160,6 +160,10 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .miui-datetime-sm { padding: 2px 6px; background: #fff; border: 1px solid #e8edf5; border-radius: 8px; font-size: 11px; color: #1a1a1a; outline: none; font-family: inherit; color-scheme: light; }
 .miui-datetime-sm::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; margin: 0; }
 
+/* MIUIX日期时间选择器弹层 */
+.miui-dtp-roller { height: 100px; overflow-y: auto; scrollbar-width: none; position: relative; }
+.miui-dtp-roller::-webkit-scrollbar { display: none; }
+
 /* MIUIX自定义下拉框 */
 .miui-select { position: relative; flex: 1; }
 .miui-select-trigger { padding: 9px 12px; background: #f2f3f5; border-radius: 10px; font-size: 13px; color: #1a1a1a; font-weight: 500; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; user-select: none; -webkit-user-select: none; }
