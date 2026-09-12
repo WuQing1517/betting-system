@@ -5526,7 +5526,7 @@ function addTimedOptionRow() {
 
     var c = document.getElementById('addtq_options');
 
-    if (c.children.length >= 3) { showToast('\u6700\u591A3\u4E2A\u9009\u9879', 'error'); return; }
+    if (c.children.length >= 30) { showToast('\u6700\u591A30\u4E2A\u9009\u9879', 'error'); return; }
 
     var d = document.createElement('div');
 

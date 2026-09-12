@@ -614,8 +614,8 @@ def create_timed_question():
     open_time = (data.get('open_time') or '').strip()
     close_time = (data.get('close_time') or '').strip()
 
-    if not question_text or not options or len(options) < 2 or len(options) > 3:
-        return jsonify({'error': '输入内容无效'}), 400
+    if not question_text or not options or len(options) < 2 or len(options) > 30:
+        return jsonify({'error': '问题内容不能为空, 选项需2-30个'}), 400
     if not open_time or not close_time:
         return jsonify({'error': '请选择开盘和封盘时间'}), 400
     # 兼容 datetime-local 值(YYYY-MM-DDTHH:MM): 统一为 YYYY-MM-DD HH:MM:SS
