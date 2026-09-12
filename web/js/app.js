@@ -1920,7 +1920,7 @@ function renderLeaderboard(entries, compId, compOpts) {
 
         entries.forEach(function(e) {
 
-            var bgColor = e.rank <= 4 ? '#e8f5e9' : e.rank <= 8 ? '#fce4ec' : '#f5f5f5';
+            var bgColor = e.rank <= 4 ? 'rgba(76,175,80,0.10)' : e.rank <= 8 ? 'rgba(233,30,99,0.06)' : 'rgba(158,158,158,0.06)';
 
             var rankColor = e.rank <= 4 ? winColor : e.rank <= 8 ? loseColor : outColor;
 
@@ -1932,7 +1932,7 @@ function renderLeaderboard(entries, compId, compOpts) {
 
             var changeIcon = change > 0 ? '<span style="color:#4caf50">\u25B2' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">\u25BC' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
 
-            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';border-radius:12px;margin-bottom:6px' + (isAdmin ? ';cursor:pointer' : '') + '"' + (isAdmin ? ' onclick="editLBEntry(' + e.team_id + ',' + compId + ')"' : '') + '>';
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.35);box-shadow:inset 0 1px 1px rgba(255,255,255,0.35),0 2px 8px rgba(0,0,0,0.04);border-radius:12px;margin-bottom:6px' + (isAdmin ? ';cursor:pointer' : '') + '"' + (isAdmin ? ' onclick="editLBEntry(' + e.team_id + ',' + compId + ')"' : '') + '>';
 
             h += '<span style="font-size:18px;font-weight:700;color:' + rankColor + ';width:24px;text-align:center">' + e.rank + '</span>';
 
