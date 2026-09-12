@@ -632,9 +632,9 @@ function miuiAlert(msg) {
 
     return new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog()">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:320px;animation:miuiFadeIn 0.2s">';
+        h += '<div class="dl-glass" style="width:85%;max-width:320px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s">';
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:20px;line-height:1.5">' + msg + '</div>';
 
@@ -656,9 +656,9 @@ function miuiConfirm(msg) {
 
     return new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog()">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:320px;animation:miuiFadeIn 0.2s">';
+        h += '<div class="dl-glass" style="width:85%;max-width:320px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s">';
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:20px;line-height:1.5">' + msg + '</div>';
 
@@ -684,9 +684,9 @@ function miuiPrompt(msg, defaultVal) {
 
     return new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog()">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:320px;animation:miuiFadeIn 0.2s">';
+        h += '<div class="dl-glass" style="width:85%;max-width:320px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s">';
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px;line-height:1.5">' + msg + '</div>';
 
@@ -720,9 +720,9 @@ function miuiPromptMulti(fields) {
 
     return new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog()">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s">';
+        h += '<div class="dl-glass" style="width:85%;max-width:340px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s">';
 
         fields.forEach(function(f, i) {
 
@@ -982,6 +982,7 @@ function maybeShowNotice() {
     overlay.id = 'noticeOverlay';
 
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10004;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
     var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
 
@@ -1065,6 +1066,7 @@ async function checkBackupSiteNotice() {
         overlay.id = 'backupNoticeOverlay';
 
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10005;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
         var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
 
@@ -1989,6 +1991,7 @@ async function showTeamFilterDialog() {
     overlay.id = 'teamFilterOverlay';
 
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
     var rows = teams.map(function(t) {
 
@@ -2004,7 +2007,7 @@ async function showTeamFilterDialog() {
 
     }).join('');
 
-    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:18px;width:88%;max-width:360px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">' +
+    overlay.innerHTML = '<div class="dl-glass" style="width:88%;max-width:360px;padding:18px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">' +
 
         '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u7B5B\u9009\u79EF\u5206\u699C\u961F\u4F0D</div>' +
 
@@ -2467,6 +2470,7 @@ function openScoreDialog(scoreId, homeId, awayId) {
     overlay.id = 'scoreDialogOverlay';
 
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
     overlay.onclick = async function(e) { if (e.target === overlay) { await saveScore(); overlay.remove(); loadMatchScores(_matchScoreCompId, _matchScoreDate); } };
 
@@ -2534,7 +2538,7 @@ async function renderScoreDialog(scoreId, homeId, awayId) {
 
     overlay._scoreId = scoreId;
 
-    var h = '<div onclick="event.stopPropagation()" style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s">';
+    var h = '<div class="dl-glass" onclick="event.stopPropagation()" style="width:90%;max-width:420px;padding:20px;animation:miuiFadeIn 0.2s">';
 
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
 
@@ -2806,9 +2810,9 @@ function showOTWinnerDialog() {
 
     var awayName = _currentTeamMap[overlay._awayId] || '客场';
 
-    var h = '<div id="otWinnerDialog" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    var h = '<div id="otWinnerDialog" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
-    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:80%;max-width:300px;text-align:center" onclick="event.stopPropagation()">';
+    h += '<div class="dl-glass" style="width:80%;max-width:300px;padding:20px;text-align:center" onclick="event.stopPropagation()">';
 
     h += '<div style="font-size:16px;font-weight:600;margin-bottom:16px">\u52A0\u8D5B\u5E73\u5C40\uFF0C\u8BF7\u9009\u62E9\u83B7\u80DC\u961F\u4F0D</div>';
 
@@ -3739,10 +3743,11 @@ function showEditProfileDialog() {
     overlay.id = 'editProfileOverlay';
 
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
-    var glass = 'background:rgba(255,255,255,0.92);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
+    var glass = 'width:85%;max-width:340px;padding:22px';
 
-    overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
+    overlay.innerHTML = '<div class="dl-glass" style="' + glass + '" onclick="event.stopPropagation()">' +
 
         '<div style="font-size:16px;font-weight:600;margin-bottom:14px">\u7F16\u8F91\u8D44\u6599</div>' +
 
@@ -3805,10 +3810,11 @@ function showChangePasswordDialog() {
     overlay.id = 'chgPwdOverlay';
 
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
+    overlay.classList.add('dl-overlay');
 
-    var glass = 'background:rgba(255,255,255,0.92);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
+    var glass = 'width:85%;max-width:340px;padding:22px';
 
-    overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
+    overlay.innerHTML = '<div class="dl-glass" style="' + glass + '" onclick="event.stopPropagation()">' +
 
         '<div style="font-size:16px;font-weight:600;margin-bottom:14px">\u4FEE\u6539\u5BC6\u7801</div>' +
 
@@ -4188,7 +4194,7 @@ async function onLivestreamLongPress(e, id) {
 
     var result = await new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog(false)">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog(false)">';
 
         h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
 
@@ -4510,8 +4516,9 @@ function promptAdminPassword() {
         var overlay = document.createElement('div');
         overlay.id = 'consolePwdOverlay';
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10003;display:flex;align-items:center;justify-content:center';
-        var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:320px';
-        overlay.innerHTML = '<div style="' + glass + '">' +
+    overlay.classList.add('dl-overlay');
+        var glass = 'width:85%;max-width:320px;padding:24px';
+        overlay.innerHTML = '<div class="dl-glass" style="' + glass + '">' +
             '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u7BA1\u7406\u5BC6\u7801\u9A8C\u8BC1</div>' +
             '<div style="font-size:12px;color:#86868b;margin-bottom:14px">\u6B64\u64CD\u4F5C\u9700\u8981\u9A8C\u8BC1\u7BA1\u7406\u5BC6\u7801</div>' +
             '<input id="consolePwd" type="password" placeholder="\u8BF7\u8F93\u5165\u7BA1\u7406\u5BC6\u7801" style="width:100%;padding:12px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none;margin-bottom:14px">' +
@@ -4658,9 +4665,9 @@ async function adjustCoins(uid) {
 
     var result = await new Promise(function(resolve) {
 
-        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)closeMiuiDialog()">';
+        var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog()">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:320px;animation:miuiFadeIn 0.2s">';
+        h += '<div class="dl-glass" style="width:85%;max-width:320px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s">';
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px">\u8C03\u5E01\u6570\u91CF</div>';
 
@@ -5834,9 +5841,9 @@ function showAddQuestionDialog(matchId, matchDate) {
 
     var defaultClose = matchDate ? matchDate + ' 23:00' : '';
 
-    var h = '<div id="addQuestionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    var h = '<div id="addQuestionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
-    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto">';
+    h += '<div class="dl-glass" style="width:90%;max-width:420px;padding:20px;max-height:80vh;overflow-y:auto;box-sizing:border-box">';
 
     h += '<div style="font-size:16px;font-weight:bold;margin-bottom:14px">\u6DFB\u52A0\u95EE\u9898</div>';
 
@@ -5962,9 +5969,9 @@ async function submitAddQuestion(matchId) {
 
 function showAddTimedQuestionDialog() {
 
-    var h = '<div id="addTimedOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    var h = '<div id="addTimedOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
-    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto">';
+    h += '<div class="dl-glass" style="width:90%;max-width:420px;padding:20px;max-height:80vh;overflow-y:auto;box-sizing:border-box">';
 
     h += '<div style="font-size:16px;font-weight:bold;margin-bottom:14px">\u6DFB\u52A0\u9650\u65F6\u7ADE\u731C</div>';
 
@@ -6116,9 +6123,9 @@ function openSettleDialog(qid) {
 
     if (!q) return;
 
-    var h = '<div id="settleOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+    var h = '<div id="settleOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
-    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:400px">';
+    h += '<div class="dl-glass" style="width:90%;max-width:400px;padding:20px">';
 
     h += '<div style="font-size:16px;font-weight:bold;margin-bottom:12px">\u9009\u62E9\u6B63\u786E\u7B54\u6848</div>';
 
@@ -6162,9 +6169,9 @@ async function showBetDetail(qid) {
 
         var bets = await api('/questions/' + qid + '/bets');
 
-        var h = '<div id="betDetailOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+        var h = '<div id="betDetailOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
-        h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:500px;max-height:70vh;overflow-y:auto">';
+        h += '<div class="dl-glass" style="width:90%;max-width:500px;padding:20px;max-height:70vh;overflow-y:auto;box-sizing:border-box">';
 
         h += '<div style="font-size:16px;font-weight:bold;margin-bottom:12px">\u6295\u6CE8\u8BE6\u60C5</div>';
 

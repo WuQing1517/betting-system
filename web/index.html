@@ -293,8 +293,8 @@
         <div id="rulesContent"></div>
     </div>
 
-    <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeCoinTrend()">
-        <div style="position:relative;background:rgba(255,255,255,0.75);backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%);border:1px solid rgba(255,255,255,0.55);border-radius:20px;box-shadow:inset 0 1px 1px rgba(255,255,255,0.7),inset 0 -1px 1px rgba(255,255,255,0.25),0 12px 40px rgba(0,0,0,0.25);width:90%;max-width:420px;overflow:hidden;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
+    <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9999;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeCoinTrend()">
+        <div class="dl-glass" style="position:relative;width:90%;max-width:420px;overflow:hidden;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:0.5px solid rgba(255,255,255,0.5)">
                 <span style="font-size:17px;font-weight:600;color:#1a1a1a">币走势图</span>
                 <div style="display:flex;align-items:center;gap:4px">
@@ -307,8 +307,8 @@
         </div>
     </div>
 
-    <div id="leaderboardOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeLeaderboard()">
-        <div style="background:#fff;border-radius:16px;width:95%;max-width:480px;height:90vh;overflow:hidden;display:flex;flex-direction:column;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
+    <div id="leaderboardOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeLeaderboard()">
+        <div class="dl-glass" style="width:95%;max-width:480px;height:90vh;overflow:hidden;display:flex;flex-direction:column;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 16px 8px">
                 <span style="font-size:18px;font-weight:600;color:#1a1a1a">积分榜</span>
                 <span onclick="closeLeaderboard()" style="font-size:24px;color:#86868b;cursor:pointer">&times;</span>
