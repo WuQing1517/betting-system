@@ -70,15 +70,16 @@ class Team(db.Model):
 
 class Competition(db.Model):
     __tablename__ = 'competitions'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), unique=True, nullable=False)  # 如 2026IVL秋季赛
     year = db.Column(db.Integer)
     season = db.Column(db.String(32))  # 春季赛/秋季赛
     status = db.Column(db.String(32), default='active')  # active, completed
     start_date = db.Column(db.Date, nullable=True)  # 赛事起始日期
+    is_default = db.Column(db.Boolean, default=False)  # 全局默认赛事: 首页优先展示, 工作台默认选中
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     matches = db.relationship('Match', backref='competition', lazy=True)
 
 class Match(db.Model):

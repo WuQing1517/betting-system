@@ -37,7 +37,7 @@ betting_bp = Blueprint('betting', __name__)
 @betting_bp.route('/competitions', methods=['GET'])
 def get_competitions():
     competitions = Competition.query.filter_by(status='active').all()
-    return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': c.start_date.isoformat() if c.start_date else None} for c in competitions])
+    return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': c.start_date.isoformat() if c.start_date else None, 'is_default': bool(c.is_default)} for c in competitions])
 
 @betting_bp.route('/teams', methods=['GET'])
 def get_teams():

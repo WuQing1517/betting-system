@@ -110,6 +110,8 @@ def create_app():
         add_column_if_missing('questions', 'open_time', 'VARCHAR(32)')
         add_column_if_missing('questions', 'close_time', 'VARCHAR(32)')
         add_column_if_missing('questions', 'max_selections', 'INTEGER DEFAULT 1')
+        add_column_if_missing('competitions', 'is_default',
+                              'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
 
         # bets唯一约束升级: 老库为(user_id, question_id)两列, 多选题投注(同题多选项)需要加option_id的三列版本
         try:

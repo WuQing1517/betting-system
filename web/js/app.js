@@ -180,6 +180,8 @@ async function refreshHomeData() {
 
         loadRecentSchedule();
 
+        loadDefaultCompSchedule();
+
         loadTimedBets();
 
     } catch (e) {}
@@ -1171,6 +1173,8 @@ function initHomePage() {
 
     loadRecentSchedule();
 
+    loadDefaultCompSchedule();
+
     loadTimedBets();
 
     if (currentUser && !currentUser.need_setup) maybeShowNotice();
@@ -1377,6 +1381,79 @@ function getTargetDates() {
 
 
 
+// 首页默认赛程区块: 展示全局默认赛事的未来比赛(点击进入该场题目列表), 近期赛程则排除该赛事避免重复
+async function loadDefaultCompSchedule() {
+
+    var section = document.getElementById('defaultCompSection');
+
+    var box = document.getElementById('defaultCompSchedule');
+
+    if (!section || !box) return;
+
+    var def = null;
+
+    try {
+
+        var comps = await api('/competitions');
+
+        for (var i = 0; i < comps.length; i++) { if (comps[i].is_default) { def = comps[i]; break; } }
+
+    } catch (e) {}
+
+    if (!def) { section.style.display = 'none'; box.innerHTML = ''; return; }
+
+    section.style.display = 'flex';
+
+    document.getElementById('defaultCompTitle').textContent = def.name;
+
+    var html = '';
+
+    try {
+
+        var data = await api('/competitions/' + def.id + '/full');
+
+        var today = new Date(); today.setHours(0, 0, 0, 0);
+
+        var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+        var upcoming = data.matches.filter(function(m) { return m.match_date && m.match_date >= todayStr; });
+
+        upcoming.sort(function(a, b) { return a.match_date > b.match_date ? 1 : -1; });
+
+        var targetDates = [];
+
+        for (var i = 0; i < upcoming.length && targetDates.length < 2; i++) {
+
+            if (targetDates.indexOf(upcoming[i].match_date) === -1) targetDates.push(upcoming[i].match_date);
+
+        }
+
+        upcoming.forEach(function(m) {
+
+            if (targetDates.indexOf(m.match_date) === -1) return;
+
+            var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
+
+            var aLogo = m.away_logo ? '<img src="' + m.away_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
+
+            html += '<div style="display:flex;align-items:center;gap:6px;margin:0 16px 8px;padding:10px 12px;background:#fff;border-radius:10px;cursor:pointer" onclick="openCompetition(' + def.id + ', \'' + (m.match_code || '') + '\')">';
+
+            html += hLogo + '<span style="font-size:13px;font-weight:500">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</span>' + aLogo;
+
+            html += '<span style="font-size:11px;color:#86868b;margin-left:auto">' + (m.match_weekday || '') + ' ' + (m.match_date || '').substring(5) + ' · ' + m.questions.length + '\u9898</span>';
+
+            html += '</div>';
+
+        });
+
+        if (!html) html = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u7A0B</div>';
+
+    } catch (e) { html = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u7A0B</div>'; }
+
+    box.innerHTML = html;
+
+}
+
 async function loadRecentSchedule() {
 
     try {
@@ -1384,6 +1461,15 @@ async function loadRecentSchedule() {
         var comps = await api('/competitions');
 
         if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = ''; return; }
+
+        // 默认赛事已在上方独立区块展示, 近期赛程中排除避免重复
+        var defId = '';
+
+        comps.forEach(function(c) { if (c.is_default) defId = String(c.id); });
+
+        if (defId) comps = comps.filter(function(c) { return String(c.id) !== defId; });
+
+        if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u8FD1\u671F\u6682\u65E0\u8D5B\u7A0B</div>'; return; }
 
         var today = new Date(); today.setHours(0,0,0,0);
 
@@ -4769,19 +4855,25 @@ async function deleteTeam(id) {
 
 // ---- \u8D5B\u7A0B ----
 
-function getDefaultCompCid() { return localStorage.getItem('adminDefaultComp') || ''; }
+var adminCompsCache = [];  // 工作台赛事列表缓存(含is_default, 供星标状态使用)
 
-function toggleDefaultComp(selectId) {
+async function toggleDefaultComp(selectId) {
 
     var cid = getMiuiSelectValue(selectId);
 
     if (!cid) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
 
-    if (getDefaultCompCid() === cid) { localStorage.removeItem('adminDefaultComp'); showToast('\u5DF2\u53D6\u6D88\u9ED8\u8BA4\u8D5B\u7A0B', 'success'); }
+    try {
 
-    else { localStorage.setItem('adminDefaultComp', cid); showToast('\u5DF2\u8BBE\u4E3A\u9ED8\u8BA4\u8D5B\u7A0B', 'success'); }
+        var r = await api('/admin/competitions/' + cid + '/default', 'PUT');
 
-    updateCompStarIcon(selectId);
+        adminCompsCache.forEach(function(c) { c.is_default = String(c.id) === cid ? r.is_default : false; });
+
+        showToast(r.is_default ? '\u5DF2\u8BBE\u4E3A\u9ED8\u8BA4\u8D5B\u7A0B(\u5168\u4F53\u7528\u6237\u751F\u6548)' : '\u5DF2\u53D6\u6D88\u9ED8\u8BA4\u8D5B\u7A0B', 'success');
+
+        updateCompStarIcon(selectId);
+
+    } catch (e) { showToast(e.message, 'error'); }
 
 }
 
@@ -4791,19 +4883,21 @@ function updateCompStarIcon(selectId) {
 
     if (!btn) return;
 
-    var isDef = getDefaultCompCid() !== '' && getDefaultCompCid() === getMiuiSelectValue(selectId);
+    var cid = getMiuiSelectValue(selectId);
+
+    var isDef = false;
+
+    adminCompsCache.forEach(function(c) { if (String(c.id) === cid && c.is_default) isDef = true; });
 
     btn.innerHTML = '<i class="' + (isDef ? 'ri-star-fill' : 'ri-star-line') + '"' + (isDef ? ' style="color:#f57c00"' : '') + '></i>';
 
 }
 
-function pickInitialComp(opts) {
+function pickInitialComp(comps) {
 
-    var saved = getDefaultCompCid();
+    for (var i = 0; i < comps.length; i++) { if (comps[i].is_default) return String(comps[i].id); }
 
-    for (var i = 0; i < opts.length; i++) { if (opts[i].value === saved) return saved; }
-
-    return opts.length > 0 ? opts[0].value : '';
+    return comps.length > 0 ? String(comps[0].id) : '';
 
 }
 
@@ -4812,6 +4906,8 @@ async function loadAdminMatches() {
     try {
 
         var comps = await api('/competitions');
+
+        adminCompsCache = comps;
 
         var h = '<div class="admin-section"><div class="admin-select-wrap">';
 
@@ -4829,7 +4925,7 @@ async function loadAdminMatches() {
 
         var opts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
 
-        miuiSelect('matchCompSelect', opts, pickInitialComp(opts), function(val) { onMatchCompChange(); updateCompStarIcon('matchCompSelect'); });
+        miuiSelect('matchCompSelect', opts, pickInitialComp(comps), function(val) { onMatchCompChange(); updateCompStarIcon('matchCompSelect'); });
 
         updateCompStarIcon('matchCompSelect');
 
@@ -5375,6 +5471,8 @@ async function loadAdminQuestions() {
 
         var comps = await api('/competitions');
 
+        adminCompsCache = comps;
+
         var h = '<div class="admin-section"><div class="admin-select-wrap">';
 
         h += '<span>\u9009\u62E9\u8D5B\u4E8B\uFF1A</span>';
@@ -5391,7 +5489,7 @@ async function loadAdminQuestions() {
 
         var opts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
 
-        miuiSelect('questionCompSelect', opts, pickInitialComp(opts), function(val) { onQuestionCompChange(); updateCompStarIcon('questionCompSelect'); });
+        miuiSelect('questionCompSelect', opts, pickInitialComp(comps), function(val) { onQuestionCompChange(); updateCompStarIcon('questionCompSelect'); });
 
         updateCompStarIcon('questionCompSelect');
 

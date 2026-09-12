@@ -460,6 +460,22 @@ def update_competition(competition_id):
     db.session.commit()
     return jsonify({'message': 'Competition updated'})
 
+@admin_bp.route('/competitions/<int:competition_id>/default', methods=['PUT'])
+@admin_required
+def set_default_competition(competition_id):
+    """设置/取消全局默认赛事(对所有用户生效: 首页近期赛程前展示, 工作台默认选中)"""
+    from routes.betting import log_operation
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({'error': '赛事不存在'}), 404
+    new_val = not comp.is_default
+    if new_val:
+        Competition.query.filter(Competition.is_default == True).update({'is_default': False}, synchronize_session=False)
+    comp.is_default = new_val
+    log_operation(int(request.headers.get('X-User-Id')), '设置默认赛事' if new_val else '取消默认赛事', comp.name)
+    db.session.commit()
+    return jsonify({'is_default': comp.is_default})
+
 @admin_bp.route('/competitions/<int:competition_id>', methods=['DELETE'])
 @admin_required
 def delete_competition(competition_id):
@@ -1023,7 +1039,7 @@ def export_data():
         'version': 2,
         'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'is_debug': u.is_debug, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed, 'notice_confirmed': bool(u.notice_confirmed)} for u in User.query.all()],
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
-        'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
+        'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None, 'is_default': bool(c.is_default)} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
         'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id, 'question_type': q.question_type or 'match', 'open_time': q.open_time, 'close_time': q.close_time, 'max_selections': q.max_selections or 1} for q in Question.query.all()],
         'options': [{'id': o.id, 'question_id': o.question_id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins} for o in Option.query.all()],
@@ -1156,6 +1172,7 @@ def import_data():
             if sd:
                 try: comp.start_date = date_type.fromisoformat(sd)
                 except: pass
+            comp.is_default = bool(c_data.get('is_default'))
         db.session.commit()
         # 构建comp_id→start_date映射，用于转换旧格式day_number
         backup_version = data.get('version', 1)
