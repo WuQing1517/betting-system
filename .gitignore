@@ -5,3 +5,6 @@ backend/uploads/
 *.pyc
 backend/*backup*.json
 backend/pre_*.json
+backend/server5000.log
+backend/server5000.err
+.zcode/
