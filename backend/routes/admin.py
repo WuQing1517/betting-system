@@ -679,7 +679,9 @@ def update_question(question_id):
     data = request.get_json()
     if 'question_text' in data:
         question.question_text = data['question_text']
-    
+    if 'max_selections' in data:
+        question.max_selections = _max_selections(data, len(question.options))
+
     db.session.commit()
     return jsonify({'message': 'Question updated'})
 

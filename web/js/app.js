@@ -5173,9 +5173,12 @@ function buildAdminQuestionCard(q, isTimed) {
 
     h += '</div>';
 
-    var multiTag = (q.max_selections || 1) > 1 ? ' <span style="font-size:10px;color:#3478f6;background:#e8f4fd;padding:1px 6px;border-radius:4px;margin-left:4px">\u591A\u9009\u00B7\u6700\u591A' + (q.max_selections || 1) + '\u9879</span>' : '';
+    var ms = q.max_selections || 1;
 
-    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500">' + sl + multiTag + '</div>';
+    var typeCtrl = '<select onchange="updateQuestionMaxSel(' + q.id + ', this.value)" style="background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:6px"><option value="1"' + (ms <= 1 ? ' selected' : '') + '>\u5355\u9009</option><option value="multi"' + (ms > 1 ? ' selected' : '') + '>\u591A\u9009</option></select>'
+        + (ms > 1 ? '<input type="number" min="2" max="30" value="' + ms + '" onchange="updateQuestionMaxSel(' + q.id + ', \'multi:\' + this.value)" title="\u6700\u591A\u53EF\u9009" style="width:56px;background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:4px">' : '');
+
+    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + sl + typeCtrl + '</div>';
 
     h += '</div>';
 
@@ -5377,6 +5380,27 @@ async function refreshQuestionRow(qid) {
 async function updateQuestionText(qid, text) {
 
     try { await api('/admin/questions/' + qid, 'PUT', { question_text: text }); } catch (e) { showToast(e.message, 'error'); }
+
+}
+
+async function updateQuestionMaxSel(qid, value) {
+
+    // value: '1'/'multi'(来自题型下拉) 或 'multi:N'(来自最多可选输入)
+    var ms;
+
+    if (value === 'multi') ms = 2;  // 切到多选先默认2, 刷新后可在输入框里调
+
+    else if (value.indexOf('multi:') === 0) ms = parseInt(value.split(':')[1]) || 2;
+
+    else ms = 1;
+
+    if (ms !== 1 && ms < 2) ms = 2;
+
+    if (ms > 30) ms = 30;
+
+    try { await api('/admin/questions/' + qid, 'PUT', { max_selections: ms }); showToast('\u9898\u578B\u5DF2\u66F4\u65B0', 'success'); refreshQuestionRow(qid); }
+
+    catch (e) { showToast(e.message, 'error'); }
 
 }
 
