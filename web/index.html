@@ -8,6 +8,14 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 <body>
+    <!-- iOS液态玻璃折射滤镜: 对底栏背后的内容做有机扭曲(近似折射), 供backdrop-filter:url()引用 -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <filter id="miuiGlassLens" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.016" numOctaves="2" seed="92" result="noise"/>
+            <feGaussianBlur in="noise" stdDeviation="2.5" result="nblur"/>
+            <feDisplacementMap in="SourceGraphic" in2="nblur" scale="42" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
     <div id="authPage" class="page active">
         <div class="auth-box">
             <h1>Coin_V_Q</h1>
@@ -101,7 +109,7 @@
         <div style="height:60px"></div>
     </div>
 
-    <div id="bottomBar" style="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:290px;background:linear-gradient(115deg,rgba(255,255,255,0.26),rgba(255,255,255,0.10));backdrop-filter:blur(12px) saturate(160%);-webkit-backdrop-filter:blur(12px) saturate(160%);border:1px solid rgba(255,255,255,0.5);border-radius:26px;box-shadow:inset 0 1px 1px rgba(255,255,255,0.55),inset 0 -1px 1px rgba(255,255,255,0.2),0 8px 32px rgba(0,0,0,0.14);display:none;z-index:100;padding:5px 10px">
+    <div id="bottomBar" style="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-width:290px;background:rgba(255,255,255,0.10);backdrop-filter:blur(4px) saturate(150%);-webkit-backdrop-filter:blur(4px) saturate(150%);backdrop-filter:url(#miuiGlassLens) blur(2px) saturate(150%);border:1px solid rgba(255,255,255,0.5);border-radius:26px;box-shadow:inset 0 1px 1px rgba(255,255,255,0.5),0 8px 32px rgba(0,0,0,0.14);display:none;z-index:100;padding:5px 10px">
         <div class="bottom-bar-item" onclick="bottomTabClick('home',this)"><i class="ri-home-5-line"></i><span>首页</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('leaderboard',this)"><i class="ri-trophy-line"></i><span>排行榜</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('profile',this)"><i class="ri-user-3-line"></i><span>个人中心</span></div>
