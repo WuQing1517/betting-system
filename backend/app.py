@@ -106,6 +106,9 @@ def create_app():
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
         add_column_if_missing('operation_logs', 'change_amount', 'INTEGER')
         add_column_if_missing('users', 'session_token', 'VARCHAR(64)')
+        add_column_if_missing('questions', 'question_type', "VARCHAR(32) DEFAULT 'match'")
+        add_column_if_missing('questions', 'open_time', 'VARCHAR(32)')
+        add_column_if_missing('questions', 'close_time', 'VARCHAR(32)')
 
         # base64图片存库: PostgreSQL下把图片列拓宽为TEXT (SQLite不校验长度无需处理)
         if engine.dialect.name != 'sqlite':

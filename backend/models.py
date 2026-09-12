@@ -99,15 +99,19 @@ class Match(db.Model):
 
 class Question(db.Model):
     __tablename__ = 'questions'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     question_code = db.Column(db.String(128), unique=True, nullable=False)  # 如 2026IVL秋季赛Week1Day1Match1Q1
     match_id = db.Column(db.Integer, db.ForeignKey('matches.id'))
     question_text = db.Column(db.Text)
     correct_option_id = db.Column(db.Integer)
-    status = db.Column(db.String(32), default='active')  # active, completed
+    status = db.Column(db.String(32), default='active')  # match题: active, completed; timed题另有 pending(未开盘), closed(已封盘/手动提前封)
+    # 限时竞猜字段(仅 question_type='timed' 时有值): 北京时间墙钟字符串 YYYY-MM-DD HH:MM:SS
+    question_type = db.Column(db.String(32), default='match')
+    open_time = db.Column(db.String(32))
+    close_time = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     options = db.relationship('Option', backref='question', lazy=True)
     bets = db.relationship('Bet', backref='question', lazy=True)
 

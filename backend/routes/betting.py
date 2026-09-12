@@ -12,12 +12,31 @@ def log_operation(user_id, action, detail, amount=None):
     entry = OperationLog(user_id=user_id, nickname=u.nickname if u else '', action=action, detail=detail, change_amount=amount)
     db.session.add(entry)
 
+def beijing_now_str():
+    """北京时间墙钟字符串, 与限时竞猜 open_time/close_time 的存储格式一致, 可直接字符串比较"""
+    return (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
+
+def sync_timed_status(question):
+    """限时竞猜惰性状态推进(自动封盘): 到开盘时间 pending->active, 过封盘时间 ->closed。
+    只向前推进: 手动提前封盘的 closed 不会被翻回; completed 不动。返回是否有变更(由调用方 commit)。"""
+    if not question or question.question_type != 'timed' or question.status == 'completed':
+        return False
+    now = beijing_now_str()
+    changed = False
+    if question.status == 'pending' and question.open_time and now >= question.open_time:
+        question.status = 'active'
+        changed = True
+    if question.status in ('pending', 'active') and question.close_time and now > question.close_time:
+        question.status = 'closed'
+        changed = True
+    return changed
+
 betting_bp = Blueprint('betting', __name__)
 
 @betting_bp.route('/competitions', methods=['GET'])
 def get_competitions():
     competitions = Competition.query.filter_by(status='active').all()
-    return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status} for c in competitions])
+    return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': c.start_date.isoformat() if c.start_date else None} for c in competitions])
 
 @betting_bp.route('/teams', methods=['GET'])
 def get_teams():
@@ -159,11 +178,43 @@ def get_match(match_code):
         questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'options': options_data})
     return jsonify({'id': match.id, 'match_code': match.match_code, 'week_number': match.week_number, 'day_number': match.day_number, 'match_number': match.match_number, 'home_team': match.home_team, 'away_team': match.away_team, 'status': match.status, 'questions': questions_data})
 
+@betting_bp.route('/timed-questions', methods=['GET'])
+def get_timed_questions():
+    """限时竞猜列表: 默认仅未结算(首页展示, 结算前一直显示); ?all=1 返回全部(全部限时竞猜页/工作台用)"""
+    show_all = request.args.get('all') == '1'
+    query = Question.query.filter(Question.question_type == 'timed')
+    if not show_all:
+        query = query.filter(Question.status != 'completed')
+    questions = query.order_by(Question.open_time.asc(), Question.id.asc()).all()
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
+    changed = False
+    for q in questions:
+        if sync_timed_status(q):
+            changed = True
+    if changed:
+        db.session.commit()
+    question_ids = [q.id for q in questions]
+    all_options = Option.query.filter(Option.question_id.in_(question_ids)).all() if question_ids else []
+    options_by_question = {}
+    for o in all_options:
+        options_by_question.setdefault(o.question_id, []).append(o)
+    all_bets = {}
+    if user_id and question_ids:
+        for b in Bet.query.filter(Bet.user_id == user_id, Bet.question_id.in_(question_ids)).all():
+            all_bets[(b.question_id, b.option_id)] = b.coins
+    result = []
+    for q in questions:
+        options_data = [{'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': all_bets.get((q.id, o.id), 0)} for o in options_by_question.get(q.id, [])]
+        result.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': sum(o['total_coins'] for o in options_data), 'user_total_bet': sum(o['user_bet'] for o in options_data), 'open_time': q.open_time, 'close_time': q.close_time, 'options': options_data})
+    return jsonify(result)
+
 @betting_bp.route('/questions/<question_code>', methods=['GET'])
 def get_question(question_code):
     question = Question.query.filter_by(question_code=question_code).first()
     if not question:
         return jsonify({'error': 'Question not found'}), 404
+    if sync_timed_status(question):
+        db.session.commit()
     user_id = parse_user_id(request.headers.get('X-User-Id'))
     options = Option.query.filter_by(question_id=question.id).all()
     total_coins = sum(o.total_coins for o in options)
@@ -176,7 +227,7 @@ def get_question(question_code):
                 user_bet = bet.coins
         options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
     user_total_bet = sum(x['user_bet'] for x in options_data)
-    return jsonify({'id': question.id, 'question_code': question.question_code, 'question_text': question.question_text, 'status': question.status, 'correct_option_id': question.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'options': options_data})
+    return jsonify({'id': question.id, 'question_code': question.question_code, 'question_text': question.question_text, 'status': question.status, 'correct_option_id': question.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'question_type': question.question_type, 'open_time': question.open_time, 'close_time': question.close_time, 'options': options_data})
 
 @betting_bp.route('/bets', methods=['POST'])
 def place_bet():
@@ -198,7 +249,11 @@ def place_bet():
     if coins < 0:
         return jsonify({'error': 'Invalid coins'}), 400
     question = Question.query.get(question_id)
-    if not question or question.status not in ['active', 'closed']:
+    if not question:
+        return jsonify({'error': 'Question not found'}), 400
+    if sync_timed_status(question):
+        db.session.commit()
+    if question.status not in ['active', 'closed']:
         return jsonify({'error': 'Question not found'}), 400
     if question.status == 'closed':
         return jsonify({'error': 'Question is closed'}), 400

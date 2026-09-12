@@ -12,6 +12,14 @@ var currentCompetition = null;
 
 var questionDataCache = null;
 
+// 限时竞猜缓存(工作台竞猜tab用, 与 questionDataCache 同步刷新)
+var timedCache = [];
+
+// 全部限时竞猜页缓存 + 周筛选锚点
+var timedListCache = [];
+
+var timedWeekAnchor = null;
+
 
 
 // 登录态请求头: 用户ID + 会话令牌(账号信息变更后令牌轮换, 旧令牌会被服务端401拒绝)
@@ -171,6 +179,8 @@ async function refreshHomeData() {
         updateUserInfo();
 
         loadRecentSchedule();
+
+        loadTimedBets();
 
     } catch (e) {}
 
@@ -871,6 +881,8 @@ function initHomePage() {
 
     loadRecentSchedule();
 
+    loadTimedBets();
+
     if (currentUser && !currentUser.need_setup) maybeShowNotice();
 
     var bb = document.getElementById('bottomBar');
@@ -1204,6 +1216,244 @@ async function loadRecentSchedule() {
         document.getElementById('recentSchedule').innerHTML = allHtml;
 
     } catch (e) {}
+
+}
+
+
+
+// ========== 限时竞猜 ==========
+
+// 'YYYY-MM-DD HH:MM:SS' -> 'MM-DD HH:mm'
+function fmtShort(s) {
+
+    if (!s || s.length < 16) return s || '';
+
+    return s.substring(5, 10) + ' ' + s.substring(11, 16);
+
+}
+
+function timedStatusLabel(s) {
+
+    return s === 'pending' ? '\u672A\u5F00\u76D8' : s === 'active' ? '\u5F00\u76D8\u4E2D' : s === 'closed' ? '\u5DF2\u5C01\u76D8' : '\u5DF2\u7ED3\u7B97';
+
+}
+
+function timedStatusColor(s) {
+
+    return s === 'pending' ? '#86868b' : s === 'active' ? '#34a853' : s === 'closed' ? '#f57c00' : '#86868b';
+
+}
+
+function timedWindow(q) {
+
+    return fmtShort(q.open_time) + ' ~ ' + fmtShort(q.close_time);
+
+}
+
+function parseYMD(s) {
+
+    var p = s.split('-');
+
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+
+}
+
+// 限时竞猜行(首页区块与全部限时竞猜页共用): 点击直接进投币页
+function timedRowHtml(q) {
+
+    var sLabel = timedStatusLabel(q.status);
+
+    var sColor = timedStatusColor(q.status);
+
+    var pool = q.total_coins || 0;
+
+    var sub = '<i class="ri-time-line" style="font-size:12px"></i> ' + timedWindow(q);
+
+    if (q.status === 'completed' && q.correct_option_id) {
+
+        var co = q.options.filter(function(o) { return o.id === q.correct_option_id; })[0];
+
+        if (co) sub += ' \u00B7 <span style="color:#34a853">\u7B54\u6848: ' + (co.option_text || '\u7A7A') + '</span>';
+
+    }
+
+    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:6px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
+
+    h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+
+    h += '<span style="font-size:14px;font-weight:500;color:#1a1a1a;flex:1;min-width:0;word-break:break-all">' + q.question_text + '</span>';
+
+    h += '<span style="font-size:12px;color:' + sColor + ';font-weight:500;flex-shrink:0">' + sLabel + '</span>';
+
+    h += '</div>';
+
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px">';
+
+    h += '<span style="font-size:11px;color:#86868b">' + sub + '</span>';
+
+    h += '<span style="font-size:11px;color:#3478f6;font-weight:500;flex-shrink:0">\u6C60 ' + pool + '\u5E01</span>';
+
+    h += '</div></div>';
+
+    return h;
+
+}
+
+async function loadTimedBets() {
+
+    var section = document.getElementById('timedSection');
+
+    var box = document.getElementById('timedBets');
+
+    if (!section || !box) return;
+
+    try {
+
+        var list = await api('/timed-questions');
+
+        if (!list.length) { section.style.display = 'none'; box.innerHTML = ''; return; }
+
+        section.style.display = 'block';
+
+        var h = '<div style="margin:0 0 8px">';
+
+        list.forEach(function(q) { h += timedRowHtml(q); });
+
+        h += '</div>';
+
+        box.innerHTML = h;
+
+    } catch (e) { section.style.display = 'none'; box.innerHTML = ''; }
+
+}
+
+function timedWeekOf(dateStr) {
+
+    if (!timedWeekAnchor || !dateStr) return null;
+
+    var a = parseYMD(timedWeekAnchor);
+
+    var firstMonday = new Date(a.getFullYear(), a.getMonth(), a.getDate() - ((a.getDay() + 6) % 7));
+
+    var diff = Math.floor((parseYMD(dateStr) - firstMonday) / 86400000);
+
+    return Math.floor(diff / 7) + 1;
+
+}
+
+async function showTimedList() {
+
+    showPage('timedList');
+
+    document.getElementById('timedListFilterArea').innerHTML = '';
+
+    document.getElementById('timedListContent').innerHTML = '<div style="text-align:center;padding:20px;color:#999">\u52A0\u8F7D\u4E2D..</div>';
+
+    try {
+
+        var results = await Promise.all([api('/timed-questions?all=1'), api('/competitions')]);
+
+        timedListCache = results[0];
+
+        timedWeekAnchor = (results[1] && results[1][0] && results[1][0].start_date) || null;
+
+        renderTimedListFilter();
+
+        renderTimedList();
+
+    } catch (e) {
+
+        document.getElementById('timedListContent').innerHTML = '<div style="text-align:center;padding:20px;color:#999">\u52A0\u8F7D\u5931\u8D25</div>';
+
+    }
+
+}
+
+function renderTimedListFilter() {
+
+    var area = document.getElementById('timedListFilterArea');
+
+    if (!timedWeekAnchor) { area.innerHTML = ''; return; }
+
+    // 可选周 = 所有限时竞猜开盘~封盘窗口覆盖到的周(赛季周, 与比赛周同一周一锚点)
+    var weeks = {};
+
+    timedListCache.forEach(function(q) {
+
+        if (!q.open_time || !q.close_time) return;
+
+        var w1 = timedWeekOf(q.open_time.substring(0, 10));
+
+        var w2 = timedWeekOf(q.close_time.substring(0, 10));
+
+        if (w1 === null || w2 === null) return;
+
+        var lo = Math.max(1, Math.min(w1, w2)), hi = Math.max(w1, w2);
+
+        for (var w = lo; w <= hi && w - lo < 60; w++) weeks[w] = true;
+
+    });
+
+    var opts = [{ value: '', label: '\u5168\u90E8\u5468' }];
+
+    Object.keys(weeks).map(Number).sort(function(a, b) { return a - b; }).forEach(function(w) { opts.push({ value: String(w), label: w + '\u5468' }); });
+
+    area.innerHTML = '<div class="filter-bar"><div id="timedWeekFilter" style="display:flex;flex:1"></div></div>';
+
+    miuiSelect('timedWeekFilter', opts, getMiuiSelectValue('timedWeekFilter') || '', function() { renderTimedList(); });
+
+}
+
+function renderTimedList() {
+
+    var box = document.getElementById('timedListContent');
+
+    if (!box) return;
+
+    var wf = getMiuiSelectValue('timedWeekFilter') || '';
+
+    var list = timedListCache;
+
+    if (wf && timedWeekAnchor) {
+
+        var a = parseYMD(timedWeekAnchor);
+
+        var firstMonday = new Date(a.getFullYear(), a.getMonth(), a.getDate() - ((a.getDay() + 6) % 7));
+
+        var weekStart = new Date(firstMonday.getFullYear(), firstMonday.getMonth(), firstMonday.getDate() + (parseInt(wf, 10) - 1) * 7);
+
+        var weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+
+        // 开盘时段覆盖: 开盘~封盘窗口与所选周有重叠即显示(跨周竞猜出现在多个周下)
+        list = timedListCache.filter(function(q) {
+
+            if (!q.open_time || !q.close_time) return false;
+
+            var openDate = parseYMD(q.open_time.substring(0, 10));
+
+            var closeDate = parseYMD(q.close_time.substring(0, 10));
+
+            return openDate <= weekEnd && closeDate >= weekStart;
+
+        });
+
+    }
+
+    if (!list.length) {
+
+        box.innerHTML = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u9650\u65F6\u7ADE\u731C</div>';
+
+        return;
+
+    }
+
+    var h = '<div style="margin:12px 0 8px">';
+
+    list.forEach(function(q) { h += timedRowHtml(q); });
+
+    h += '</div>';
+
+    box.innerHTML = h;
 
 }
 
@@ -2715,11 +2965,19 @@ async function loadBetPage(code, status, homeTeam, awayTeam, homeLogo, awayLogo,
 
         currentQuestion = q;
 
-        var homeLogoHtml = homeLogo ? '<img src="' + homeLogo + '" style="width:36px;height:36px;border-radius:10px;object-fit:contain;background:#f2f3f5">' : '<div style="width:36px;height:36px;border-radius:10px;background:#f2f3f5;display:flex;align-items:center;justify-content:center;font-size:13px;color:#86868b">?</div>';
+        if (q.question_type === 'timed') {
 
-        var awayLogoHtml = awayLogo ? '<img src="' + awayLogo + '" style="width:36px;height:36px;border-radius:10px;object-fit:contain;background:#f2f3f5">' : '<div style="width:36px;height:36px;border-radius:10px;background:#f2f3f5;display:flex;align-items:center;justify-content:center;font-size:13px;color:#86868b">?</div>';
+            document.getElementById('betMatchInfo').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 0"><i class="ri-lightbulb-flash-line" style="font-size:26px;color:#f57c00"></i><div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#1a1a1a">\u9650\u65F6\u7ADE\u731C</div><div style="font-size:12px;color:#86868b;margin-top:2px">' + timedWindow(q) + '</div></div></div>';
 
-        document.getElementById('betMatchInfo').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0">' + homeLogoHtml + '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#1a1a1a">' + (homeTeam || '?') + ' <span style="color:#86868b;font-weight:400">VS</span> ' + (awayTeam || '?') + '</div></div>' + awayLogoHtml + '</div>';
+        } else {
+
+            var homeLogoHtml = homeLogo ? '<img src="' + homeLogo + '" style="width:36px;height:36px;border-radius:10px;object-fit:contain;background:#f2f3f5">' : '<div style="width:36px;height:36px;border-radius:10px;background:#f2f3f5;display:flex;align-items:center;justify-content:center;font-size:13px;color:#86868b">?</div>';
+
+            var awayLogoHtml = awayLogo ? '<img src="' + awayLogo + '" style="width:36px;height:36px;border-radius:10px;object-fit:contain;background:#f2f3f5">' : '<div style="width:36px;height:36px;border-radius:10px;background:#f2f3f5;display:flex;align-items:center;justify-content:center;font-size:13px;color:#86868b">?</div>';
+
+            document.getElementById('betMatchInfo').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0">' + homeLogoHtml + '<div style="text-align:center"><div style="font-size:20px;font-weight:700;color:#1a1a1a">' + (homeTeam || '?') + ' <span style="color:#86868b;font-weight:400">VS</span> ' + (awayTeam || '?') + '</div></div>' + awayLogoHtml + '</div>';
+
+        }
 
         document.getElementById('betQuestionText').textContent = questionText || q.question_text;
 
@@ -2728,6 +2986,8 @@ async function loadBetPage(code, status, homeTeam, awayTeam, homeLogo, awayLogo,
         var isCompleted = q.status === 'completed';
 
         var isClosed = q.status === 'closed';
+
+        var isPending = q.status === 'pending';
 
         var isActive = q.status === 'active';
 
@@ -2770,6 +3030,8 @@ async function loadBetPage(code, status, homeTeam, awayTeam, homeLogo, awayLogo,
         if (isCompleted) html += '<div style="padding:12px 16px;font-size:13px;color:#86868b;background:#f7f8fa;border-radius:12px;margin:0 16px">\u8BE5\u7ADE\u731C\u5DF2\u7ED3\u7B97</div>';
 
         else if (isClosed) html += '<div style="padding:12px 16px;font-size:13px;color:#f57c00;background:#fff8e1;border-radius:12px;margin:0 16px">\u5DF2\u5C01\u76D8\uFF0C\u6682\u505C\u4E0B\u6CE8</div>';
+
+        else if (isPending) html += '<div style="padding:12px 16px;font-size:13px;color:#86868b;background:#f7f8fa;border-radius:12px;margin:0 16px">\u6682\u672A\u5F00\u76D8\uFF0C' + fmtShort(q.open_time) + ' \u5F00\u542F\u6295\u5E01</div>';
 
         document.getElementById('optionList').innerHTML = html;
 
@@ -4767,7 +5029,7 @@ async function loadAdminQuestions() {
 
         h += '<div id="questionCompSelect"></div>';
 
-        h += '</div><div style="display:flex;gap:8px;padding:0 12px 4px"><div id="questionWeekFilter"></div><div id="questionDayFilter"></div></div>';
+        h += '</div><div style="display:flex;gap:8px;padding:0 12px 4px;align-items:center"><div id="questionWeekFilter"></div><div id="questionDayFilter"></div><button class="admin-btn btn-success" style="font-size:18px;width:34px;height:34px;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:0" onclick="showAddTimedQuestionDialog()" title="\u6DFB\u52A0\u9650\u65F6\u7ADE\u731C"><i class="ri-lightbulb-flash-line"></i></button></div>';
 
         h += '<div id="questionContent"></div></div>';
 
@@ -4797,13 +5059,24 @@ async function onQuestionCompChange() {
 
     try {
 
-        var data = await api('/competitions/' + cid + '/full');
+        var results = await Promise.all([api('/competitions/' + cid + '/full'), loadTimedCache()]);
+
+        var data = results[0];
 
         questionDataCache = data;
 
         var weeks = {}, days = {};
 
         data.matches.forEach(function(m) { weeks[m.week_number] = true; days[m.day_number] = true; });
+
+        // 限时竞猜覆盖的周也并入周筛选(比赛没有的周也能筛出限时竞猜)
+        timedCache.forEach(function(q) {
+
+            var wd = timedWeekDay(q, data.start_date);
+
+            if (wd) weeks[wd.week] = true;
+
+        });
 
         var weekOpts = [{value:'',label:'\u5168\u90E8\u5468'}];
 
@@ -4827,6 +5100,125 @@ async function onQuestionCompChange() {
 
 
 
+function timedWeekDay(q, startDateStr) {
+
+    // 按赛季周一锚点把开盘日期换算成 (周, 日); 无法换算(未设起始日期/早于第1周周一)返回 null
+    if (!startDateStr || !q.open_time) return null;
+
+    var sd = parseYMD(startDateStr);
+
+    var firstMonday = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() - ((sd.getDay() + 6) % 7));
+
+    var od = parseYMD(q.open_time.substring(0, 10));
+
+    var diffDays = Math.floor((od - firstMonday) / 86400000);
+
+    if (diffDays < 0) return null;
+
+    return { week: Math.floor(diffDays / 7) + 1, day: ((od.getDay() + 6) % 7) + 1, date: q.open_time.substring(0, 10) };
+
+}
+
+function buildAdminQuestionCard(q, isTimed) {
+
+    var h = '';
+
+    var sl = q.status === 'active' ? '\u5F00\u76D8\u4E2D' : q.status === 'closed' ? '\u5DF2\u5C01\u76D8' : q.status === 'pending' ? '\u672A\u5F00\u76D8' : '\u5DF2\u7ED3\u7B97';
+
+    var sc = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
+
+    var qb = q.status === 'active' ? '#e8f4fd' : q.status === 'completed' ? '#e8f7ed' : q.status === 'pending' ? '#f2f3f5' : '#fff8e1';
+
+    h += '<div id="qrow_' + q.id + '" style="background:' + qb + ';border-radius:14px;padding:14px;margin:8px 0">';
+
+    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+
+    h += '<div style="flex:1;min-width:0">';
+
+    if (isTimed) {
+
+        h += '<div style="font-size:14px;font-weight:600;color:#1a1a1a;word-break:break-all"><i class="ri-time-line" style="color:#f57c00"></i> ' + timedWindow(q) + ' <span style="font-size:11px;font-weight:400;color:#86868b">' + q.question_code + '</span></div>';
+
+    } else {
+
+        var shortCode = q.question_code.replace(/^.*?(Week\d+Day\d+Match\d+Q\d+)$/, '$1');
+
+        h += '<div style="font-size:14px;font-weight:600;color:#1a1a1a;word-break:break-all">' + shortCode + '</div>';
+
+    }
+
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">';
+
+    h += '<input class="inline-input-sm" value="' + (q.question_text || '').replace(/"/g, '&quot;') + '" onblur="updateQuestionText(' + q.id + ',this.value)" style="flex:1;min-width:0;background:#fff;border:1px solid #e8edf5;border-radius:8px;padding:6px 10px">';
+
+    h += '</div>';
+
+    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500">' + sl + '</div>';
+
+    h += '</div>';
+
+    h += '<div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">';
+
+    if (q.status === 'active') {
+
+        h += '<button class="admin-btn btn-danger" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="closeQuestion(' + q.id + ')" title="\u5C01\u76D8"><i class="ri-stop-circle-line"></i></button>';
+
+        h += '<button class="admin-btn btn-sm" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteQuestionWeb(' + q.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+
+    } else if (q.status === 'closed') {
+
+        h += '<button class="admin-btn btn-success" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="openQuestion(' + q.id + ')" title="\u5F00\u76D8"><i class="ri-play-circle-line"></i></button>';
+
+        h += '<button class="admin-btn btn-sm" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteQuestionWeb(' + q.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+
+        h += '<button class="admin-btn btn-warning" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="openSettleDialog(' + q.id + ')" title="\u7ED3\u7B97"><i class="ri-check-double-line"></i></button>';
+
+    } else if (q.status === 'pending') {
+
+        h += '<button class="admin-btn btn-sm" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteQuestionWeb(' + q.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+
+    } else {
+
+        h += '<button class="admin-btn btn-warning" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="resetQuestionWeb(' + q.id + ')" title="\u91CD\u7F6E"><i class="ri-refresh-line"></i></button>';
+
+    }
+
+    h += '<button class="admin-btn btn-sm" style="font-size:11px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="showBetDetail(' + q.id + ')" title="\u6295\u6CE8\u8BE6\u60C5"><i class="ri-information-line"></i></button>';
+
+    h += '</div></div>';
+
+    q.options.forEach(function(o) {
+
+        var ob = '#fff8e1';
+
+        if (q.status === 'active') ob = '#e8f4fd';
+
+        else if (q.correct_option_id && o.id === q.correct_option_id) ob = '#e8f7ed';
+
+        else if (q.correct_option_id) ob = '#fff0ed';
+
+        h += '<div id="optrow_' + o.id + '" style="display:flex;align-items:center;gap:6px;margin:4px 0;padding:4px 8px;border-radius:8px;background:' + ob + '">';
+
+        h += '<input class="inline-input-sm" value="' + (o.option_text || '').replace(/"/g, '&quot;') + '" data-oid="' + o.id + '" data-field="text" onblur="saveOptionField(this)" placeholder="\u9009\u9879\u5185\u5BB9" style="flex:2;background:#f2f3f5;border-radius:8px;padding:6px 8px">';
+
+        h += '<input class="inline-input-num" type="number" value="' + o.base_rate + '" data-oid="' + o.id + '" data-field="rate" onblur="saveOptionField(this)" style="width:56px;background:#fff8e1;border-radius:8px;padding:6px">';
+
+        h += '<span style="font-size:11px;color:#3478f6;font-weight:500">' + (o.total_coins || 0) + '</span>';
+
+        if (q.status !== 'completed') h += '<button class="admin-btn btn-danger" style="font-size:14px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px" onclick="deleteOptionWeb(' + o.id + ',' + q.id + ')"><i class="ri-close-line"></i></button>';
+
+        h += '</div>';
+
+    });
+
+    if (q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
+
+    h += '</div>';
+
+    return h;
+
+}
+
 function renderQuestionContent(data) {
 
     var c = document.getElementById('questionContent');
@@ -4835,101 +5227,94 @@ function renderQuestionContent(data) {
 
     var df = getMiuiSelectValue('questionDayFilter') || '';
 
-    var h = '<div style="margin-top:10px">';
+    // 比赛按(周,日)分日组(保持原顺序); 限时竞猜按开盘日期归入对应日组, 渲染在该日最前面
+    var dayGroups = [];
+
+    var groupByKey = {};
 
     data.matches.forEach(function(m) {
 
-        if (wf && String(m.week_number) !== wf) return;
+        var key = m.week_number + '_' + m.day_number;
 
-        if (df && String(m.day_number) !== df) return;
+        if (!groupByKey[key]) {
 
-        h += '<div class="match-divider">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
+            groupByKey[key] = { week: m.week_number, day: m.day_number, date: m.match_date || null, timed: [], matches: [] };
 
-        m.questions.forEach(function(q) {
+            dayGroups.push(groupByKey[key]);
 
-            var sl = q.status === 'active' ? '\u5F00\u76D8\u4E2D' : q.status === 'closed' ? '\u5DF2\u5C01\u76D8' : '\u5DF2\u7ED3\u7B97';
+        }
 
-            var sc = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
+        groupByKey[key].matches.push(m);
 
-            var qb = q.status === 'active' ? '#e8f4fd' : q.status === 'completed' ? '#e8f7ed' : '#fff8e1';
+    });
 
-            var shortCode = q.question_code.replace(/^.*?(Week\d+Day\d+Match\d+Q\d+)$/, '$1');
+    var ungrouped = [];
 
-            h += '<div id="qrow_' + q.id + '" style="background:' + qb + ';border-radius:14px;padding:14px;margin:8px 0">';
+    timedCache.forEach(function(q) {
 
-            h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+        var wd = timedWeekDay(q, data.start_date);
 
-            h += '<div style="flex:1;min-width:0">';
+        if (!wd) { ungrouped.push(q); return; }
 
-            h += '<div style="font-size:14px;font-weight:600;color:#1a1a1a;word-break:break-all">' + shortCode + '</div>';
+        var g = groupByKey[wd.week + '_' + wd.day];
 
-            h += '<div style="display:flex;align-items:center;gap:6px;margin-top:6px">';
+        if (!g) {
 
-            h += '<input class="inline-input-sm" value="' + (q.question_text || '').replace(/"/g, '&quot;') + '" onblur="updateQuestionText(' + q.id + ',this.value)" style="flex:1;min-width:0;background:#fff;border:1px solid #e8edf5;border-radius:8px;padding:6px 10px">';
+            g = { week: wd.week, day: wd.day, date: wd.date, timed: [], matches: [] };
 
-            h += '</div>';
+            groupByKey[wd.week + '_' + wd.day] = g;
 
-            h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500">' + sl + '</div>';
+            dayGroups.push(g);
 
-            h += '</div>';
+        }
 
-            h += '<div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end">';
+        g.timed.push(q);
 
-            if (q.status === 'active') {
+    });
 
-                h += '<button class="admin-btn btn-danger" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="closeQuestion(' + q.id + ')" title="\u5C01\u76D8"><i class="ri-stop-circle-line"></i></button>';
+    dayGroups.sort(function(a, b) {
 
-                h += '<button class="admin-btn btn-sm" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteQuestionWeb(' + q.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+        if (a.date && b.date) return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
 
-            } else if (q.status === 'closed') {
+        return 0;
 
-                h += '<button class="admin-btn btn-success" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="openQuestion(' + q.id + ')" title="\u5F00\u76D8"><i class="ri-play-circle-line"></i></button>';
+    });
 
-                h += '<button class="admin-btn btn-sm" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteQuestionWeb(' + q.id + ')" title="\u5220\u9664"><i class="ri-delete-bin-line"></i></button>';
+    if (ungrouped.length) dayGroups.unshift({ week: null, day: null, date: null, timed: ungrouped, matches: [] });
 
-                h += '<button class="admin-btn btn-warning" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="openSettleDialog(' + q.id + ')" title="\u7ED3\u7B97"><i class="ri-check-double-line"></i></button>';
+    var h = '<div style="margin-top:10px">';
 
-            } else {
+    dayGroups.forEach(function(g) {
 
-                h += '<button class="admin-btn btn-warning" style="font-size:18px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="resetQuestionWeb(' + q.id + ')" title="\u91CD\u7F6E"><i class="ri-refresh-line"></i></button>';
+        if (g.week !== null) {
 
-            }
+            if (wf && String(g.week) !== wf) return;
 
-            h += '<button class="admin-btn btn-sm" style="font-size:11px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="showBetDetail(' + q.id + ')" title="\u6295\u6CE8\u8BE6\u60C5"><i class="ri-information-line"></i></button>';
+            if (df && String(g.day) !== df) return;
 
-            h += '</div></div>';
+        } else if (wf || df) {
 
-            q.options.forEach(function(o) {
+            return;
 
-                var ob = '#fff8e1';
+        }
 
-                if (q.status === 'active') ob = '#e8f4fd';
+        if (g.timed.length) {
 
-                else if (q.correct_option_id && o.id === q.correct_option_id) ob = '#e8f7ed';
+            h += '<div class="match-divider" style="color:#f57c00;border-left-color:#f57c00">\u23F0 \u9650\u65F6\u7ADE\u731C' + (g.date ? ' \u00B7 ' + g.date.substring(5) : '') + '</div>';
 
-                else if (q.correct_option_id) ob = '#fff0ed';
+            g.timed.forEach(function(q) { h += buildAdminQuestionCard(q, true); });
 
-                h += '<div id="optrow_' + o.id + '" style="display:flex;align-items:center;gap:6px;margin:4px 0;padding:4px 8px;border-radius:8px;background:' + ob + '">';
+        }
 
-                h += '<input class="inline-input-sm" value="' + (o.option_text || '').replace(/"/g, '&quot;') + '" data-oid="' + o.id + '" data-field="text" onblur="saveOptionField(this)" placeholder="\u9009\u9879\u5185\u5BB9" style="flex:2;background:#f2f3f5;border-radius:8px;padding:6px 8px">';
+        g.matches.forEach(function(m) {
 
-                h += '<input class="inline-input-num" type="number" value="' + o.base_rate + '" data-oid="' + o.id + '" data-field="rate" onblur="saveOptionField(this)" style="width:56px;background:#fff8e1;border-radius:8px;padding:6px">';
+            h += '<div class="match-divider">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
 
-                h += '<span style="font-size:11px;color:#3478f6;font-weight:500">' + (o.total_coins || 0) + '</span>';
+            m.questions.forEach(function(q) { h += buildAdminQuestionCard(q, false); });
 
-                if (q.status !== 'completed') h += '<button class="admin-btn btn-danger" style="font-size:14px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px" onclick="deleteOptionWeb(' + o.id + ',' + q.id + ')"><i class="ri-close-line"></i></button>';
-
-                h += '</div>';
-
-            });
-
-            if (q.status !== 'completed') h += '<div style="margin-top:6px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addOptionWeb(' + q.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
-
-            h += '</div>';
+            h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
 
         });
-
-        h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
 
     });
 
@@ -4941,6 +5326,12 @@ function renderQuestionContent(data) {
 
 
 
+async function loadTimedCache() {
+
+    try { timedCache = await api('/timed-questions?all=1'); } catch (e) { timedCache = []; }
+
+}
+
 async function refreshQuestionRow(qid) {
 
     if (!questionDataCache) { onQuestionCompChange(); return; }
@@ -4949,11 +5340,11 @@ async function refreshQuestionRow(qid) {
 
     var cid = getMiuiSelectValue('questionCompSelect') || questionDataCache.id;
 
-    var data = await api('/competitions/' + cid + '/full');
+    var results = await Promise.all([api('/competitions/' + cid + '/full'), loadTimedCache()]);
 
-    questionDataCache = data;
+    questionDataCache = results[0];
 
-    renderQuestionContent(data);
+    renderQuestionContent(questionDataCache);
 
     window.scrollTo(0, scrollY);
 
@@ -5085,6 +5476,120 @@ async function submitAddQuestion(matchId) {
 
 }
 
+
+
+// ---- 添加限时竞猜弹窗(不依附比赛) ----
+
+function showAddTimedQuestionDialog() {
+
+    var h = '<div id="addTimedOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+
+    h += '<div style="background:#fff;border-radius:12px;padding:20px;width:90%;max-width:420px;max-height:80vh;overflow-y:auto">';
+
+    h += '<div style="font-size:16px;font-weight:bold;margin-bottom:14px">\u6DFB\u52A0\u9650\u65F6\u7ADE\u731C</div>';
+
+    h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
+
+    h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5F00\u76D8\u65F6\u95F4</label>';
+
+    h += '<input id="addtq_open" type="datetime-local" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
+
+    h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
+
+    h += '<input id="addtq_close" type="datetime-local" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
+
+    h += '</div>';
+
+    h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u95EE\u9898\u5185\u5BB9</label>';
+
+    h += '<input id="addtq_text" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px" placeholder="\u5982\uFF1A\u672C\u5C40MVP\u662F\u8C01\uFF1F"></div>';
+
+    h += '<div id="addtq_options">';
+
+    h += '<div class="addq-opt" style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button></div>';
+
+    h += '<div class="addq-opt" style="display:flex;gap:6px;margin-bottom:8px;align-items:center"><input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button></div>';
+
+    h += '</div>';
+
+    h += '<div style="display:flex;gap:8px;margin-bottom:14px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px" onclick="addTimedOptionRow()"><i class="ri-add-line"></i> \u6DFB\u52A0\u9009\u9879</button></div>';
+
+    h += '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="admin-btn btn-sm" onclick="document.getElementById(\'addTimedOverlay\').remove()">\u53D6\u6D88</button>';
+
+    h += '<button class="admin-btn btn-sm" style="background:#667eea;color:#fff" onclick="submitAddTimedQuestion()">\u786E\u5B9A</button></div>';
+
+    h += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', h);
+
+}
+
+function addTimedOptionRow() {
+
+    var c = document.getElementById('addtq_options');
+
+    if (c.children.length >= 3) { showToast('\u6700\u591A3\u4E2A\u9009\u9879', 'error'); return; }
+
+    var d = document.createElement('div');
+
+    d.className = 'addq-opt';
+
+    d.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;align-items:center';
+
+    d.innerHTML = '<input class="addq-opt-text" style="flex:2;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" placeholder="\u9009\u9879\u5185\u5BB9"><input class="addq-opt-rate" type="number" step="0.1" min="1.1" value="2.0" style="width:60px;background:#fff8e1;border:1px solid #e8edf5;border-radius:8px;padding:8px;font-size:13px" placeholder="\u500D\u7387"><button class="admin-btn btn-danger" style="font-size:16px;width:28px;height:28px;padding:0;flex-shrink:0" onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button>';
+
+    c.appendChild(d);
+
+}
+
+async function submitAddTimedQuestion() {
+
+    var open = document.getElementById('addtq_open').value;
+
+    var close = document.getElementById('addtq_close').value;
+
+    var text = document.getElementById('addtq_text').value.trim();
+
+    if (!open || !close) { showToast('\u8BF7\u9009\u62E9\u5F00\u76D8\u548C\u5C01\u76D8\u65F6\u95F4', 'error'); return; }
+
+    if (close <= open) { showToast('\u5C01\u76D8\u65F6\u95F4\u5FC5\u987B\u665A\u4E8E\u5F00\u76D8\u65F6\u95F4', 'error'); return; }
+
+    if (!text) { showToast('\u8BF7\u8F93\u5165\u95EE\u9898\u5185\u5BB9', 'error'); return; }
+
+    var optRows = document.querySelectorAll('#addtq_options .addq-opt');
+
+    var options = [];
+
+    for (var i = 0; i < optRows.length; i++) {
+
+        var t = optRows[i].querySelector('.addq-opt-text').value.trim();
+
+        var r = parseFloat(optRows[i].querySelector('.addq-opt-rate').value) || 2.0;
+
+        if (t) options.push({ option_text: t, base_rate: r });
+
+    }
+
+    if (options.length < 2) { showToast('\u81F3\u5C11\u9700\u89812\u4E2A\u9009\u9879', 'error'); return; }
+
+    try {
+
+        await api('/admin/timed-questions', 'POST', { question_text: text, options: options, open_time: open, close_time: close });
+
+        document.getElementById('addTimedOverlay').remove();
+
+        showToast('\u6DFB\u52A0\u6210\u529F', 'success');
+
+        await loadTimedCache();
+
+        if (questionDataCache) renderQuestionContent(questionDataCache);
+
+        else onQuestionCompChange();
+
+    } catch (e) { showToast(e.message, 'error'); }
+
+}
+
 async function deleteOptionWeb(oid, qid) { if (!(await miuiConfirm('\u5220\u9664\u9009\u9879\uFF1F'))) return; try { await api('/admin/options/' + oid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); var el = document.getElementById('optrow_' + oid); if (el) el.remove(); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
 
 async function addOptionWeb(qid) { try { await api('/admin/options', 'POST', { question_id: qid, option_text: '', base_rate: 2.0 }); showToast('\u6DFB\u52A0\u6210\u529F', 'success'); refreshQuestionRow(qid); } catch (e) { showToast(e.message, 'error'); } }
@@ -5100,6 +5605,8 @@ function openSettleDialog(qid) {
     if (!questionDataCache) return;
 
     questionDataCache.matches.forEach(function(m) { m.questions.forEach(function(question) { if (question.id === qid) q = question; }); });
+
+    if (!q) q = timedCache.filter(function(x) { return x.id === qid; })[0];
 
     if (!q) return;
 

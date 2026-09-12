@@ -84,6 +84,11 @@
                 <div style="font-size:12px;color:#1a1a1a;margin-top:4px;font-weight:500">积分榜</div>
             </div>
         </div>
+        <div class="section-title" id="timedSection" style="display:none">
+            <span>限时竞猜</span>
+            <span style="font-size:13px;color:#3478f6;cursor:pointer;font-weight:normal" onclick="showTimedList()">全部限时竞猜 →</span>
+        </div>
+        <div id="timedBets"></div>
         <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
             <span>近期赛程</span>
             <span style="font-size:13px;color:#3478f6;cursor:pointer;font-weight:normal" onclick="showFullSchedule()">全部赛程 →</span>
@@ -233,6 +238,16 @@
         </nav>
         <div id="scheduleFilterArea"></div>
         <div id="scheduleContent"></div>
+    </div>
+
+    <div id="timedListPage" class="page">
+        <nav class="navbar navbar-center">
+            <span class="back-btn" onclick="goBack()"><i class="ri-arrow-left-s-line"></i></span>
+            <span class="nav-title">限时竞猜</span>
+            <span></span>
+        </nav>
+        <div id="timedListFilterArea"></div>
+        <div id="timedListContent"></div>
     </div>
 
     <div id="prizesPage" class="page">

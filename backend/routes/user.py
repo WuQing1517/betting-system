@@ -182,7 +182,7 @@ def get_coin_history():
     events = []
     for b in bets:
         q = Question.query.get(b.question_id)
-        m = Match.query.get(q.match_id) if q else None
+        m = Match.query.get(q.match_id) if q and q.match_id else None
         dt = b.created_at or datetime.utcnow()
         match_date = None
         if m and m.competition_id:

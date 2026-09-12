@@ -603,6 +603,55 @@ def create_question():
     db.session.commit()
     return jsonify({'message': 'Question created', 'id': question.id, 'question_code': question_code})
 
+@admin_bp.route('/timed-questions', methods=['POST'])
+@admin_required
+def create_timed_question():
+    """创建限时竞猜: 不依附比赛, 指定开盘/封盘时间(北京时间), 由 sync_timed_status 到点自动开/封盘"""
+    from routes.betting import log_operation, beijing_now_str
+    data = request.get_json()
+    question_text = (data.get('question_text') or '').strip()
+    options = data.get('options')  # [{option_text, base_rate}]
+    open_time = (data.get('open_time') or '').strip()
+    close_time = (data.get('close_time') or '').strip()
+
+    if not question_text or not options or len(options) < 2 or len(options) > 3:
+        return jsonify({'error': '输入内容无效'}), 400
+    if not open_time or not close_time:
+        return jsonify({'error': '请选择开盘和封盘时间'}), 400
+    # 兼容 datetime-local 值(YYYY-MM-DDTHH:MM): 统一为 YYYY-MM-DD HH:MM:SS
+    open_time = open_time.replace('T', ' ')
+    close_time = close_time.replace('T', ' ')
+    if len(open_time) == 16: open_time += ':00'
+    if len(close_time) == 16: close_time += ':00'
+    if close_time <= open_time:
+        return jsonify({'error': '封盘时间必须晚于开盘时间'}), 400
+    now = beijing_now_str()
+    if close_time <= now:
+        return jsonify({'error': '封盘时间必须晚于当前时间'}), 400
+
+    day_tag = open_time[:10].replace('-', '')
+    n = 1
+    while Question.query.filter_by(question_code=f'Timed{day_tag}Q{n}').first():
+        n += 1
+    question_code = f'Timed{day_tag}Q{n}'
+
+    question = Question(
+        question_code=question_code,
+        match_id=None,
+        question_text=question_text,
+        question_type='timed',
+        open_time=open_time,
+        close_time=close_time,
+        status='active' if now >= open_time else 'pending'
+    )
+    db.session.add(question)
+    db.session.flush()
+    for opt in options:
+        db.session.add(Option(question_id=question.id, option_text=opt['option_text'], base_rate=opt.get('base_rate', 2.0)))
+    log_operation(int(request.headers.get('X-User-Id')), '添加限时竞猜', f'{question_code} {question_text} (开盘{open_time} 封盘{close_time})')
+    db.session.commit()
+    return jsonify({'message': 'Timed question created', 'id': question.id, 'question_code': question_code})
+
 @admin_bp.route('/questions/<int:question_id>', methods=['PUT'])
 @admin_required
 def update_question(question_id):
@@ -933,7 +982,7 @@ def export_data():
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
-        'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id} for q in Question.query.all()],
+        'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id, 'question_type': q.question_type or 'match', 'open_time': q.open_time, 'close_time': q.close_time} for q in Question.query.all()],
         'options': [{'id': o.id, 'question_id': o.question_id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins} for o in Option.query.all()],
         'bets': [{'id': b.id, 'user_id': b.user_id, 'question_id': b.question_id, 'option_id': b.option_id, 'coins': b.coins} for b in Bet.query.all()],
         'prizes': [{'id': p.id, 'competition_id': p.competition_id, 'name': p.name, 'quantity': p.quantity, 'condition': p.condition, 'provider': p.provider, 'notes': p.notes, 'creator_id': p.creator_id} for p in Prize.query.all()],
@@ -1166,6 +1215,9 @@ def import_data():
             q.match_id = q_match
             q.status = q_data.get('status', 'active')
             q.correct_option_id = _int_opt(q_data.get('correct_option_id'))
+            q.question_type = q_data.get('question_type') or 'match'
+            q.open_time = q_data.get('open_time')
+            q.close_time = q_data.get('close_time')
         db.session.commit()
         options_by_id = {o.id: o for o in Option.query.all()}
         for o_data in data.get('options', []):
