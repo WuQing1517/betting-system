@@ -4107,8 +4107,6 @@ async function loadAdminTeams() {
 
         var h = '<div class="admin-section">';
 
-        h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="addTeam()" title="\u6DFB\u52A0\u961F\u4F0D"><i class="ri-add-circle-line"></i></button>';
-
         teams.forEach(function(t) {
 
             var logoUrl = t.logo_url || '';  // 相对地址(/api/img/...或/uploads/...)按当前站点解析, 不再拼接旧域名
@@ -4130,6 +4128,8 @@ async function loadAdminTeams() {
             h += '</div></div>';
 
         });
+
+        h += '<button class="admin-btn btn-success" onclick="addTeam()" style="width:100%;margin-top:8px;margin-left:0;padding:12px;border-radius:12px;font-size:15px"><i class="ri-add-circle-line"></i> \u6DFB\u52A0\u961F\u4F0D</button>';
 
         h += '</div>';
 

@@ -116,9 +116,13 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .btn-danger { background: #fff0ed; color: #e74c3c; }
 .btn-warning { background: #fff8e1; color: #f57c00; }
 .btn-success { background: #e8f7ed; color: #34a853; }
-.admin-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; }
-.admin-table th { background: #f7f8fa; padding: 10px 12px; text-align: left; font-size: 12px; color: #86868b; font-weight: 500; }
-.admin-table td { padding: 10px 12px; border-top: 0.5px solid #f2f3f5; font-size: 13px; color: #1a1a1a; }
+.admin-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 14px; }
+.admin-table th { position: sticky; top: 58px; z-index: 97; background: #f7f8fa; padding: 10px 12px; text-align: left; font-size: 12px; color: #86868b; font-weight: 500; }
+.admin-table th:first-child { border-top-left-radius: 14px; }
+.admin-table th:last-child { border-top-right-radius: 14px; }
+.admin-table tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+.admin-table tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+.admin-table td { padding: 10px 12px; border-top: 0.5px solid #f2f3f5; font-size: 13px; color: #1a1a1a; background: #fff; }
 
 /* 内联编辑 */
 .inline-input { border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-size: 14px; background: transparent; transition: all 0.2s; }
@@ -170,8 +174,8 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .bottom-bar-item i { font-size:22px; margin-bottom:2px; }
 .bottom-bar-item.active { color:#3478f6; }
 
-/* 后台管理下拉框 */
-.admin-select-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: 90px; z-index: 98; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 10px 0; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+/* 后台管理下拉框: sticky top须等于导航栏高度, 大于它会在页首被sticky推下产生空白 */
+.admin-select-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: 58px; z-index: 98; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); padding: 10px 0; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
 
 /* 比赛分隔 */
 .match-divider { padding: 8px 16px; font-size: 13px; color: #3478f6; font-weight: 600; background: #f7f8fa; border-left: 3px solid #3478f6; margin: 8px 16px 4px; border-radius: 0 8px 8px 0; }
