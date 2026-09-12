@@ -313,7 +313,9 @@ def get_question_bets(question_id):
 
 @betting_bp.route('/user/coin-stats', methods=['GET'])
 def get_coin_stats():
-    """用户币数变动统计: 今日增减 + 上次比赛日增减 (按北京时间)"""
+    """用户币数变动统计: 今日增减 + 上次比赛日增减 (按北京时间)
+    只统计已落定的变动: 已结算投注的净盈亏(按投注日归属)与管理员调币。
+    待结算投注不计入正负(本金尚未定胜负, 单独显示在"待结算")。"""
     user_id = parse_user_id(request.headers.get('X-User-Id'))
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
@@ -321,11 +323,6 @@ def get_coin_stats():
     from datetime import timedelta
     beijing_today = (datetime.utcnow() + timedelta(hours=8)).date()
     since_utc = datetime.utcnow() - timedelta(days=30)
-    logs = OperationLog.query.filter(
-        OperationLog.user_id == user_id,
-        OperationLog.created_at >= since_utc,
-        OperationLog.change_amount.isnot(None)
-    ).all()
     # 上次比赛日: 最近一个已到的比赛日(赛事起始日+周/天推算)
     last_match_date = None
     for m in Match.query.all():
@@ -339,13 +336,42 @@ def get_coin_stats():
             last_match_date = d
     today_delta = 0
     last_match_delta = None
-    for lg in logs:
-        local_date = (lg.created_at + timedelta(hours=8)).date()
-        amt = lg.change_amount or 0
-        if local_date == beijing_today:
+
+    def add_delta(day, amt):
+        nonlocal today_delta, last_match_delta
+        if day == beijing_today:
             today_delta += amt
-        if last_match_date and local_date == last_match_date:
+        if last_match_date and day == last_match_date:
             last_match_delta = (last_match_delta or 0) + amt
+
+    # 非投注类变动(调币等)仍按日志统计; 投注类日志排除, 改由投注记录统一计算,
+    # 否则待结算的本金会被当成亏损计进正负, 且重置结算后旧日志无法追溯
+    logs = OperationLog.query.filter(
+        OperationLog.user_id == user_id,
+        OperationLog.created_at >= since_utc,
+        OperationLog.change_amount.isnot(None),
+        ~OperationLog.action.in_(['投币', '投币修改', '投币取消', '投币胜利'])
+    ).all()
+    for lg in logs:
+        add_delta((lg.created_at + timedelta(hours=8)).date(), lg.change_amount or 0)
+
+    # 已结算投注: 净盈亏计入投注日 (赢家=派奖-本金, 输家=-本金); 待结算/已重置(记录已删)自然不计入
+    bets = Bet.query.filter(Bet.user_id == user_id, Bet.created_at >= since_utc).all()
+    for b in bets:
+        q = Question.query.get(b.question_id)
+        if not q or q.status != 'completed' or not q.correct_option_id:
+            continue
+        day = (b.created_at + timedelta(hours=8)).date()
+        if b.option_id != q.correct_option_id:
+            add_delta(day, -b.coins)
+            continue
+        options = Option.query.filter_by(question_id=q.id).all()
+        correct = next((o for o in options if o.id == q.correct_option_id), None)
+        if not correct:
+            continue
+        total_pool = sum(o.total_coins for o in options)
+        rate = correct.base_rate if correct.total_coins == 0 else correct.base_rate * (total_pool / correct.total_coins)
+        add_delta(day, int(b.coins * rate) - b.coins)
     return jsonify({
         'today_delta': today_delta,
         'last_match_date': last_match_date.isoformat() if last_match_date else None,
@@ -358,10 +384,11 @@ def get_pending_coins():
     if not user_id:
         return jsonify({'error': 'Missing user id'}), 400
     # 单次JOIN聚合(逐条查询在跨洋数据库上会拖到十几秒, 堵死唯一的worker)
+    # pending: 限时竞猜未开盘, 本金已扣同样属于待结算
     from sqlalchemy import func
     total = db.session.query(func.coalesce(func.sum(Bet.coins), 0)).join(
         Question, Question.id == Bet.question_id
-    ).filter(Bet.user_id == user_id, Question.status.in_(['active', 'closed'])).scalar()
+    ).filter(Bet.user_id == user_id, Question.status.in_(['active', 'closed', 'pending'])).scalar()
     return jsonify({'pending_coins': int(total or 0)})
 
 @betting_bp.route('/leaderboard', methods=['GET'])
