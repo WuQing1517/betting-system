@@ -464,7 +464,7 @@ function miuiPromptMulti(fields) {
 
             } else {
 
-                h += '<input id="miuiPromptField' + i + '" type="' + (f.type || 'text') + '" placeholder="' + (f.placeholder || '') + '" value="' + (f.defaultValue || '') + '" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none">';
+                h += '<input id="miuiPromptField' + i + '" type="' + (f.type || 'text') + '" class="miui-datetime" style="padding:11px;font-size:14px;font-weight:400" placeholder="' + (f.placeholder || '') + '" value="' + (f.defaultValue || '') + '">';
 
             }
 
@@ -5180,7 +5180,7 @@ function buildAdminQuestionCard(q, isTimed) {
 
     var closeVal = q.close_time ? q.close_time.substring(0, 16).replace(' ', 'T') : '';
 
-    var closeCtrl = '<input type="datetime-local" value="' + closeVal + '" onchange="updateQuestionCloseTime(' + q.id + ', this)" title="\u5c01\u76d8\u65f6\u95f4, \u5230\u70b9\u81ea\u52a8\u5c01\u76d8; \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8" style="background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:4px">';
+    var closeCtrl = '<input type="datetime-local" class="miui-datetime-sm" value="' + closeVal + '" onchange="updateQuestionCloseTime(' + q.id + ', this)" title="\u5c01\u76d8\u65f6\u95f4, \u5230\u70b9\u81ea\u52a8\u5c01\u76d8; \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8">';
 
     h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + sl + typeCtrl + closeCtrl + '</div>';
 
@@ -5477,7 +5477,7 @@ function showAddQuestionDialog(matchId, matchDate) {
 
     h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addq_close" type="datetime-local" value="' + defaultClose + '" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" title="\u9ed8\u8ba4\u4e3a\u6bd4\u8d5b\u65e5 23:00, \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8"></div>';
+    h += '<input id="addq_close" type="datetime-local" class="miui-datetime" value="' + defaultClose + '" title="\u9ed8\u8ba4\u4e3a\u6bd4\u8d5b\u65e5 23:00, \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8"></div>';
 
     h += '<div id="addq_options">';
 
@@ -5591,11 +5591,11 @@ function showAddTimedQuestionDialog() {
 
     h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5F00\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addtq_open" type="datetime-local" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
+    h += '<input id="addtq_open" type="datetime-local" class="miui-datetime"></div>';
 
     h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
 
-    h += '<input id="addtq_close" type="datetime-local" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
+    h += '<input id="addtq_close" type="datetime-local" class="miui-datetime"></div>';
 
     h += '</div>';
 

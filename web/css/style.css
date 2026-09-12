@@ -151,6 +151,15 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .filter-bar { display: flex; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid rgba(0,0,0,0.06); }
 .filter-bar.fixed { position: fixed; top: 48px; left: 0; right: 0; z-index: 99; }
 
+/* MIUIX日期时间输入 */
+.miui-datetime { padding: 9px 12px; background: #f2f3f5; border: none; border-radius: 10px; font-size: 13px; color: #1a1a1a; font-weight: 500; outline: none; font-family: inherit; box-sizing: border-box; width: 100%; color-scheme: light; transition: background 0.2s; }
+.miui-datetime:hover { background: #eceef3; }
+.miui-datetime:focus { background: #e8edf5; outline: none; }
+.miui-datetime::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; }
+/* MIUIX日期时间输入-紧凑版(工作台题卡内联) */
+.miui-datetime-sm { padding: 2px 6px; background: #fff; border: 1px solid #e8edf5; border-radius: 8px; font-size: 11px; color: #1a1a1a; outline: none; font-family: inherit; color-scheme: light; }
+.miui-datetime-sm::-webkit-calendar-picker-indicator { opacity: 0.45; cursor: pointer; margin: 0; }
+
 /* MIUIX自定义下拉框 */
 .miui-select { position: relative; flex: 1; }
 .miui-select-trigger { padding: 9px 12px; background: #f2f3f5; border-radius: 10px; font-size: 13px; color: #1a1a1a; font-weight: 500; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; user-select: none; -webkit-user-select: none; }
