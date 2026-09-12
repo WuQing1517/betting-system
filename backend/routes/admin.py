@@ -560,6 +560,20 @@ def update_match_status(match_id):
     return jsonify({'message': 'Match status updated'})
 
 # 问题管理
+def _max_selections(data, option_count):
+    """题型参数: 1=单选, N=多选最多N项; 限制在[1, min(30, 选项数)]内"""
+    try:
+        ms = int(data.get('max_selections') or 1)
+    except (TypeError, ValueError):
+        ms = 1
+    if ms < 1:
+        ms = 1
+    if ms > 30:
+        ms = 30
+    if option_count and ms > option_count:
+        ms = option_count
+    return ms
+
 @admin_bp.route('/questions', methods=['POST'])
 @admin_required
 def create_question():
@@ -586,7 +600,8 @@ def create_question():
     question = Question(
         question_code=question_code,
         match_id=match_id,
-        question_text=question_text
+        question_text=question_text,
+        max_selections=_max_selections(data, len(options))
     )
     db.session.add(question)
     db.session.flush()  # 获取question.id
@@ -642,6 +657,7 @@ def create_timed_question():
         question_type='timed',
         open_time=open_time,
         close_time=close_time,
+        max_selections=_max_selections(data, len(options)),
         status='active' if now >= open_time else 'pending'
     )
     db.session.add(question)
@@ -982,7 +998,7 @@ def export_data():
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
-        'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id, 'question_type': q.question_type or 'match', 'open_time': q.open_time, 'close_time': q.close_time} for q in Question.query.all()],
+        'questions': [{'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'match_id': q.match_id, 'status': q.status, 'correct_option_id': q.correct_option_id, 'question_type': q.question_type or 'match', 'open_time': q.open_time, 'close_time': q.close_time, 'max_selections': q.max_selections or 1} for q in Question.query.all()],
         'options': [{'id': o.id, 'question_id': o.question_id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins} for o in Option.query.all()],
         'bets': [{'id': b.id, 'user_id': b.user_id, 'question_id': b.question_id, 'option_id': b.option_id, 'coins': b.coins} for b in Bet.query.all()],
         'prizes': [{'id': p.id, 'competition_id': p.competition_id, 'name': p.name, 'quantity': p.quantity, 'condition': p.condition, 'provider': p.provider, 'notes': p.notes, 'creator_id': p.creator_id} for p in Prize.query.all()],
@@ -1218,6 +1234,7 @@ def import_data():
             q.question_type = q_data.get('question_type') or 'match'
             q.open_time = q_data.get('open_time')
             q.close_time = q_data.get('close_time')
+            q.max_selections = _int_opt(q_data.get('max_selections')) or 1
         db.session.commit()
         options_by_id = {o.id: o for o in Option.query.all()}
         for o_data in data.get('options', []):

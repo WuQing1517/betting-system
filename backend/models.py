@@ -110,6 +110,7 @@ class Question(db.Model):
     question_type = db.Column(db.String(32), default='match')
     open_time = db.Column(db.String(32))
     close_time = db.Column(db.String(32))
+    max_selections = db.Column(db.Integer, default=1)  # 最多可选选项数: 1=单选, N>1=多选
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     options = db.relationship('Option', backref='question', lazy=True)

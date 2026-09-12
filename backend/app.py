@@ -109,6 +109,41 @@ def create_app():
         add_column_if_missing('questions', 'question_type', "VARCHAR(32) DEFAULT 'match'")
         add_column_if_missing('questions', 'open_time', 'VARCHAR(32)')
         add_column_if_missing('questions', 'close_time', 'VARCHAR(32)')
+        add_column_if_missing('questions', 'max_selections', 'INTEGER DEFAULT 1')
+
+        # bets唯一约束升级: 老库为(user_id, question_id)两列, 多选题投注(同题多选项)需要加option_id的三列版本
+        try:
+            bets_ucs = inspect(engine).get_unique_constraints('bets')
+            needs_fix = any(set(u.get('column_names') or []) == {'user_id', 'question_id'} for u in bets_ucs)
+        except Exception:
+            needs_fix = False
+        if needs_fix:
+            if engine.dialect.name == 'sqlite':
+                # SQLite不支持DROP CONSTRAINT, 重建表迁移(老约束下同题仅一条投注, 直接复制无冲突)
+                with engine.begin() as conn:
+                    conn.execute(text('''
+                        CREATE TABLE bets_new (
+                            id INTEGER NOT NULL,
+                            user_id INTEGER,
+                            question_id INTEGER,
+                            option_id INTEGER,
+                            coins INTEGER,
+                            created_at DATETIME,
+                            PRIMARY KEY (id),
+                            UNIQUE (user_id, question_id, option_id),
+                            FOREIGN KEY(user_id) REFERENCES users (id),
+                            FOREIGN KEY(question_id) REFERENCES questions (id),
+                            FOREIGN KEY(option_id) REFERENCES options (id)
+                        )'''))
+                    conn.execute(text('INSERT INTO bets_new (id, user_id, question_id, option_id, coins, created_at) SELECT id, user_id, question_id, option_id, coins, created_at FROM bets'))
+                    conn.execute(text('DROP TABLE bets'))
+                    conn.execute(text('ALTER TABLE bets_new RENAME TO bets'))
+            else:
+                with engine.begin() as conn:
+                    for u in bets_ucs:
+                        if set(u.get('column_names') or []) == {'user_id', 'question_id'} and u.get('name'):
+                            conn.execute(text(f'ALTER TABLE bets DROP CONSTRAINT "{u["name"]}"'))
+                    conn.execute(text('ALTER TABLE bets ADD CONSTRAINT uq_bets_user_question_option UNIQUE (user_id, question_id, option_id)'))
 
         # base64图片存库: PostgreSQL下把图片列拓宽为TEXT (SQLite不校验长度无需处理)
         if engine.dialect.name != 'sqlite':

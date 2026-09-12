@@ -2915,7 +2915,9 @@ function renderQuestions(matches) {
 
             html += '<div class="question-header"><div class="question-label">' + (idx + 1) + '</div>';
 
-            html += '<div class="question-text">' + q.question_text + '</div></div>';
+            var multiTag = (q.max_selections || 1) > 1 ? '<span style="font-size:10px;color:#3478f6;background:#e8f4fd;padding:1px 6px;border-radius:4px;margin-left:6px;flex-shrink:0">\u591A\u9009\u00B7\u6700\u591A' + (q.max_selections || 1) + '\u9879</span>' : '';
+
+            html += '<div class="question-text">' + q.question_text + multiTag + '</div></div>';
 
             html += '<div class="bet-stats"><span style="color:#3478f6">\u7ADE\u731C\u6C60 ' + (q.total_coins || 0) + '\u5E01</span>';
 
@@ -2978,6 +2980,26 @@ async function loadBetPage(code, status, homeTeam, awayTeam, homeLogo, awayLogo,
         }
 
         document.getElementById('betQuestionText').textContent = questionText || q.question_text;
+
+        var oldMultiHint = document.getElementById('betMultiHint');
+
+        if (oldMultiHint) oldMultiHint.remove();
+
+        var betMaxSel = q.max_selections || 1;
+
+        if (betMaxSel > 1) {
+
+            var multiHint = document.createElement('div');
+
+            multiHint.id = 'betMultiHint';
+
+            multiHint.style.cssText = 'margin:0 16px 8px;padding:8px 12px;background:#e8f4fd;color:#3478f6;font-size:13px;border-radius:10px;font-weight:500';
+
+            multiHint.textContent = '\u591A\u9009\u9898\uFF1A\u6700\u591A\u53EF\u9009 ' + betMaxSel + ' \u4E2A\u9009\u9879';
+
+            document.getElementById('betQuestionText').insertAdjacentElement('afterend', multiHint);
+
+        }
 
         document.getElementById('betBalance').textContent = currentUser.coins;
 
@@ -5151,7 +5173,9 @@ function buildAdminQuestionCard(q, isTimed) {
 
     h += '</div>';
 
-    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500">' + sl + '</div>';
+    var multiTag = (q.max_selections || 1) > 1 ? ' <span style="font-size:10px;color:#3478f6;background:#e8f4fd;padding:1px 6px;border-radius:4px;margin-left:4px">\u591A\u9009\u00B7\u6700\u591A' + (q.max_selections || 1) + '\u9879</span>' : '';
+
+    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500">' + sl + multiTag + '</div>';
 
     h += '</div>';
 
@@ -5392,6 +5416,18 @@ function showAddQuestionDialog(matchId) {
 
     h += '<div style="font-size:16px;font-weight:bold;margin-bottom:14px">\u6DFB\u52A0\u95EE\u9898</div>';
 
+    h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
+
+    h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u9898\u578B</label>';
+
+    h += '<select id="addq_seltype" onchange="document.getElementById(\'addq_maxsel_wrap\').style.display=this.value===\'multi\'?\'block\':\'none\'" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px;outline:none"><option value="1">\u5355\u9009</option><option value="multi">\u591A\u9009</option></select></div>';
+
+    h += '<div style="flex:1;min-width:0;display:none" id="addq_maxsel_wrap"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u6700\u591A\u53EF\u9009</label>';
+
+    h += '<input id="addq_maxsel" type="number" min="2" max="30" value="2" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px"></div>';
+
+    h += '</div>';
+
     h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u95EE\u9898\u5185\u5BB9</label>';
 
     h += '<input id="addq_text" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px" placeholder="\u5982\uFF1A\u672C\u5C40MVP\u662F\u8C01\uFF1F"></div>';
@@ -5444,6 +5480,20 @@ async function submitAddQuestion(matchId) {
 
     if (!text) { showToast('\u8BF7\u8F93\u5165\u95EE\u9898\u5185\u5BB9', 'error'); return; }
 
+    var selTypeEl = document.getElementById('addq_seltype');
+
+    var maxSel = 1;
+
+    if (selTypeEl && selTypeEl.value === 'multi') {
+
+        maxSel = parseInt(document.getElementById('addq_maxsel').value) || 2;
+
+        if (maxSel < 2) maxSel = 2;
+
+        if (maxSel > 30) maxSel = 30;
+
+    }
+
     var optRows = document.querySelectorAll('#addq_options .addq-opt');
 
     var options = [];
@@ -5462,7 +5512,7 @@ async function submitAddQuestion(matchId) {
 
     try {
 
-        await api('/admin/questions', 'POST', { match_id: matchId, question_text: text, options: options });
+        await api('/admin/questions', 'POST', { match_id: matchId, question_text: text, options: options, max_selections: maxSel });
 
         document.getElementById('addQuestionOverlay').remove();
 
@@ -5495,6 +5545,18 @@ function showAddTimedQuestionDialog() {
     h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
 
     h += '<input id="addtq_close" type="datetime-local" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
+
+    h += '</div>';
+
+    h += '<div style="display:flex;gap:8px;margin-bottom:12px">';
+
+    h += '<div style="flex:1;min-width:0"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u9898\u578B</label>';
+
+    h += '<select id="addtq_seltype" onchange="document.getElementById(\'addtq_maxsel_wrap\').style.display=this.value===\'multi\'?\'block\':\'none\'" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"><option value="1">\u5355\u9009</option><option value="multi">\u591A\u9009</option></select></div>';
+
+    h += '<div style="flex:1;min-width:0;display:none" id="addtq_maxsel_wrap"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u6700\u591A\u53EF\u9009</label>';
+
+    h += '<input id="addtq_maxsel" type="number" min="2" max="30" value="2" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px"></div>';
 
     h += '</div>';
 
@@ -5570,9 +5632,23 @@ async function submitAddTimedQuestion() {
 
     if (options.length < 2) { showToast('\u81F3\u5C11\u9700\u89812\u4E2A\u9009\u9879', 'error'); return; }
 
+    var selTypeEl = document.getElementById('addtq_seltype');
+
+    var maxSel = 1;
+
+    if (selTypeEl && selTypeEl.value === 'multi') {
+
+        maxSel = parseInt(document.getElementById('addtq_maxsel').value) || 2;
+
+        if (maxSel < 2) maxSel = 2;
+
+        if (maxSel > 30) maxSel = 30;
+
+    }
+
     try {
 
-        await api('/admin/timed-questions', 'POST', { question_text: text, options: options, open_time: open, close_time: close });
+        await api('/admin/timed-questions', 'POST', { question_text: text, options: options, open_time: open, close_time: close, max_selections: maxSel });
 
         document.getElementById('addTimedOverlay').remove();
 

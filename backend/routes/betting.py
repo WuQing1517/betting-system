@@ -143,7 +143,7 @@ def get_competition_full(competition_id):
                 user_bet = all_bets.get((q.id, o.id), 0)
                 options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
             user_total_bet = sum(x['user_bet'] for x in options_data)
-            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'options': options_data})
+            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'options': options_data})
         matches_data.append({'id': m.id, 'match_code': m.match_code, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'home_logo': make_logo(team_logos.get(m.home_team)), 'away_logo': make_logo(team_logos.get(m.away_team)), 'match_date': match_date_str, 'match_weekday': match_weekday, 'status': m.status, 'questions': questions_data})
     return jsonify({'id': competition.id, 'name': competition.name, 'year': competition.year, 'season': competition.season, 'status': competition.status, 'start_date': start_date_str, 'matches': matches_data})
 
@@ -205,7 +205,7 @@ def get_timed_questions():
     result = []
     for q in questions:
         options_data = [{'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': all_bets.get((q.id, o.id), 0)} for o in options_by_question.get(q.id, [])]
-        result.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': sum(o['total_coins'] for o in options_data), 'user_total_bet': sum(o['user_bet'] for o in options_data), 'open_time': q.open_time, 'close_time': q.close_time, 'options': options_data})
+        result.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': sum(o['total_coins'] for o in options_data), 'user_total_bet': sum(o['user_bet'] for o in options_data), 'max_selections': q.max_selections or 1, 'open_time': q.open_time, 'close_time': q.close_time, 'options': options_data})
     return jsonify(result)
 
 @betting_bp.route('/questions/<question_code>', methods=['GET'])
@@ -227,7 +227,7 @@ def get_question(question_code):
                 user_bet = bet.coins
         options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
     user_total_bet = sum(x['user_bet'] for x in options_data)
-    return jsonify({'id': question.id, 'question_code': question.question_code, 'question_text': question.question_text, 'status': question.status, 'correct_option_id': question.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'question_type': question.question_type, 'open_time': question.open_time, 'close_time': question.close_time, 'options': options_data})
+    return jsonify({'id': question.id, 'question_code': question.question_code, 'question_text': question.question_text, 'status': question.status, 'correct_option_id': question.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'question_type': question.question_type, 'max_selections': question.max_selections or 1, 'open_time': question.open_time, 'close_time': question.close_time, 'options': options_data})
 
 @betting_bp.route('/bets', methods=['POST'])
 def place_bet():
@@ -261,6 +261,14 @@ def place_bet():
     if not option or option.question_id != question_id:
         return jsonify({'error': 'Invalid option'}), 400
     existing_bet = Bet.query.filter_by(user_id=user_id, question_id=question_id, option_id=option_id).first()
+    # 多选题限选: 新增一个选项的投注时, 已投选项数不能超过 max_selections (改投/撤单不受限)
+    if coins > 0 and not existing_bet:
+        max_sel = question.max_selections or 1
+        sel_count = Bet.query.filter(Bet.user_id == user_id, Bet.question_id == question_id).count()
+        if sel_count >= max_sel:
+            if max_sel <= 1:
+                return jsonify({'error': '该题为单选题, 只能选择一个选项'}), 400
+            return jsonify({'error': '该题最多可选%d个选项' % max_sel}), 400
     if existing_bet:
         if coins == 0:
             user.coins += existing_bet.coins
