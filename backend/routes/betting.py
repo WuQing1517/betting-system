@@ -126,6 +126,7 @@ def get_competition_full(competition_id):
             all_bets[(b.question_id, b.option_id)] = b.coins
     matches_data = []
     start_date_str = competition.start_date.isoformat() if competition.start_date else None
+    status_changed = False
     for m in matches:
         questions = questions_by_match.get(m.id, [])
         match_date_str = None
@@ -136,7 +137,6 @@ def get_competition_full(competition_id):
             match_date_str = match_date.isoformat()
             match_weekday = weekday_names[match_date.weekday()]
         questions_data = []
-        status_changed = False
         for q in questions:
             if sync_timed_status(q):
                 status_changed = True
@@ -173,7 +173,10 @@ def get_match(match_code):
         for b in all_bets_list:
             all_bets[(b.question_id, b.option_id)] = b.coins
     questions_data = []
+    status_changed = False
     for q in questions:
+        if sync_timed_status(q):
+            status_changed = True
         options = options_by_question.get(q.id, [])
         total_coins = sum(o.total_coins for o in options)
         options_data = []
@@ -181,7 +184,7 @@ def get_match(match_code):
             user_bet = all_bets.get((q.id, o.id), 0)
             options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
         user_total_bet = sum(x['user_bet'] for x in options_data)
-        questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'options': options_data})
+        questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
     if status_changed:
         db.session.commit()
     return jsonify({'id': match.id, 'match_code': match.match_code, 'week_number': match.week_number, 'day_number': match.day_number, 'match_number': match.match_number, 'home_team': match.home_team, 'away_team': match.away_team, 'status': match.status, 'questions': questions_data})

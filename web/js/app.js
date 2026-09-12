@@ -4769,6 +4769,44 @@ async function deleteTeam(id) {
 
 // ---- \u8D5B\u7A0B ----
 
+function getDefaultCompCid() { return localStorage.getItem('adminDefaultComp') || ''; }
+
+function toggleDefaultComp(selectId) {
+
+    var cid = getMiuiSelectValue(selectId);
+
+    if (!cid) { showToast('\u8BF7\u5148\u9009\u62E9\u8D5B\u4E8B', 'error'); return; }
+
+    if (getDefaultCompCid() === cid) { localStorage.removeItem('adminDefaultComp'); showToast('\u5DF2\u53D6\u6D88\u9ED8\u8BA4\u8D5B\u7A0B', 'success'); }
+
+    else { localStorage.setItem('adminDefaultComp', cid); showToast('\u5DF2\u8BBE\u4E3A\u9ED8\u8BA4\u8D5B\u7A0B', 'success'); }
+
+    updateCompStarIcon(selectId);
+
+}
+
+function updateCompStarIcon(selectId) {
+
+    var btn = document.getElementById(selectId + '_star');
+
+    if (!btn) return;
+
+    var isDef = getDefaultCompCid() !== '' && getDefaultCompCid() === getMiuiSelectValue(selectId);
+
+    btn.innerHTML = '<i class="' + (isDef ? 'ri-star-fill' : 'ri-star-line') + '"' + (isDef ? ' style="color:#f57c00"' : '') + '></i>';
+
+}
+
+function pickInitialComp(opts) {
+
+    var saved = getDefaultCompCid();
+
+    for (var i = 0; i < opts.length; i++) { if (opts[i].value === saved) return saved; }
+
+    return opts.length > 0 ? opts[0].value : '';
+
+}
+
 async function loadAdminMatches() {
 
     try {
@@ -4781,6 +4819,8 @@ async function loadAdminMatches() {
 
         h += '<div id="matchCompSelect"></div>';
 
+        h += '<button id="matchCompSelect_star" class="admin-btn" style="font-size:16px;width:34px;height:34px;padding:0;margin-left:0;display:flex;align-items:center;justify-content:center;background:transparent" onclick="toggleDefaultComp(\'matchCompSelect\')" title="\u8bbe\u4e3a\u9ed8\u8ba4\u8d5b\u7a0b(\u8d5b\u7a0b/\u7ade\u731c\u9875\u9ed8\u8ba4\u9009\u4e2d)"><i class="ri-star-line" style="color:#86868b"></i></button>';
+
         h += '<button class="admin-btn btn-success" style="font-size:16px;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center" onclick="createCompetitionWeb()" title="\u521B\u5EFA\u8D5B\u4E8B"><i class="ri-add-circle-line"></i></button></div>';
 
         h += '<div id="matchContent"></div></div>';
@@ -4789,7 +4829,9 @@ async function loadAdminMatches() {
 
         var opts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
 
-        miuiSelect('matchCompSelect', opts, opts.length > 0 ? opts[0].value : '', function(val) { onMatchCompChange(); });
+        miuiSelect('matchCompSelect', opts, pickInitialComp(opts), function(val) { onMatchCompChange(); updateCompStarIcon('matchCompSelect'); });
+
+        updateCompStarIcon('matchCompSelect');
 
         if (comps.length > 0) onMatchCompChange();
 
@@ -5339,6 +5381,8 @@ async function loadAdminQuestions() {
 
         h += '<div id="questionCompSelect"></div>';
 
+        h += '<button id="questionCompSelect_star" class="admin-btn" style="font-size:16px;width:34px;height:34px;padding:0;margin-left:0;display:flex;align-items:center;justify-content:center;background:transparent" onclick="toggleDefaultComp(\'questionCompSelect\')" title="\u8bbe\u4e3a\u9ed8\u8ba4\u8d5b\u7a0b(\u8d5b\u7a0b/\u7ade\u731c\u9875\u9ed8\u8ba4\u9009\u4e2d)"><i class="ri-star-line" style="color:#86868b"></i></button>';
+
         h += '</div><div style="display:flex;gap:8px;padding:0 12px 4px;align-items:center"><div id="questionWeekFilter"></div><div id="questionDayFilter"></div><button class="admin-btn btn-success" style="font-size:18px;width:34px;height:34px;padding:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:0" onclick="showAddTimedQuestionDialog()" title="\u6DFB\u52A0\u9650\u65F6\u7ADE\u731C"><i class="ri-lightbulb-flash-line"></i></button></div>';
 
         h += '<div id="questionContent"></div></div>';
@@ -5347,7 +5391,9 @@ async function loadAdminQuestions() {
 
         var opts = comps.map(function(c) { return {value: String(c.id), label: c.name}; });
 
-        miuiSelect('questionCompSelect', opts, opts.length > 0 ? opts[0].value : '', function(val) { onQuestionCompChange(); });
+        miuiSelect('questionCompSelect', opts, pickInitialComp(opts), function(val) { onQuestionCompChange(); updateCompStarIcon('questionCompSelect'); });
+
+        updateCompStarIcon('questionCompSelect');
 
         if (comps.length > 0) onQuestionCompChange();
 
