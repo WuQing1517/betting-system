@@ -1307,23 +1307,21 @@ async function loadTimedBets() {
 
     if (!section || !box) return;
 
-    try {
+    var list = [];
 
-        var list = await api('/timed-questions');
+    try { list = await api('/timed-questions'); } catch (e) {}
 
-        if (!list.length) { section.style.display = 'none'; box.innerHTML = ''; return; }
+    section.style.display = 'flex';
 
-        section.style.display = 'flex';
+    if (!list.length) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u9650\u65F6\u7ADE\u731C</div>'; return; }
 
-        var h = '<div style="margin:0 0 8px">';
+    var h = '<div style="margin:0 0 8px">';
 
-        list.forEach(function(q) { h += timedRowHtml(q); });
+    list.forEach(function(q) { h += timedRowHtml(q); });
 
-        h += '</div>';
+    h += '</div>';
 
-        box.innerHTML = h;
-
-    } catch (e) { section.style.display = 'none'; box.innerHTML = ''; }
+    box.innerHTML = h;
 
 }
 
