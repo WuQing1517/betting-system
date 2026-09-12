@@ -62,9 +62,12 @@ def setup_superadmin():
     me.password = password
     me.cn = cn
     me.is_superadmin = True
+    from routes.user import rotate_session_token
+    new_token = rotate_session_token(me)  # 账号信息变更: 轮换令牌, 其他浏览器旧令牌失效
     db.session.commit()
     return jsonify({
         'message': 'OK',
+        'session_token': new_token,
         'user': {'user_id': me.id, 'openid': me.openid, 'nickname': me.nickname,
                  'cn': me.cn, 'is_superadmin': True, 'need_setup': False}
     })
@@ -926,7 +929,7 @@ def export_data():
     from models import User, Team, Competition, Match, Question, Option, Bet, Prize, OperationLog, Livestream, LeaderboardEntry, MatchScore
     data = {
         'version': 2,
-        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'is_debug': u.is_debug, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed} for u in User.query.all()],
+        'users': [{'id': u.id, 'nickname': u.nickname, 'cn': u.cn, 'coins': u.coins, 'is_admin': u.is_admin, 'is_superadmin': u.is_superadmin, 'is_debug': u.is_debug, 'openid': u.openid, 'password': u.password, 'avatar_url': u.avatar_url, 'rules_viewed': u.rules_viewed, 'notice_confirmed': bool(u.notice_confirmed)} for u in User.query.all()],
         'teams': [{'id': t.id, 'name': t.name, 'logo_url': t.logo_url} for t in Team.query.all()],
         'competitions': [{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': str(c.start_date) if c.start_date else None} for c in Competition.query.all()],
         'matches': [{'id': m.id, 'match_code': m.match_code, 'competition_id': m.competition_id, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'status': m.status} for m in Match.query.all()],
@@ -1014,6 +1017,7 @@ def import_data():
             user.password = u_data.get('password', '')
             user.avatar_url = u_data.get('avatar_url', '')
             user.rules_viewed = u_data.get('rules_viewed', False)
+            user.notice_confirmed = bool(u_data.get('notice_confirmed', False))
             users_by_openid[user.openid] = user
         # 导入者保持超级管理员(旧版本备份没有is_superadmin字段也不会丢权限)
         if importer_openid:

@@ -18,6 +18,8 @@ async function request(url, method = 'GET', data = null) {
         'Content-Type': 'application/json',
         'X-User-Id': userId
     };
+    const token = localStorage.getItem('adminSessionToken');
+    if (token) headers['X-Session-Token'] = token;
 
     const options = {
         method: method,
@@ -31,11 +33,18 @@ async function request(url, method = 'GET', data = null) {
     try {
         const response = await fetch(`${API_BASE_URL}${url}`, options);
         const result = await response.json();
-        
+
         if (!response.ok) {
+            // 会话失效(账号信息变更后令牌被轮换): 清除登录态回登录页
+            if (response.status === 401 && result.code === 'SESSION_EXPIRED') {
+                localStorage.removeItem('adminUserId');
+                localStorage.removeItem('adminSessionToken');
+                window.location.href = 'login.html';
+                throw new Error(result.error || '登录状态已失效');
+            }
             throw new Error(result.error || 'Request failed');
         }
-        
+
         return result;
     } catch (error) {
         console.error('Request error:', error);

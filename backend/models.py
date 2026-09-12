@@ -53,7 +53,9 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_superadmin = db.Column(db.Boolean, default=False)  # 超级管理员标识(修改账号后依然保留权限)
     is_debug = db.Column(db.Boolean, default=False)  # 调试标签: 不参与投币/结算/排行榜
+    session_token = db.Column(db.String(64))  # 会话令牌: 登录时签发, 账号信息变更时轮换(旧令牌的浏览器被踢下线)
     rules_viewed = db.Column(db.Boolean, default=False)
+    notice_confirmed = db.Column(db.Boolean, default=False)  # 首页公告确认: 未确认每次进首页弹窗, 确认后不再显示
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bets = db.relationship('Bet', backref='user', lazy=True)

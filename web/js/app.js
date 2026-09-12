@@ -14,11 +14,41 @@ var questionDataCache = null;
 
 
 
+// 登录态请求头: 用户ID + 会话令牌(账号信息变更后令牌轮换, 旧令牌会被服务端401拒绝)
+
+function authHeaders() {
+
+    var h = {};
+
+    if (currentUser) {
+
+        h['X-User-Id'] = String(currentUser.user_id || currentUser.id);
+
+        if (currentUser.session_token) h['X-Session-Token'] = currentUser.session_token;
+
+    }
+
+    return h;
+
+}
+
+
+
+// 强制登出回登录页 (会话令牌失效/被踢下线时调用)
+
+function forceLogout(msg) {
+
+    switchAccount();
+
+    showToast(msg || '登录状态已失效，请重新登录', 'error');
+
+}
+
+
+
 async function api(url, method, data, extraHeaders) {
 
-    var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
-
-    if (currentUser) opts.headers['X-User-Id'] = String(currentUser.user_id || currentUser.id);
+    var opts = { method: method || 'GET', headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()) };
 
     if (extraHeaders) Object.assign(opts.headers, extraHeaders);
 
@@ -27,6 +57,26 @@ async function api(url, method, data, extraHeaders) {
     var res = await fetch(API_BASE + url, opts);
 
     var json = await res.json();
+
+    if (res.status === 401 && json.code === 'SESSION_EXPIRED') {
+
+        // 同浏览器其他标签页可能刚改过账号信息(localStorage已更新令牌): 沿用新令牌重试一次
+
+        var stored = JSON.parse(localStorage.getItem('user') || 'null');
+
+        if (stored && stored.session_token && stored.session_token !== (currentUser && currentUser.session_token)) {
+
+            currentUser = stored;
+
+            return api(url, method, data, extraHeaders);
+
+        }
+
+        forceLogout(json.error);
+
+        throw new Error(json.error || '登录状态已失效');
+
+    }
 
     if (!res.ok) throw new Error(json.error || '\u8BF7\u6C42\u5931\u8D25');
 
@@ -548,6 +598,8 @@ async function login() {
 
         initHomePage();
 
+        checkBackupSiteNotice();
+
         if (currentUser.need_setup) showSuperadminSetup();
 
     } catch (e) { showToast(e.message, 'error'); }
@@ -592,11 +644,15 @@ async function showSuperadminSetup() {
 
         Object.assign(currentUser, resp.user);
 
+        if (resp.session_token) currentUser.session_token = resp.session_token;  // 账号信息已变更: 保存轮换后的新令牌
+
         currentUser.need_setup = false;
 
         localStorage.setItem('user', JSON.stringify(currentUser));
 
         showToast('\u7BA1\u7406\u5458\u8D26\u53F7\u5DF2\u66F4\u65B0', 'success');
+
+        maybeShowNotice();
 
     } catch (e) {
 
@@ -605,6 +661,135 @@ async function showSuperadminSetup() {
         showSuperadminSetup();
 
     }
+
+}
+
+
+
+// 首页公告确认弹窗 (类似群公告): 未确认每次进首页都会弹出, 确认后不再显示
+
+function maybeShowNotice() {
+
+    if (!currentUser || currentUser.notice_confirmed) return;
+
+    if (document.getElementById('noticeOverlay')) return;
+
+    var overlay = document.createElement('div');
+
+    overlay.id = 'noticeOverlay';
+
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10004;display:flex;align-items:center;justify-content:center';
+
+    var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
+
+    var item = 'display:flex;align-items:flex-start;gap:9px;margin-bottom:10px';
+
+    var dot = 'flex-shrink:0;margin-top:8px;width:6px;height:6px;border-radius:50%;background:#3478f6';
+
+    overlay.innerHTML = '<div style="' + glass + '">' +
+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">' +
+
+        '<i class="ri-megaphone-line" style="font-size:22px;color:#3478f6"></i>' +
+
+        '<span style="font-size:17px;font-weight:600;color:#1a1a1a">\u91CD\u8981\u516C\u544A</span></div>' +
+
+        '<div style="font-size:14px;color:#3a3a3c;line-height:1.7;margin-bottom:18px">' +
+
+        '<div style="' + item + '"><span style="' + dot + '"></span><span>本竞猜系统由雾清制作，永久免费开放，不会产生任何消费。</span></div>' +
+
+        '<div style="' + item + '"><span style="' + dot + '"></span><span>系统不存在任何充值入口，也不存在充值的可能性。</span></div>' +
+
+        '<div style="' + item + '"><span style="' + dot + '"></span><span>如有人攻击网站导致出现金钱交易，请第一时间联系雾清反馈问题！</span></div>' +
+
+        '</div>' +
+
+        '<button id="noticeOkBtn" class="admin-btn" style="width:100%;padding:12px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">\u6211\u5DF2\u77E5\u6653</button>' +
+
+        '</div>';
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('noticeOkBtn').onclick = async function() {
+
+        try {
+
+            await api('/user/notice-confirm', 'PUT', {});
+
+            currentUser.notice_confirmed = true;
+
+            localStorage.setItem('user', JSON.stringify(currentUser));
+
+            overlay.remove();
+
+            showToast('\u611F\u8C22\u786E\u8BA4\uFF0C\u795D\u60A8\u7ADE\u731C\u6109\u5FEB', 'success');
+
+        } catch (e) {
+
+            showToast(e.message, 'error');
+
+            // 本地缓存的账号已不存在(换库/被删号): 退出登录让用户重新登录
+            if (/not found|不存在/i.test(e.message || '')) {
+
+                overlay.remove();
+
+                switchAccount();
+
+            }
+
+        }
+
+    };
+
+}
+
+
+
+// 备用站提示: 后端SITE_ROLE=backup时(如PA镜像), 每次登录/注册后弹窗提醒前往主站竞猜
+
+async function checkBackupSiteNotice() {
+
+    try {
+
+        var info = await api('/site-info');
+
+        if (!info || info.role !== 'backup' || !info.main_site_url) return;
+
+        if (document.getElementById('backupNoticeOverlay')) return;
+
+        var overlay = document.createElement('div');
+
+        overlay.id = 'backupNoticeOverlay';
+
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10005;display:flex;align-items:center;justify-content:center';
+
+        var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
+
+        overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
+
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><i class="ri-error-warning-line" style="font-size:22px;color:#f59e0b"></i><span style="font-size:17px;font-weight:600;color:#1a1a1a">\u5907\u7528\u7AD9\u63D0\u793A</span></div>' +
+
+            '<div style="font-size:14px;color:#3a3a3c;line-height:1.8;margin-bottom:18px">' +
+
+            '<div>\u672C\u7AD9\u91C7\u7528\u300C\u4E3B\u7AD9 + \u5907\u7528\u7AD9 + \u5B9A\u671F\u5907\u4EFD\u300D\u65B9\u6848\uFF0C\u60A8\u5F53\u524D\u8BBF\u95EE\u7684\u662F<b>\u5907\u7528\u7AD9</b>\u3002</div>' +
+
+            '<div style="margin-top:6px">\u4E3B\u7AD9\u6B63\u5E38\u8FD0\u884C\u65F6\uFF0C\u5728\u672C\u7AD9\u8FDB\u884C\u7684\u4EFB\u4F55\u4FEE\u6539\uFF08\u542B\u6295\u5E01\u3001\u6CE8\u518C\u3001\u6539\u8D44\u6599\uFF09\u90FD<b>\u4E0D\u4F1A\u4FDD\u5B58\u5230\u6B63\u5F0F\u6570\u636E\u5E93</b>\uFF0C\u6570\u636E\u4F1A\u88AB\u5B9A\u671F\u5907\u4EFD\u8986\u76D6\u3002</div>' +
+
+            '<div style="margin-top:6px">\u7ADE\u731C\u64CD\u4F5C\u8BF7\u524D\u5F80\u4E3B\u7AD9\uFF1ACoin-IVL by wuqing</div></div>' +
+
+            '<a id="goMainSiteBtn" href="' + info.main_site_url + '" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;padding:12px;border-radius:12px;background:#3478f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">\u524D\u5F80\u4E3B\u7AD9\u7ADE\u731C</a>' +
+
+            '<button id="backupNoticeCloseBtn" style="width:100%;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer">\u5173\u95ED</button>' +
+
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('backupNoticeCloseBtn').onclick = function() { overlay.remove(); };
+
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+    } catch (e) {}
 
 }
 
@@ -631,6 +816,8 @@ async function register() {
         showToast('\u6CE8\u518C\u6210\u529F', 'success');
 
         initHomePage();
+
+        checkBackupSiteNotice();
 
     } catch (e) { showToast(e.message, 'error'); }
 
@@ -671,6 +858,8 @@ function initHomePage() {
     updateUserInfo();
 
     loadRecentSchedule();
+
+    if (currentUser && !currentUser.need_setup) maybeShowNotice();
 
     var bb = document.getElementById('bottomBar');
 
@@ -1512,7 +1701,7 @@ async function loadMatchScores(compId, date) {
 
         var existingScores = [];
 
-        try { var resp = await fetch(API_BASE + '/leaderboard/' + compId + '/match-scores?date=' + date, { headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) } }); existingScores = await resp.json(); } catch (e) {}
+        try { var resp = await fetch(API_BASE + '/leaderboard/' + compId + '/match-scores?date=' + date, { headers: authHeaders() }); existingScores = await resp.json(); } catch (e) {}
 
         var scoreMap = {};
 
@@ -1648,7 +1837,7 @@ async function editMatchScoreByTeams(homeId, awayId, date) {
 
         var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores?date=' + date, {
 
-            headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }
+            headers: authHeaders()
 
         });
 
@@ -1684,7 +1873,7 @@ async function editMatchScoreByTeams(homeId, awayId, date) {
 
                 method: 'POST',
 
-                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+                headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
 
                 body: JSON.stringify({ competition_id: parseInt(_matchScoreCompId), match_date: _matchScoreDate, home_team_id: homeId, away_team_id: awayId })
 
@@ -1738,7 +1927,7 @@ async function renderScoreDialog(scoreId, homeId, awayId) {
 
         var resp = await fetch(API_BASE + '/leaderboard/' + _matchScoreCompId + '/match-scores/' + scoreId, {
 
-            headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }
+            headers: authHeaders()
 
         });
 
@@ -2136,7 +2325,7 @@ async function saveScore() {
 
             method: 'PUT',
 
-            headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id) },
+            headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
 
             body: JSON.stringify(payload)
 
@@ -2934,9 +3123,9 @@ function showEditProfileDialog() {
 
     overlay.id = 'editProfileOverlay';
 
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
 
-    var glass = 'background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
+    var glass = 'background:rgba(255,255,255,0.92);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
 
     overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
 
@@ -2974,7 +3163,9 @@ async function saveProfileDialog() {
 
     try {
 
-        await api('/user/profile', 'PUT', { nickname: nn, cn: cn });
+        var resp = await api('/user/profile', 'PUT', { nickname: nn, cn: cn });
+
+        if (resp.session_token) currentUser.session_token = resp.session_token;  // 令牌已轮换: 本浏览器续用新令牌, 其他浏览器被踢
 
         currentUser.nickname = nn; currentUser.cn = cn;
 
@@ -2998,9 +3189,9 @@ function showChangePasswordDialog() {
 
     overlay.id = 'chgPwdOverlay';
 
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10002;display:flex;align-items:center;justify-content:center';
 
-    var glass = 'background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(28px);-webkit-backdrop-filter:saturate(180%) blur(28px);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
+    var glass = 'background:rgba(255,255,255,0.92);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.2);padding:22px;width:85%;max-width:340px';
 
     overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
 
@@ -3046,7 +3237,9 @@ async function savePasswordDialog() {
 
     try {
 
-        await api('/user/password', 'PUT', { old_password: o, new_password: n });
+        var resp = await api('/user/password', 'PUT', { old_password: o, new_password: n });
+
+        if (resp.session_token) { currentUser.session_token = resp.session_token; localStorage.setItem('user', JSON.stringify(currentUser)); }
 
         document.getElementById('chgPwdOverlay').remove();
 
@@ -3072,11 +3265,13 @@ function uploadAvatar() {
 
         try {
 
-            var res = await fetch(API_BASE + '/user/avatar', { method: 'POST', headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }, body: fd });
+            var res = await fetch(API_BASE + '/user/avatar', { method: 'POST', headers: authHeaders(), body: fd });
 
             var data = await res.json();
 
             if (!res.ok) throw new Error(data.error);
+
+            if (data.session_token) currentUser.session_token = data.session_token;  // 头像变更令牌轮换, 保存新令牌
 
             currentUser.avatar_url = data.url;
 
@@ -3585,7 +3780,7 @@ async function exportData() {
 
     try {
 
-        var resp = await fetch(API_BASE + '/admin/export', { headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) } });
+        var resp = await fetch(API_BASE + '/admin/export', { headers: authHeaders() });
 
         if (!resp.ok) { var err = await resp.json(); throw new Error(err.error || '\u5BFC\u51FA\u5931\u8D25'); }
 
@@ -3641,7 +3836,7 @@ async function importData() {
 
                 method: 'POST',
 
-                headers: { 'Content-Type': 'application/json', 'X-User-Id': String(currentUser.user_id || currentUser.id), 'X-Admin-Password': pwd },
+                headers: Object.assign({ 'Content-Type': 'application/json', 'X-Admin-Password': pwd }, authHeaders()),
 
                 body: text
 
@@ -3699,8 +3894,8 @@ function promptAdminPassword() {
     return new Promise(function(resolve) {
         var overlay = document.createElement('div');
         overlay.id = 'consolePwdOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);z-index:10003;display:flex;align-items:center;justify-content:center';
-        var glass = 'background:rgba(255,255,255,0.95);backdrop-filter:blur(28px);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:320px';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10003;display:flex;align-items:center;justify-content:center';
+        var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:320px';
         overlay.innerHTML = '<div style="' + glass + '">' +
             '<div style="font-size:16px;font-weight:600;margin-bottom:6px">\u7BA1\u7406\u5BC6\u7801\u9A8C\u8BC1</div>' +
             '<div style="font-size:12px;color:#86868b;margin-bottom:14px">\u6B64\u64CD\u4F5C\u9700\u8981\u9A8C\u8BC1\u7BA1\u7406\u5BC6\u7801</div>' +
@@ -3962,7 +4157,7 @@ function uploadTeamLogo(tid) {
 
         try {
 
-            var res = await fetch(API_BASE + '/admin/teams/' + tid + '/logo', { method: 'POST', headers: { 'X-User-Id': String(currentUser.user_id || currentUser.id) }, body: fd });
+            var res = await fetch(API_BASE + '/admin/teams/' + tid + '/logo', { method: 'POST', headers: authHeaders(), body: fd });
 
             var data = await res.json(); if (!res.ok) throw new Error(data.error);
 

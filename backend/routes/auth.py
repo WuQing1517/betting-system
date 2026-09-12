@@ -6,15 +6,32 @@ from config import Config
 auth_bp = Blueprint('auth', __name__)
 
 import os
+import uuid
 
 MAIN_ADMIN = {
     'username': os.environ.get('ADMIN_USERNAME') or 'admin',
     'password': os.environ.get('ADMIN_PASSWORD') or 'admin'
 }
 
+def issue_session_token(user):
+    """签发会话令牌: 已有令牌则复用(多浏览器可同时在线), 没有才新建。
+    令牌仅在账号信息变更时轮换, 由各变更接口负责。"""
+    if not user.session_token:
+        user.session_token = uuid.uuid4().hex
+        db.session.commit()
+    return user.session_token
+
 def _is_default_superadmin(user):
     """是否仍在使用默认超管账号(用于触发首次修改提示)"""
     return user.openid == 'dev_admin' and (user.password or '') == 'admin'
+
+@auth_bp.route('/site-info', methods=['GET'])
+def site_info():
+    """站点角色信息(公开): 备用站前端据此在登录后弹出前往主站提示"""
+    return jsonify({
+        'role': Config.SITE_ROLE,
+        'main_site_url': Config.MAIN_SITE_URL
+    })
 
 @auth_bp.route('/dev-login', methods=['POST'])
 def dev_login():
@@ -50,7 +67,9 @@ def dev_login():
         'is_admin': user.is_admin,
         'is_superadmin': bool(user.is_superadmin),
         'need_setup': bool(user.is_superadmin) and _is_default_superadmin(user),
-        'rules_viewed': user.rules_viewed
+        'rules_viewed': user.rules_viewed,
+        'notice_confirmed': bool(user.notice_confirmed),
+        'session_token': issue_session_token(user)
     })
 
 @auth_bp.route('/dev-register', methods=['POST'])
@@ -75,7 +94,8 @@ def dev_register():
         password=password,
         nickname=username,
         cn=cn,
-        coins=Config.INITIAL_COINS
+        coins=Config.INITIAL_COINS,
+        session_token=uuid.uuid4().hex
     )
     db.session.add(user)
     db.session.commit()
@@ -92,7 +112,9 @@ def dev_register():
         'is_admin': user.is_admin,
         'is_superadmin': bool(user.is_superadmin),
         'need_setup': False,
-        'rules_viewed': user.rules_viewed
+        'rules_viewed': user.rules_viewed,
+        'notice_confirmed': bool(user.notice_confirmed),
+        'session_token': user.session_token
     })
 
 @auth_bp.route('/admin/login', methods=['POST'])
@@ -106,7 +128,7 @@ def admin_login():
         openid = 'dev_' + username
         user = User.query.filter_by(openid=openid).first()
         if not user:
-            user = User(openid=openid, nickname=username, coins=0, is_admin=True, rules_viewed=True)
+            user = User(openid=openid, nickname=username, coins=0, is_admin=True, rules_viewed=True, notice_confirmed=True)
             db.session.add(user)
             db.session.commit()
         elif not user.is_admin:
@@ -116,7 +138,8 @@ def admin_login():
             'success': True,
             'is_main_admin': True,
             'user_id': user.id,
-            'username': username
+            'username': username,
+            'session_token': issue_session_token(user)
         })
 
     openid = 'dev_' + username
@@ -126,7 +149,8 @@ def admin_login():
             'success': True,
             'is_main_admin': False,
             'user_id': user.id,
-            'nickname': user.nickname
+            'nickname': user.nickname,
+            'session_token': issue_session_token(user)
         })
 
     return jsonify({'success': False, 'error': '账号或密码码错误误'}), 401
@@ -223,7 +247,7 @@ def admin_toggle_admin(user_id):
     db.session.commit()
 
     return jsonify({
-        'message': '已设置为管理员' if is_admin else '已取消管理员',
+        'message': '已设置为管理员' if data['is_admin'] else '已取消管理员',
         'user_id': user.id,
         'is_admin': user.is_admin
     })

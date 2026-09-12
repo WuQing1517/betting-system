@@ -58,8 +58,12 @@
         <div class="login-box">
             <h1 class="login-title">竞猜系统管理后台</h1>
             <div class="form-group">
-                <label for="adminId">管理员ID</label>
-                <input type="text" id="adminId" placeholder="请输入管理员用户ID">
+                <label for="adminUsername">管理员账号</label>
+                <input type="text" id="adminUsername" placeholder="请输入管理员账号">
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">密码</label>
+                <input type="password" id="adminPassword" placeholder="请输入密码">
             </div>
             <button class="login-btn" onclick="adminLogin()">登录</button>
             <div class="login-tip">
@@ -69,36 +73,39 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+
         // 检查是否已登录
-        if (localStorage.getItem('adminUserId')) {
+        if (localStorage.getItem('adminUserId') && localStorage.getItem('adminSessionToken')) {
             window.location.href = '../index.html';
         }
-        
-        function adminLogin() {
-            const adminId = document.getElementById('adminId').value.trim();
-            
-            if (!adminId) {
-                alert('请输入管理员ID');
+
+        async function adminLogin() {
+            const username = document.getElementById('adminUsername').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+
+            if (!username || !password) {
+                alert('请输入账号和密码');
                 return;
             }
-            
-            // 验证管理员权限
-            fetch(`http://localhost:5000/api/admin/stats`, {
-                headers: {
-                    'X-User-Id': adminId
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    localStorage.setItem('adminUserId', adminId);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    localStorage.setItem('adminUserId', result.user_id);
+                    localStorage.setItem('adminSessionToken', result.session_token || '');
                     window.location.href = '../index.html';
                 } else {
-                    alert('管理员权限验证失败，请确认ID正确');
+                    alert(result.error || '账号或密码错误');
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 alert('登录失败: ' + error.message);
-            });
+            }
         }
     </script>
 </body>

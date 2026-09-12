@@ -63,11 +63,10 @@
         }
 
         function loadStats() {
-            fetch('http://localhost:5000/api/admin/stats', {
-                headers: {
-                    'X-User-Id': localStorage.getItem('adminUserId')
-                }
-            })
+            const headers = { 'X-User-Id': localStorage.getItem('adminUserId') };
+            const token = localStorage.getItem('adminSessionToken');
+            if (token) headers['X-Session-Token'] = token;
+            fetch('http://localhost:5000/api/admin/stats', { headers: headers })
             .then(response => response.json())
             .then(data => {
                 document.getElementById('totalUsers').textContent = data.total_users;

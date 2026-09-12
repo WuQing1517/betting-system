@@ -64,6 +64,8 @@ betting-system/
 |------|------|--------|
 | `SECRET_KEY` | Flask密钥 | dev-secret-key |
 | `SERVER_URL` | 服务器地址（生成图片URL） | https://106.53.67.7 |
+| `SITE_ROLE` | 站点角色：`main`主站 / `backup`备用站（登录后弹"前往主站"提示） | main |
+| `MAIN_SITE_URL` | 备用站提示中指向的主站地址 | https://coin-ivl-wuqing.onrender.com/ |
 
 ## 安装部署
 

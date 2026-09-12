@@ -8,6 +8,12 @@ import uuid
 
 user_bp = Blueprint('user', __name__)
 
+def rotate_session_token(user):
+    """账号信息变更后轮换会话令牌: 返回新令牌给当前浏览器续用,
+    其他浏览器仍持旧令牌, 下次请求被会话校验401踢下线。"""
+    user.session_token = uuid.uuid4().hex
+    return user.session_token
+
 @user_bp.route('/user/profile', methods=['GET'])
 def get_profile():
     user_id = parse_user_id(request.headers.get('X-User-Id'))
@@ -30,7 +36,10 @@ def get_profile():
         'is_admin': user.is_admin,
         'is_superadmin': bool(user.is_superadmin),
         'need_setup': bool(user.is_superadmin) and user.openid == 'dev_admin' and (user.password or '') == 'admin',
-        'rules_viewed': user.rules_viewed
+        'rules_viewed': user.rules_viewed,
+        'notice_confirmed': bool(user.notice_confirmed),
+        # 前端会用该响应整体覆盖本地登录态, 必须带回令牌否则令牌丢失导致后续请求401
+        'session_token': user.session_token
     })
 
 @user_bp.route('/user/profile', methods=['PUT'])
@@ -54,8 +63,9 @@ def update_profile():
     if 'cn' in data:
         user.cn = data['cn']
 
+    new_token = rotate_session_token(user)
     db.session.commit()
-    return jsonify({'message': 'Profile updated'})
+    return jsonify({'message': 'Profile updated', 'session_token': new_token})
 
 @user_bp.route('/user/password', methods=['PUT'])
 def change_password():
@@ -78,8 +88,9 @@ def change_password():
         return jsonify({'error': 'Old password incorrect'}), 400
 
     user.password = new_password
+    new_token = rotate_session_token(user)
     db.session.commit()
-    return jsonify({'message': 'Password updated'})
+    return jsonify({'message': 'Password updated', 'session_token': new_token})
 
 @user_bp.route('/user/avatar', methods=['POST'])
 def upload_avatar():
@@ -109,9 +120,10 @@ def upload_avatar():
         return jsonify({'error': '图片大小不能超过300KB'}), 400
     mime = detect_image_mime(data, ext)
     user.avatar_url = 'data:%s;base64,%s' % (mime, base64.b64encode(data).decode())
+    new_token = rotate_session_token(user)
     db.session.commit()
 
-    response = jsonify({'url': f'/api/img/users/{user.id}'})
+    response = jsonify({'url': f'/api/img/users/{user.id}', 'session_token': new_token})
     response.headers['Content-Type'] = 'application/json'
     return response
 
@@ -127,6 +139,21 @@ def mark_rules_viewed():
 
     user.rules_viewed = True
     db.session.commit()
+
+@user_bp.route('/user/notice-confirm', methods=['PUT'])
+def confirm_notice():
+    """确认首页公告: 确认后不再弹出"""
+    user_id = parse_user_id(request.headers.get('X-User-Id'))
+    if not user_id:
+        return jsonify({'error': 'Missing user id'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    user.notice_confirmed = True
+    db.session.commit()
+    return jsonify({'message': 'OK'})
 
 @user_bp.route('/user/coin-history', methods=['GET'])
 def get_coin_history():

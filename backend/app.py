@@ -1,6 +1,6 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, jsonify
 from config import Config
-from models import db
+from models import db, User, parse_user_id
 import os
 
 # 预加载所有路由模块，加速首次请求
@@ -28,6 +28,29 @@ def create_app():
     app.register_blueprint(user_bp, url_prefix='/api')
     app.register_blueprint(betting_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+
+    # 会话校验: 登录态请求必须携带与账号当前令牌一致的 X-Session-Token。
+    # 令牌在登录时签发, 账号信息变更(改昵称/密码/头像等)时轮换 ——
+    # 发起变更的浏览器拿到新令牌继续在线, 其他浏览器的旧令牌在这里被401踢下线。
+    SESSION_PUBLIC_PREFIXES = ('/api/dev-login', '/api/dev-register', '/api/admin/login', '/api/img/', '/api/site-info')
+
+    @app.before_request
+    def check_session_token():
+        path = request.path
+        if not path.startswith('/api/'):
+            return
+        for prefix in SESSION_PUBLIC_PREFIXES:
+            if path.startswith(prefix):
+                return
+        uid = parse_user_id(request.headers.get('X-User-Id'))
+        if uid is None:
+            return  # 未登录的公开访问(题目列表/排行榜等)
+        user = db.session.get(User, uid)
+        if not user:
+            return jsonify({'error': '登录状态已失效，请重新登录', 'code': 'SESSION_EXPIRED'}), 401
+        token = request.headers.get('X-Session-Token')
+        if not token or token != user.session_token:
+            return jsonify({'error': '账号信息已变更，请重新登录', 'code': 'SESSION_EXPIRED'}), 401
 
     # 静态文件服务（上传的图片）
     @app.route('/uploads/<path:filename>')
@@ -79,7 +102,10 @@ def create_app():
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
         add_column_if_missing('users', 'is_debug',
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
+        add_column_if_missing('users', 'notice_confirmed',
+                              'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
         add_column_if_missing('operation_logs', 'change_amount', 'INTEGER')
+        add_column_if_missing('users', 'session_token', 'VARCHAR(64)')
 
         # base64图片存库: PostgreSQL下把图片列拓宽为TEXT (SQLite不校验长度无需处理)
         if engine.dialect.name != 'sqlite':

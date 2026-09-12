@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, json, Response, redirect
 import base64
 from config import Config
 from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, parse_user_id, image_output_url
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from models import OperationLog
 
 def log_operation(user_id, action, detail, amount=None):

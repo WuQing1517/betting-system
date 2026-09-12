@@ -16,3 +16,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SERVER_URL = os.environ.get('SERVER_URL') or 'https://106.53.67.7'
     INITIAL_COINS = 5000
+
+    # 站点角色: main=主站(默认,不弹提示), backup=备用站(登录后提示前往主站, 如PA镜像)
+    SITE_ROLE = os.environ.get('SITE_ROLE', 'main')
+    MAIN_SITE_URL = os.environ.get('MAIN_SITE_URL') or 'https://coin-ivl-wuqing.onrender.com/'
