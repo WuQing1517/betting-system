@@ -180,8 +180,6 @@ async function refreshHomeData() {
 
         loadRecentSchedule();
 
-        loadDefaultCompSchedule();
-
         loadTimedBets();
 
     } catch (e) {}
@@ -1173,8 +1171,6 @@ function initHomePage() {
 
     loadRecentSchedule();
 
-    loadDefaultCompSchedule();
-
     loadTimedBets();
 
     if (currentUser && !currentUser.need_setup) maybeShowNotice();
@@ -1381,95 +1377,28 @@ function getTargetDates() {
 
 
 
-// 首页默认赛程区块: 展示全局默认赛事的未来比赛(点击进入该场题目列表), 近期赛程则排除该赛事避免重复
-async function loadDefaultCompSchedule() {
-
-    var section = document.getElementById('defaultCompSection');
-
-    var box = document.getElementById('defaultCompSchedule');
-
-    if (!section || !box) return;
-
-    var def = null;
-
-    try {
-
-        var comps = await api('/competitions');
-
-        for (var i = 0; i < comps.length; i++) { if (comps[i].is_default) { def = comps[i]; break; } }
-
-    } catch (e) {}
-
-    if (!def) { section.style.display = 'none'; box.innerHTML = ''; return; }
-
-    section.style.display = 'flex';
-
-    document.getElementById('defaultCompTitle').textContent = def.name;
-
-    var html = '';
-
-    try {
-
-        var data = await api('/competitions/' + def.id + '/full');
-
-        var today = new Date(); today.setHours(0, 0, 0, 0);
-
-        var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-
-        var upcoming = data.matches.filter(function(m) { return m.match_date && m.match_date >= todayStr; });
-
-        upcoming.sort(function(a, b) { return a.match_date > b.match_date ? 1 : -1; });
-
-        var targetDates = [];
-
-        for (var i = 0; i < upcoming.length && targetDates.length < 2; i++) {
-
-            if (targetDates.indexOf(upcoming[i].match_date) === -1) targetDates.push(upcoming[i].match_date);
-
-        }
-
-        upcoming.forEach(function(m) {
-
-            if (targetDates.indexOf(m.match_date) === -1) return;
-
-            var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
-
-            var aLogo = m.away_logo ? '<img src="' + m.away_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
-
-            html += '<div style="display:flex;align-items:center;gap:6px;margin:0 16px 8px;padding:10px 12px;background:#fff;border-radius:10px;cursor:pointer" onclick="openCompetition(' + def.id + ', \'' + (m.match_code || '') + '\')">';
-
-            html += hLogo + '<span style="font-size:13px;font-weight:500">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</span>' + aLogo;
-
-            html += '<span style="font-size:11px;color:#86868b;margin-left:auto">' + (m.match_weekday || '') + ' ' + (m.match_date || '').substring(5) + ' · ' + m.questions.length + '\u9898</span>';
-
-            html += '</div>';
-
-        });
-
-        if (!html) html = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u7A0B</div>';
-
-    } catch (e) { html = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u6682\u65E0\u8D5B\u7A0B</div>'; }
-
-    box.innerHTML = html;
-
-}
-
 async function loadRecentSchedule() {
 
     try {
 
         var comps = await api('/competitions');
 
+        // 近期赛程标题行的小框: 提示当前默认赛程(全员可见), 未设默认则隐藏
+        var chip = document.getElementById('defaultCompChip');
+
+        if (chip) {
+
+            var defName = '';
+
+            comps.forEach(function(c) { if (c.is_default) defName = c.name; });
+
+            chip.textContent = defName ? '\u5f53\u524d\u8d5b\u7a0b\uff1a' + defName : '';
+
+            chip.style.display = defName ? 'inline-block' : 'none';
+
+        }
+
         if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = ''; return; }
-
-        // 默认赛事已在上方独立区块展示, 近期赛程中排除避免重复
-        var defId = '';
-
-        comps.forEach(function(c) { if (c.is_default) defId = String(c.id); });
-
-        if (defId) comps = comps.filter(function(c) { return String(c.id) !== defId; });
-
-        if (comps.length === 0) { document.getElementById('recentSchedule').innerHTML = '<div style="padding:16px;text-align:center;color:#86868b;font-size:13px">\u8FD1\u671F\u6682\u65E0\u8D5B\u7A0B</div>'; return; }
 
         var today = new Date(); today.setHours(0,0,0,0);
 
