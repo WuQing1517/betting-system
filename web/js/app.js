@@ -4495,6 +4495,10 @@ function switchAdminTab(tab, event) {
 
     }
 
+    // 顶栏显示当前分类名称
+    var navTitle = document.querySelector('#adminPage .nav-title');
+    if (navTitle && names[tab]) navTitle.textContent = names[tab];
+
     if (tab === 'users') loadAdminUsers();
 
     else if (tab === 'teams') loadAdminTeams();
