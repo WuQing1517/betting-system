@@ -139,7 +139,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .q-option-wrong { background: #fff0ed; border-left: 3px solid #e74c3c; }
 
 /* 提示 */
-.toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: rgba(26,26,26,0.88); color: #fff; border-radius: 10px; font-size: 14px; z-index: 9999; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; }
+.toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: rgba(26,26,26,0.88); color: #fff; border-radius: 10px; font-size: 14px; z-index: 2147483647; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 500; }
 .toast.success { background: rgba(52,168,83,0.9); }
 .toast.error { background: rgba(234,67,53,0.9); }
 

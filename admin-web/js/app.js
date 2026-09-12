@@ -63,7 +63,7 @@ function showAlert(message, type = 'success') {
     alertDiv.style.padding = '15px 25px';
     alertDiv.style.borderRadius = '5px';
     alertDiv.style.color = '#fff';
-    alertDiv.style.zIndex = '10000';
+    alertDiv.style.zIndex = '2147483647';
     alertDiv.style.backgroundColor = type === 'success' ? '#2ecc71' : '#e74c3c';
     
     document.body.appendChild(alertDiv);

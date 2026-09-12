@@ -672,6 +672,9 @@ function maybeShowNotice() {
 
     if (!currentUser || currentUser.notice_confirmed) return;
 
+    // 仅在已登录且当前正停留在首页时弹出, 避免盖在登录页等其他页面上
+    if (currentPage !== 'home' || !document.getElementById('homePage').classList.contains('active')) return;
+
     if (document.getElementById('noticeOverlay')) return;
 
     var overlay = document.createElement('div');
@@ -832,6 +835,15 @@ function switchAccount() {
     localStorage.removeItem('user');
 
     pageHistory = [];
+
+    // 关闭公告类弹窗: 提示只属于登录后的首页, 登出时不能留在登录页上
+    ['noticeOverlay', 'backupNoticeOverlay'].forEach(function(id) {
+
+        var el = document.getElementById(id);
+
+        if (el) el.remove();
+
+    });
 
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
 
@@ -2895,9 +2907,7 @@ async function showProfile() {
 
         document.getElementById('profileCoins').textContent = u.coins || 0;
 
-        document.getElementById('editNickname').value = u.nickname || '';
-
-        document.getElementById('editCn').value = u.cn || '';
+        // 编辑昵称/CN由showEditProfileDialog弹窗负责(个人中心按钮化后页面内不再有editNickname/editCn输入框)
 
     } catch (e) { showToast('\u52A0\u8F7D\u5931\u8D25', 'error'); }
 
