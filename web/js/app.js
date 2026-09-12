@@ -1313,7 +1313,7 @@ async function loadTimedBets() {
 
         if (!list.length) { section.style.display = 'none'; box.innerHTML = ''; return; }
 
-        section.style.display = 'block';
+        section.style.display = 'flex';
 
         var h = '<div style="margin:0 0 8px">';
 
