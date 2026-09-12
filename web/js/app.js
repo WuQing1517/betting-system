@@ -1586,7 +1586,7 @@ function timedRowHtml(q) {
 
     }
 
-    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
+    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin:0 16px 4px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
 
     h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
 
