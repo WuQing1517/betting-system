@@ -293,15 +293,17 @@
         <div id="rulesContent"></div>
     </div>
 
-    <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeCoinTrend()">
-        <div style="position:relative;background:#fff;border-radius:16px;width:90%;max-width:420px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
-            <canvas id="coinChart" width="720" height="400" style="width:100%;height:auto;display:block;border-radius:16px;clip-path:inset(0 round 16px)"></canvas>
-            <div onclick="toggleCoinChart()" style="position:absolute;bottom:-6px;left:-1px;cursor:pointer;z-index:2">
-                <svg width="44" height="44" viewBox="0 0 44 44">
-                    <path d="M0,0 L0,28 Q0,44 16,44 L44,44 L0,0 Z" fill="#34a853"/>
-                    <text x="10" y="31" text-anchor="middle" fill="#fff" font-size="8" font-weight="700" font-family="-apple-system,sans-serif" id="chartToggleText" transform="rotate(45, 10, 31)">周K</text>
-                </svg>
+    <div id="coinTrendOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)closeCoinTrend()">
+        <div style="position:relative;background:rgba(255,255,255,0.75);backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%);border:1px solid rgba(255,255,255,0.55);border-radius:20px;box-shadow:inset 0 1px 1px rgba(255,255,255,0.7),inset 0 -1px 1px rgba(255,255,255,0.25),0 12px 40px rgba(0,0,0,0.25);width:90%;max-width:420px;overflow:hidden;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:0.5px solid rgba(255,255,255,0.5)">
+                <span style="font-size:17px;font-weight:600;color:#1a1a1a">币走势图</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                    <span id="trendToggleDay" onclick="toggleCoinChart()" style="font-size:13px;font-weight:600;padding:4px 12px;border-radius:8px;cursor:pointer;background:rgba(52,120,246,0.1);color:#3478f6">日K</span>
+                    <span id="trendToggleWeek" onclick="toggleCoinChart()" style="font-size:13px;font-weight:500;padding:4px 12px;border-radius:8px;cursor:pointer;background:transparent;color:#86868b">周K</span>
+                    <span onclick="closeCoinTrend()" style="margin-left:10px;font-size:22px;color:#86868b;cursor:pointer;line-height:1">&times;</span>
+                </div>
             </div>
+            <canvas id="coinChart" width="720" height="400" style="width:100%;height:auto;display:block"></canvas>
         </div>
     </div>
 

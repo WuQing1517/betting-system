@@ -3540,9 +3540,25 @@ function toggleCoinChart() {
 
 function updateToggleBtn() {
 
-    var el = document.getElementById('chartToggleText');
+    var dayBtn = document.getElementById('trendToggleDay');
 
-    if (el) el.textContent = coinChartGroup === 'day' ? '\u5468K' : '\u65E5K';
+    var weekBtn = document.getElementById('trendToggleWeek');
+
+    if (!dayBtn) return;
+
+    var isDay = coinChartGroup === 'day';
+
+    dayBtn.style.background = isDay ? 'rgba(52,120,246,0.1)' : 'transparent';
+
+    dayBtn.style.color = isDay ? '#3478f6' : '#86868b';
+
+    dayBtn.style.fontWeight = isDay ? '600' : '500';
+
+    weekBtn.style.background = !isDay ? 'rgba(52,120,246,0.1)' : 'transparent';
+
+    weekBtn.style.color = !isDay ? '#3478f6' : '#86868b';
+
+    weekBtn.style.fontWeight = !isDay ? '600' : '500';
 
 }
 
