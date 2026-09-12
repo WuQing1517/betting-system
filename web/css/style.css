@@ -4,7 +4,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .page.active { display: block; }
 
 /* 导航栏 - iOS液态玻璃 */
-.navbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: linear-gradient(115deg, rgba(255,255,255,0.5), rgba(255,255,255,0.25)); backdrop-filter: blur(16px) saturate(170%); -webkit-backdrop-filter: blur(16px) saturate(170%); border-bottom: 0.5px solid rgba(255,255,255,0.6); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.75); color: #1a1a1a; position: sticky; top: 0; z-index: 100; }
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: linear-gradient(180deg, rgba(255,255,255,0.48), rgba(255,255,255,0.30)); backdrop-filter: blur(12px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.1); border-bottom: 0.5px solid rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(255,255,255,0.15); color: #1a1a1a; position: sticky; top: 0; z-index: 100; }
 .nav-title { font-size: 17px; font-weight: 600; color: #1a1a1a; }
 .nav-right { display: flex; gap: 16px; font-size: 14px; }
 .nav-link { cursor: pointer; color: #3478f6; font-weight: 400; }
@@ -78,7 +78,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 
 /* 排行榜 */
 /* 排行榜卡片 - iOS液态玻璃 + 前三名颜色 */
-.rank-item { display: flex; align-items: center; margin: 0 16px 6px; padding: 12px 14px; background: rgba(255,255,255,0.22); backdrop-filter: blur(8px) saturate(150%); -webkit-backdrop-filter: blur(8px) saturate(150%); border: 1px solid rgba(255,255,255,0.45); border-radius: 14px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.45), 0 2px 12px rgba(0,0,0,0.06); }
+.rank-item { display: flex; align-items: center; margin: 0 16px 6px; padding: 12px 14px; background: rgba(255,255,255,0.22); backdrop-filter: blur(8px) saturate(160%) brightness(1.05); -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.05); border-top: 0.5px solid rgba(255,255,255,0.5); border-bottom: 0.5px solid rgba(255,255,255,0.1); border-left: none; border-right: none; border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.04); }
 .rank-item:nth-child(1) { background: rgba(255,215,0,0.14); border-color: rgba(255,215,0,0.38); }
 .rank-item:nth-child(2) { background: rgba(192,192,192,0.14); border-color: rgba(192,192,192,0.38); }
 .rank-item:nth-child(3) { background: rgba(205,127,50,0.14); border-color: rgba(205,127,50,0.38); }
@@ -100,15 +100,15 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .edit-form { margin: 0 16px; padding: 16px; background: #fff; border-radius: 14px; }
 
 /* 主页快捷入口卡片 - 液态玻璃 */
-.home-btn { flex: 1; background: rgba(255,255,255,0.15); backdrop-filter: blur(6px) saturate(150%); -webkit-backdrop-filter: blur(6px) saturate(150%); border: 1px solid rgba(255,255,255,0.4); border-radius: 14px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 2px 8px rgba(0,0,0,0.06); padding: 14px 8px; text-align: center; cursor: pointer; }
+.home-btn { flex: 1; background: rgba(255,255,255,0.18); backdrop-filter: blur(8px) saturate(160%) brightness(1.05); -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.05); border: 0.5px solid rgba(255,255,255,0.5); border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.1), 0 2px 12px rgba(0,0,0,0.06); padding: 14px 8px; text-align: center; cursor: pointer; }
 .home-btn:active { background: rgba(255,255,255,0.28); }
 
 /* 弹窗内按钮统一液态玻璃(不覆盖按钮自身颜色) */
-.dl-glass button { background: rgba(255,255,255,0.12) !important; backdrop-filter: blur(4px) !important; -webkit-backdrop-filter: blur(4px) !important; border: 1px solid rgba(255,255,255,0.4) !important; border-radius: 10px !important; transition: background 0.15s !important; }
+.dl-glass button { background: rgba(255,255,255,0.18) !important; backdrop-filter: blur(8px) saturate(150%) brightness(1.05) !important; -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.05) !important; border: 0.5px solid rgba(255,255,255,0.5) !important; border-radius: 10px !important; transition: background 0.15s !important; }
 .dl-glass button:hover { background: rgba(255,255,255,0.22) !important; }
 
 /* 管理后台 - iOS液态玻璃悬浮栏(高透+折射: 底下内容清晰可见并发生液态扭曲; 不支持url()滤镜的浏览器回退普通玻璃) */
-.admin-tabs { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; width: min(430px, calc(100% - 28px)); background: rgba(255,255,255,0.10); backdrop-filter: blur(4px) saturate(150%); -webkit-backdrop-filter: blur(4px) saturate(150%); backdrop-filter: url(#miuiGlassLens) blur(2px) saturate(150%); border: 1px solid rgba(255,255,255,0.5); border-radius: 26px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), 0 8px 32px rgba(0,0,0,0.14); padding: 8px 12px; z-index: 101; }
+.admin-tabs { position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; width: min(430px, calc(100% - 28px)); background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,255,255,0.22)); backdrop-filter: blur(12px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.1); border-top: 0.5px solid rgba(255,255,255,0.6); border-bottom: 0.5px solid rgba(255,255,255,0.15); border-radius: 26px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(255,255,255,0.15), 0 8px 32px rgba(0,0,0,0.1); padding: 8px 12px; z-index: 101; }
 .admin-tabs .tab { flex: 1; }
 #adminContent { padding-bottom: 96px; }
 .admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
@@ -161,7 +161,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .toast.error { background: rgba(234,67,53,0.9); }
 
 /* 筛选栏 - iOS液态玻璃 */
-.filter-bar { display: flex; gap: 8px; padding: 10px 16px; background: linear-gradient(115deg, rgba(255,255,255,0.5), rgba(255,255,255,0.25)); backdrop-filter: blur(16px) saturate(170%); -webkit-backdrop-filter: blur(16px) saturate(170%); border-bottom: 0.5px solid rgba(255,255,255,0.6); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.75); }
+.filter-bar { display: flex; gap: 8px; padding: 10px 16px; background: linear-gradient(180deg, rgba(255,255,255,0.48), rgba(255,255,255,0.30)); backdrop-filter: blur(12px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.1); border-bottom: 0.5px solid rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(255,255,255,0.15); }
 .filter-bar.fixed { position: fixed; top: 48px; left: 0; right: 0; z-index: 99; }
 
 /* MIUIX日期时间输入 */
@@ -180,9 +180,9 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 统一弹窗遮罩 - iOS液态玻璃 */
 .dl-overlay { background: rgba(0,0,0,0.4) !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; }
 /* 统一弹窗卡片 - iOS液态玻璃(与底栏一致: 高透+折射) */
-.dl-glass { background: rgba(255,255,255,0.10) !important; backdrop-filter: url(#miuiGlassLens) blur(2px) saturate(150%) !important; -webkit-backdrop-filter: url(#miuiGlassLens) blur(2px) saturate(150%) !important; border: 1px solid rgba(255,255,255,0.5) !important; border-radius: 22px !important; box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), 0 8px 32px rgba(0,0,0,0.14) !important; }
+.dl-glass { background: linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.18)) !important; backdrop-filter: blur(10px) saturate(170%) brightness(1.08) !important; -webkit-backdrop-filter: blur(10px) saturate(170%) brightness(1.08) !important; border-top: 0.5px solid rgba(255,255,255,0.55) !important; border-bottom: 0.5px solid rgba(255,255,255,0.12) !important; border-left: none !important; border-right: none !important; border-radius: 22px !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.12), 0 8px 32px rgba(0,0,0,0.12) !important; }
 /* 弹窗内输入框/select 统一液态玻璃 */
-.dl-glass input, .dl-glass select { background: rgba(255,255,255,0.18) !important; backdrop-filter: blur(6px) saturate(150%) !important; -webkit-backdrop-filter: blur(6px) saturate(150%) !important; border: 1px solid rgba(255,255,255,0.4) !important; border-radius: 10px !important; color: #1a1a1a !important; }
+.dl-glass input, .dl-glass select { background: rgba(255,255,255,0.18) !important; backdrop-filter: blur(8px) saturate(150%) brightness(1.05) !important; -webkit-backdrop-filter: blur(8px) saturate(150%) brightness(1.05) !important; border: 0.5px solid rgba(255,255,255,0.5) !important; border-radius: 10px !important; color: #1a1a1a !important; }
 
 /* 导航栏当前赛程小框 */
 #defaultCompChip { display: none; font-size: 17px; font-weight: 600; color: #3478f6; background: #e8f4fd; border-radius: 10px; padding: 4px 14px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
@@ -193,7 +193,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 
 /* MIUIX自定义下拉框 - iOS液态玻璃触发器 */
 .miui-select { position: relative; flex: 1; }
-.miui-select-trigger { padding: 9px 12px; background: rgba(255,255,255,0.12); backdrop-filter: url(#miuiGlassLens) blur(2px) saturate(150%); -webkit-backdrop-filter: url(#miuiGlassLens) blur(2px) saturate(150%); border: 1px solid rgba(255,255,255,0.45); border-radius: 10px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.4); font-size: 13px; color: #1a1a1a; font-weight: 500; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; user-select: none; -webkit-user-select: none; }
+.miui-select-trigger { padding: 9px 12px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px) saturate(160%) brightness(1.05); -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.05); border-top: 0.5px solid rgba(255,255,255,0.5); border-bottom: 0.5px solid rgba(255,255,255,0.1); border-left: none; border-right: none; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.1); font-size: 13px; color: #1a1a1a; font-weight: 500; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; user-select: none; -webkit-user-select: none; }
 .miui-select-trigger::after { content: ''; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #86868b; margin-left: 6px; flex-shrink: 0; transition: transform 0.2s; }
 .miui-select.open .miui-select-trigger { background: rgba(255,255,255,0.22); }
 .miui-select.open .miui-select-trigger::after { transform: rotate(180deg); }
@@ -209,13 +209,13 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 底部导航栏 */
 .bottom-bar-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:7px 0; color:#86868b; font-size:10px; cursor:pointer; transition:all 0.25s; -webkit-tap-highlight-color:transparent; border-radius:18px; }
 .bottom-bar-item span { display: none; font-weight: 600; white-space: nowrap; }
-.bottom-bar-item.active { color: #3478f6; background: rgba(52,120,246,0.12); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(52,120,246,0.2); }
+.bottom-bar-item.active { color: #3478f6; background: rgba(52,120,246,0.12); backdrop-filter: blur(6px) saturate(150%) brightness(1.05); -webkit-backdrop-filter: blur(6px) saturate(150%) brightness(1.05); border-top: 0.5px solid rgba(52,120,246,0.3); border-bottom: 0.5px solid rgba(52,120,246,0.08); box-shadow: inset 0 1px 0 rgba(52,120,246,0.35); }
 .bottom-bar-item.active span { display: block; }
 .bottom-bar-item i { font-size:22px; margin-bottom:2px; }
 .bottom-bar-item.active { color:#3478f6; }
 
 /* 后台管理下拉框: sticky top须等于导航栏高度, 大于它会在页首被sticky推下产生空白 */
-.admin-select-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: 58px; z-index: 98; background: linear-gradient(115deg, rgba(255,255,255,0.5), rgba(255,255,255,0.25)); backdrop-filter: blur(16px) saturate(170%); -webkit-backdrop-filter: blur(16px) saturate(170%); border-bottom: 0.5px solid rgba(255,255,255,0.6); box-shadow: inset 0 0.5px 0 rgba(255,255,255,0.75); padding: 10px 0; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+.admin-select-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: 58px; z-index: 98; background: linear-gradient(180deg, rgba(255,255,255,0.48), rgba(255,255,255,0.30)); backdrop-filter: blur(12px) saturate(180%) brightness(1.1); -webkit-backdrop-filter: blur(12px) saturate(180%) brightness(1.1); border-bottom: 0.5px solid rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(255,255,255,0.15); padding: 10px 0; margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
 
 /* 比赛分隔 */
 .match-divider { padding: 8px 16px; font-size: 13px; color: #3478f6; font-weight: 600; background: #f7f8fa; border-left: 3px solid #3478f6; margin: 8px 16px 4px; border-radius: 0 8px 8px 0; }
