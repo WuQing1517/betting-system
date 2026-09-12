@@ -17,13 +17,14 @@ def beijing_now_str():
     return (datetime.utcnow() + timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
 
 def sync_timed_status(question):
-    """限时竞猜惰性状态推进(自动封盘): 到开盘时间 pending->active, 过封盘时间 ->closed。
-    只向前推进: 手动提前封盘的 closed 不会被翻回; completed 不动。返回是否有变更(由调用方 commit)。"""
-    if not question or question.question_type != 'timed' or question.status == 'completed':
+    """惰性状态推进: 限时竞猜到开盘时间 pending->active; 任何带close_time的题(限时/比赛题通用)
+    过封盘时间自动closed(自动封盘)。只向前推进: 手动提前封盘的closed不会被翻回; completed不动。
+    返回是否有变更(由调用方 commit)。"""
+    if not question or question.status == 'completed':
         return False
     now = beijing_now_str()
     changed = False
-    if question.status == 'pending' and question.open_time and now >= question.open_time:
+    if question.question_type == 'timed' and question.status == 'pending' and question.open_time and now >= question.open_time:
         question.status = 'active'
         changed = True
     if question.status in ('pending', 'active') and question.close_time and now > question.close_time:
@@ -135,7 +136,10 @@ def get_competition_full(competition_id):
             match_date_str = match_date.isoformat()
             match_weekday = weekday_names[match_date.weekday()]
         questions_data = []
+        status_changed = False
         for q in questions:
+            if sync_timed_status(q):
+                status_changed = True
             options = options_by_question.get(q.id, [])
             total_coins = sum(o.total_coins for o in options)
             options_data = []
@@ -143,8 +147,10 @@ def get_competition_full(competition_id):
                 user_bet = all_bets.get((q.id, o.id), 0)
                 options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
             user_total_bet = sum(x['user_bet'] for x in options_data)
-            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'options': options_data})
+            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
         matches_data.append({'id': m.id, 'match_code': m.match_code, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'home_logo': make_logo(team_logos.get(m.home_team)), 'away_logo': make_logo(team_logos.get(m.away_team)), 'match_date': match_date_str, 'match_weekday': match_weekday, 'status': m.status, 'questions': questions_data})
+    if status_changed:
+        db.session.commit()
     return jsonify({'id': competition.id, 'name': competition.name, 'year': competition.year, 'season': competition.season, 'status': competition.status, 'start_date': start_date_str, 'matches': matches_data})
 
 @betting_bp.route('/matches/<match_code>', methods=['GET'])
@@ -176,6 +182,8 @@ def get_match(match_code):
             options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
         user_total_bet = sum(x['user_bet'] for x in options_data)
         questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'options': options_data})
+    if status_changed:
+        db.session.commit()
     return jsonify({'id': match.id, 'match_code': match.match_code, 'week_number': match.week_number, 'day_number': match.day_number, 'match_number': match.match_number, 'home_team': match.home_team, 'away_team': match.away_team, 'status': match.status, 'questions': questions_data})
 
 @betting_bp.route('/timed-questions', methods=['GET'])
@@ -256,7 +264,7 @@ def place_bet():
     if question.status not in ['active', 'closed']:
         return jsonify({'error': 'Question not found'}), 400
     if question.status == 'closed':
-        return jsonify({'error': 'Question is closed'}), 400
+        return jsonify({'error': '已封盘，暂停投注'}), 400
     option = Option.query.get(option_id)
     if not option or option.question_id != question_id:
         return jsonify({'error': 'Invalid option'}), 400
@@ -339,7 +347,7 @@ def get_coin_stats():
         comp = Competition.query.get(m.competition_id)
         if not comp or not comp.start_date:
             continue
-        d = comp.start_date + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
+        d = comp.start_date - timedelta(days=comp.start_date.weekday()) + timedelta(days=(m.week_number - 1) * 7 + (m.day_number - 1))
         if d <= beijing_today and (last_match_date is None or d > last_match_date):
             last_match_date = d
     today_delta = 0

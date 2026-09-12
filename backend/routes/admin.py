@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from models import db, User, Team, Competition, Match, Question, Option, Bet, resolve_image_url, detect_image_mime, parse_user_id, image_output_url
 from config import Config
 from functools import wraps
+from datetime import timedelta
 import base64
 import os
 import uuid
@@ -403,12 +404,14 @@ def create_match():
                 db.session.add(Team(name=team_name.strip()))  # 获取match.id
 
     # 自动生成3个问题
+    auto_close = _match_close_default(match)
     for i in range(1, 4):
         question_code = f"{match_code}Q{i}"
         question = Question(
             question_code=question_code,
             match_id=match.id,
-            question_text=f"第{i}题"
+            question_text=f"第{i}题",
+            close_time=auto_close
         )
         db.session.add(question)
         db.session.flush()
@@ -560,6 +563,25 @@ def update_match_status(match_id):
     return jsonify({'message': 'Match status updated'})
 
 # 问题管理
+def _match_close_default(match):
+    """比赛题默认封盘时间: 比赛日(match_date) 23:00; 无赛事起始日期则不自动封盘
+    (match_date算法与 /competitions/{id}/full 一致: start_date所在周的周一为第1周第1天)"""
+    comp = Competition.query.get(match.competition_id) if match and match.competition_id else None
+    if not comp or not comp.start_date or match.week_number is None or match.day_number is None:
+        return None
+    first_monday = comp.start_date - timedelta(days=comp.start_date.weekday())
+    d = first_monday + timedelta(days=(match.week_number - 1) * 7 + (match.day_number - 1))
+    return d.isoformat() + ' 23:00:00'
+
+def _normalize_close_time(value):
+    """兼容 datetime-local 值(YYYY-MM-DDTHH:MM): 统一为 YYYY-MM-DD HH:MM:SS, 空串返回None(不自动封盘)"""
+    if not value:
+        return None
+    v = str(value).replace('T', ' ').strip()
+    if len(v) == 16:
+        v += ':00'
+    return v or None
+
 def _max_selections(data, option_count):
     """题型参数: 1=单选, N=多选最多N项; 限制在[1, min(30, 选项数)]内"""
     try:
@@ -601,7 +623,8 @@ def create_question():
         question_code=question_code,
         match_id=match_id,
         question_text=question_text,
-        max_selections=_max_selections(data, len(options))
+        max_selections=_max_selections(data, len(options)),
+        close_time=_normalize_close_time(data.get('close_time')) or _match_close_default(match)
     )
     db.session.add(question)
     db.session.flush()  # 获取question.id
@@ -681,6 +704,8 @@ def update_question(question_id):
         question.question_text = data['question_text']
     if 'max_selections' in data:
         question.max_selections = _max_selections(data, len(question.options))
+    if 'close_time' in data:
+        question.close_time = _normalize_close_time(data.get('close_time'))
 
     db.session.commit()
     return jsonify({'message': 'Question updated'})

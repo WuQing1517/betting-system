@@ -5178,7 +5178,11 @@ function buildAdminQuestionCard(q, isTimed) {
     var typeCtrl = '<select onchange="updateQuestionMaxSel(' + q.id + ', this.value)" style="background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:6px"><option value="1"' + (ms <= 1 ? ' selected' : '') + '>\u5355\u9009</option><option value="multi"' + (ms > 1 ? ' selected' : '') + '>\u591A\u9009</option></select>'
         + (ms > 1 ? '<input type="number" min="2" max="30" value="' + ms + '" onchange="updateQuestionMaxSel(' + q.id + ', \'multi:\' + this.value)" title="\u6700\u591A\u53EF\u9009" style="width:56px;background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:4px">' : '');
 
-    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + sl + typeCtrl + '</div>';
+    var closeVal = q.close_time ? q.close_time.substring(0, 16).replace(' ', 'T') : '';
+
+    var closeCtrl = '<input type="datetime-local" value="' + closeVal + '" onchange="updateQuestionCloseTime(' + q.id + ', this)" title="\u5c01\u76d8\u65f6\u95f4, \u5230\u70b9\u81ea\u52a8\u5c01\u76d8; \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8" style="background:#fff;border:1px solid #e8edf5;border-radius:6px;padding:1px 4px;font-size:11px;color:#1a1a1a;outline:none;margin-left:4px">';
+
+    h += '<div style="font-size:12px;color:' + sc + ';margin-top:4px;font-weight:500;display:flex;align-items:center;flex-wrap:wrap;gap:4px">' + sl + typeCtrl + closeCtrl + '</div>';
 
     h += '</div>';
 
@@ -5337,7 +5341,7 @@ function renderQuestionContent(data) {
 
             m.questions.forEach(function(q) { h += buildAdminQuestionCard(q, false); });
 
-            h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
+            h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ', \'' + (m.match_date || '') + '\')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
 
         });
 
@@ -5406,6 +5410,19 @@ async function updateQuestionMaxSel(qid, value) {
 
 
 
+async function updateQuestionCloseTime(qid, el) {
+
+    // datetime-local 值转 YYYY-MM-DD HH:MM:SS; 清空则不自动封盘
+    var v = el.value ? el.value.replace('T', ' ') : '';
+
+    if (v && v.length === 16) v += ':00';
+
+    try { await api('/admin/questions/' + qid, 'PUT', { close_time: v || null }); showToast('\u5C01\u76D8\u65F6\u95F4\u5DF2\u66F4\u65B0', 'success'); refreshQuestionRow(qid); }
+
+    catch (e) { showToast(e.message, 'error'); }
+
+}
+
 async function saveOptionField(el) {
 
     var oid = el.getAttribute('data-oid'), field = el.getAttribute('data-field');
@@ -5432,7 +5449,9 @@ async function resetQuestionWeb(qid) { if (!(await miuiConfirm('\u91CD\u7F6E\u54
 
 // ---- 添加问题弹窗 ----
 
-function showAddQuestionDialog(matchId) {
+function showAddQuestionDialog(matchId, matchDate) {
+
+    var defaultClose = matchDate ? matchDate + 'T23:00' : '';
 
     var h = '<div id="addQuestionOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
 
@@ -5455,6 +5474,10 @@ function showAddQuestionDialog(matchId) {
     h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u95EE\u9898\u5185\u5BB9</label>';
 
     h += '<input id="addq_text" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:14px" placeholder="\u5982\uFF1A\u672C\u5C40MVP\u662F\u8C01\uFF1F"></div>';
+
+    h += '<div style="margin-bottom:12px"><label style="font-size:13px;color:#666;display:block;margin-bottom:4px">\u5C01\u76D8\u65F6\u95F4</label>';
+
+    h += '<input id="addq_close" type="datetime-local" value="' + defaultClose + '" style="width:100%;box-sizing:border-box;background:#f2f3f5;border:1px solid #e8edf5;border-radius:8px;padding:8px 10px;font-size:13px" title="\u9ed8\u8ba4\u4e3a\u6bd4\u8d5b\u65e5 23:00, \u6e05\u7a7a\u5219\u4e0d\u81ea\u52a8\u5c01\u76d8"></div>';
 
     h += '<div id="addq_options">';
 
@@ -5536,7 +5559,11 @@ async function submitAddQuestion(matchId) {
 
     try {
 
-        await api('/admin/questions', 'POST', { match_id: matchId, question_text: text, options: options, max_selections: maxSel });
+        var closeRaw = document.getElementById('addq_close') ? document.getElementById('addq_close').value : '';
+
+        var closeTime = closeRaw ? closeRaw.replace('T', ' ') + (closeRaw.length === 16 ? ':00' : '') : '';
+
+        await api('/admin/questions', 'POST', { match_id: matchId, question_text: text, options: options, max_selections: maxSel, close_time: closeTime });
 
         document.getElementById('addQuestionOverlay').remove();
 
