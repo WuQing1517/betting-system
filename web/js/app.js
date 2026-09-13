@@ -2542,7 +2542,7 @@ async function renderScoreDialog(scoreId, homeId, awayId) {
 
     h += '<span style="font-size:18px;font-weight:600">' + homeName + ' vs ' + awayName + '</span>';
 
-    h += '<span onclick="doSaveAndClose()" style="font-size:22px;color:#667eea;cursor:pointer">&#x2713;</span>';
+    h += '<span onclick="doSaveAndClose()" style="font-size:22px;color:#3478f6;cursor:pointer">&#x2713;</span>';
 
     h += '</div>';
 
@@ -5881,7 +5881,7 @@ function showAddQuestionDialog(matchId, matchDate) {
 
     h += '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="admin-btn btn-sm" onclick="document.getElementById(\'addQuestionOverlay\').remove()">\u53D6\u6D88</button>';
 
-    h += '<button class="admin-btn btn-sm" style="background:#667eea;color:#fff" onclick="submitAddQuestion(' + matchId + ')">\u786E\u5B9A</button></div>';
+    h += '<button class="admin-btn btn-sm" style="color:#3478f6" onclick="submitAddQuestion(' + matchId + ')">\u786E\u5B9A</button></div>';
 
     h += '</div></div>';
 
@@ -6017,7 +6017,7 @@ function showAddTimedQuestionDialog() {
 
     h += '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="admin-btn btn-sm" onclick="document.getElementById(\'addTimedOverlay\').remove()">\u53D6\u6D88</button>';
 
-    h += '<button class="admin-btn btn-sm" style="background:#667eea;color:#fff" onclick="submitAddTimedQuestion()">\u786E\u5B9A</button></div>';
+    h += '<button class="admin-btn btn-sm" style="color:#3478f6" onclick="submitAddTimedQuestion()">\u786E\u5B9A</button></div>';
 
     h += '</div></div>';
 
