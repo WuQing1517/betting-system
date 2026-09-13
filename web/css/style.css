@@ -23,6 +23,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #86868b; font-weight: 500; }
 .form-group input { width: 100%; padding: 13px 14px; border: none; border-radius: 12px; font-size: 16px; background: #f2f3f5; color: #1a1a1a; transition: background 0.2s; }
 .form-group input:focus { background: #edf0f5; outline: none; }
+.form-group input::placeholder { color: rgba(255,255,255,0.55); }
 .btn-primary { width:100%; padding:14px; background:rgba(255,255,255,0.10); backdrop-filter:blur(4px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05); border-top:1px solid rgba(255,255,255,0.40); border-left:1px solid rgba(255,255,255,0.25); border-right:1px solid rgba(255,255,255,0.10); border-bottom:1px solid rgba(255,255,255,0.05); border-radius:12px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06); font-size:16px; font-weight:600; cursor:pointer; color:#3478f6; transition:background 0.15s; letter-spacing:0.3px; }
 .btn-primary:hover { background:rgba(255,255,255,0.18); }
 .btn-primary:active { background:rgba(255,255,255,0.22); }
@@ -184,6 +185,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .dl-glass { background:linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.06));backdrop-filter:blur(3px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(3px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.40);border-left:1px solid rgba(255,255,255,0.25);border-right:1px solid rgba(255,255,255,0.10);border-bottom:1px solid rgba(255,255,255,0.05);border-radius:22px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06),0 6px 24px 0 rgba(0,0,0,0.06) }
 /* 弹窗内输入框/select 统一液态玻璃 */
 .dl-glass input, .dl-glass select { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(4px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; color:#1a1a1a !important; }
+.dl-glass input::placeholder, .dl-glass select::placeholder { color:rgba(255,255,255,0.7) !important; }
 
 /* 导航栏当前赛程小框 */
 #defaultCompChip { display: none; font-size: 17px; font-weight: 600; color: #3478f6; background: #e8f4fd; border-radius: 10px; padding: 4px 14px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
