@@ -2021,9 +2021,9 @@ async function showTeamFilterDialog() {
 
         '<div style="display:flex;gap:10px;margin-top:12px">' +
 
-        '<button class="admin-btn" style="flex:1;padding:10px" onclick="document.getElementById(\'teamFilterOverlay\').remove()">\u53D6\u6D88</button>' +
+        '<button class="admin-btn" style="flex:1;padding:10px;color:#3478f6" onclick="document.getElementById(\'teamFilterOverlay\').remove()">\u53D6\u6D88</button>' +
 
-        '<button class="admin-btn" style="flex:2;padding:10px;background:#3478f6;color:#fff;border:none;border-radius:10px" onclick="tfSave()">\u4FDD\u5B58</button></div>' +
+        '<button class="admin-btn" style="flex:2;padding:10px;color:#3478f6" onclick="tfSave()">\u4FDD\u5B58</button></div>' +
 
         '</div>';
 
