@@ -23,7 +23,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #86868b; font-weight: 500; }
 .form-group input { width: 100%; padding: 13px 14px; border: none; border-radius: 12px; font-size: 16px; background: #f2f3f5; color: #1a1a1a; transition: background 0.2s; }
 .form-group input:focus { background: #edf0f5; outline: none; }
-.btn-primary { width:100%; padding:14px; background:rgba(255,255,255,0.10); backdrop-filter:blur(2px) saturate(130%); -webkit-backdrop-filter:blur(2px) saturate(130%); border-top:1px solid rgba(255,255,255,0.40); border-left:1px solid rgba(255,255,255,0.25); border-right:1px solid rgba(255,255,255,0.10); border-bottom:1px solid rgba(255,255,255,0.05); border-radius:12px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06); font-size:16px; font-weight:600; cursor:pointer; color:#3478f6; transition:background 0.15s; letter-spacing:0.3px; }
+.btn-primary { width:100%; padding:14px; background:rgba(255,255,255,0.10); backdrop-filter:blur(4px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05); border-top:1px solid rgba(255,255,255,0.40); border-left:1px solid rgba(255,255,255,0.25); border-right:1px solid rgba(255,255,255,0.10); border-bottom:1px solid rgba(255,255,255,0.05); border-radius:12px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06); font-size:16px; font-weight:600; cursor:pointer; color:#3478f6; transition:background 0.15s; letter-spacing:0.3px; }
 .btn-primary:hover { background:rgba(255,255,255,0.18); }
 .btn-primary:active { background:rgba(255,255,255,0.22); }
 .btn-full { margin-top: 20px; }
@@ -105,7 +105,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .home-btn:active { background:linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.08)); }
 
 /* 弹窗内按钮统一液态玻璃(不覆盖按钮自身颜色) */
-.dl-glass button { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; transition:background 0.15s !important; }
+.dl-glass button { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(4px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; transition:background 0.15s !important; }
 .dl-glass button:hover { background: rgba(255,255,255,0.22) !important; }
 
 /* 管理后台 - iOS液态玻璃悬浮栏(高透+折射: 底下内容清晰可见并发生液态扭曲; 不支持url()滤镜的浏览器回退普通玻璃) */
@@ -115,7 +115,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
 .admin-tabs .tab i { font-size: 20px; line-height: 1; transition: all 0.25s; }
 .admin-tabs .tab .tab-label { display: none; font-size: 10px; font-weight: 600; white-space: nowrap; }
-.admin-tabs .tab.active { color:#3478f6; background:rgba(52,120,246,0.10); }
+.admin-tabs .tab.active { color:#3478f6; background:rgba(52,120,246,0.10); backdrop-filter:blur(4px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05); }
 .admin-tabs .tab.active i { font-size: 20px; }
 .admin-tabs .tab.active .tab-label { display: none; }
 .admin-tabs .tab.active::after { display: none; }
@@ -124,9 +124,9 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .stat-card { background: #fff; border-radius: 14px; padding: 16px; text-align: center; }
 .stat-value { font-size: 26px; font-weight: 700; color: #3478f6; }
 .stat-label { font-size: 11px; color: #86868b; margin-top: 4px; }
-.admin-btn { padding:6px 12px; border:1px solid rgba(255,255,255,0.4); border-radius:8px; font-size:12px; cursor:pointer; margin-left:4px; font-weight:500; transition:background 0.15s; background:rgba(255,255,255,0.08) !important; backdrop-filter:blur(2px) saturate(130%); -webkit-backdrop-filter:blur(2px) saturate(130%); }
+.admin-btn { padding:6px 12px; border:1px solid rgba(255,255,255,0.4); border-radius:8px; font-size:12px; cursor:pointer; margin-left:4px; font-weight:500; transition:background 0.15s; background:rgba(255,255,255,0.08) !important; backdrop-filter:blur(4px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05); }
 .admin-btn:active { opacity:0.7; }
-.btn-sm { background:linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05));backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.35);border-left:1px solid rgba(255,255,255,0.22);border-right:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.04);border-radius:8px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.30),inset 0 -1px 0 0 rgba(255,255,255,0.04) color:#1a1a1a; }
+.btn-sm { background:linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.05));backdrop-filter:blur(4px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.35);border-left:1px solid rgba(255,255,255,0.22);border-right:1px solid rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.04);border-radius:8px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.30),inset 0 -1px 0 0 rgba(255,255,255,0.04) color:#1a1a1a; }
 .btn-danger { color:#e74c3c; }
 .btn-warning { color:#f57c00; }
 .btn-success { color:#34a853; }
@@ -183,7 +183,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 统一弹窗卡片 - iOS液态玻璃(与底栏一致: 高透+折射) */
 .dl-glass { background:linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.06));backdrop-filter:blur(3px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(3px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.40);border-left:1px solid rgba(255,255,255,0.25);border-right:1px solid rgba(255,255,255,0.10);border-bottom:1px solid rgba(255,255,255,0.05);border-radius:22px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.35),inset 0 -1px 0 0 rgba(255,255,255,0.06),0 6px 24px 0 rgba(0,0,0,0.06) }
 /* 弹窗内输入框/select 统一液态玻璃 */
-.dl-glass input, .dl-glass select { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(2px) saturate(130%);-webkit-backdrop-filter:blur(2px) saturate(130%);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; color:#1a1a1a !important; }
+.dl-glass input, .dl-glass select { background:rgba(255,255,255,0.08) !important;backdrop-filter:blur(4px) saturate(140%) brightness(1.05);-webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05);border-top:1px solid rgba(255,255,255,0.30);border-left:1px solid rgba(255,255,255,0.18);border-right:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.03);border-radius:10px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.25),inset 0 -1px 0 0 rgba(255,255,255,0.04) !important; color:#1a1a1a !important; }
 
 /* 导航栏当前赛程小框 */
 #defaultCompChip { display: none; font-size: 17px; font-weight: 600; color: #3478f6; background: #e8f4fd; border-radius: 10px; padding: 4px 14px; margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
@@ -210,7 +210,7 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 底部导航栏 */
 .bottom-bar-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:5px 0; color:#86868b; font-size:10px; cursor:pointer; transition:all 0.25s; -webkit-tap-highlight-color:transparent; border-radius:18px; }
 .bottom-bar-item span { display: none; font-weight: 600; white-space: nowrap; }
-.bottom-bar-item.active { color:#3478f6; background:rgba(52,120,246,0.10); }
+.bottom-bar-item.active { color:#3478f6; background:rgba(52,120,246,0.10); backdrop-filter:blur(4px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(4px) saturate(140%) brightness(1.05); }
 .bottom-bar-item.active span { display: none; }
 .bottom-bar-item i { font-size:20px; margin-bottom:1px; }
 
