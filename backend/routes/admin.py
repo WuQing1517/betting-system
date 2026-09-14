@@ -1063,17 +1063,19 @@ def export_data():
 def import_data():
     """导入数据 (超级管理员登录 或 备份令牌X-Backup-Token)"""
     import os as _os
-    _admin_pwd = _os.environ.get('ADMIN_PASSWORD') or 'admin'
-    _req_pwd = request.headers.get('X-Admin-Password', '')
-    if _req_pwd != _admin_pwd:
-        return jsonify({'error': '管理密码错误'}), 403
+    # 备份令牌放行: 用于备站自动同步, 用户与超管标识以备份内容为准
+    backup_token = os.environ.get('BACKUP_TOKEN', '')
+    req_token = request.headers.get('X-Backup-Token', '')
+    token_ok = bool(backup_token) and req_token == backup_token
+    # 非备份请求: 需要验证管理密码
+    if not token_ok:
+        _admin_pwd = _os.environ.get('ADMIN_PASSWORD') or 'admin'
+        _req_pwd = request.headers.get('X-Admin-Password', '')
+        if _req_pwd != _admin_pwd:
+            return jsonify({'error': '管理密码错误'}), 403
     try:
         data = request.get_json()
         from datetime import date as date_type
-        # 备份令牌放行: 用于备站自动同步, 用户与超管标识以备份内容为准
-        backup_token = os.environ.get('BACKUP_TOKEN', '')
-        req_token = request.headers.get('X-Backup-Token', '')
-        token_ok = bool(backup_token) and req_token == backup_token
         # 记录导入者身份: 用户表会被重建, 管理员手动导入时导入者保留超级管理员权限
         importer_openid = None
         if not token_ok:
