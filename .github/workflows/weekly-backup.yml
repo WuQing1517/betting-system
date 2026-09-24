@@ -33,6 +33,7 @@ jobs:
             "${SITE_URL}/api/admin/export" -o backup.json
           grep -q '"version"' backup.json || { echo "备份内容异常:"; head -c 300 backup.json; exit 1; }
           echo "备份大小: $(wc -c < backup.json) 字节"
+          echo "BACKUP_SIZE=$(wc -c < backup.json)" >> $GITHUB_ENV
 
       - name: 推送到备份仓库
         env:
@@ -57,10 +58,67 @@ jobs:
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
         run: |
           set -x
-          if [ -z "$PA_URL" ]; then echo "未配置PA_URL, 跳过备站同步"; exit 0; fi
+          if [ -z "$PA_URL" ]; then echo "未配置PA_URL, 跳过备站同步"; echo "PA_SYNC=skipped" >> $GITHUB_ENV; exit 0; fi
           RESP=$(curl -sS --retry 3 --retry-delay 30 --max-time 600 \
             -X POST -H "Content-Type: application/json" -H "X-Backup-Token: ${BACKUP_TOKEN}" \
             --data-binary @backup.json "${PA_URL}/api/admin/import")
           echo "$RESP" | head -c 300
-          echo "$RESP" | grep -q '"message"' || { echo "备站同步失败"; exit 1; }
+          echo "$RESP" | grep -q '"message"' || { echo "备站同步失败"; echo "PA_SYNC=failed" >> $GITHUB_ENV; exit 1; }
           echo "备站同步成功"
+          echo "PA_SYNC=ok" >> $GITHUB_ENV
+
+      # 通知: 成败都发, 未配置的渠道自动跳过, 通知失败不影响备份结果
+      - name: 微信通知
+        if: always()
+        continue-on-error: true
+        env:
+          JOB_STATUS: ${{ job.status }}
+          BACKUP_SIZE: ${{ env.BACKUP_SIZE }}
+          PA_SYNC: ${{ env.PA_SYNC }}
+          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          SIZE=${BACKUP_SIZE:-未知}
+          if [ "$JOB_STATUS" = "success" ]; then
+            case "$PA_SYNC" in
+              ok)      TITLE="✅ 每周备份成功 ${DATE}"; STATUS_LINE="PA备站同步: 成功";;
+              skipped) TITLE="⚠️ 每周备份完成(未同步PA) ${DATE}"; STATUS_LINE="PA备站同步: 跳过(未配置PA_URL)";;
+              *)       TITLE="✅ 每周备份成功 ${DATE}"; STATUS_LINE="PA备站同步: ${PA_SYNC:-无}";;
+            esac
+            BODY=$(printf '备份文件: backup_%s.json (%s 字节)\n%s\n仓库: https://github.com/WuQing1517/betting-backup' "$DATE" "$SIZE" "$STATUS_LINE")
+          else
+            TITLE="❌ 每周备份失败 ${DATE}"
+            STATUS_LINE="本次备份未完成, 请尽快查看日志"
+            BODY=$(printf '%s\n日志: https://github.com/WuQing1517/betting-system/actions' "$STATUS_LINE")
+          fi
+          echo "MAIL_TITLE=$TITLE" >> "$GITHUB_ENV"
+          printf '%s\n%s\n' "$STATUS_LINE" "$BODY" > mail_body.txt
+          if [ -n "$SERVERCHAN_SENDKEY" ]; then
+            RESP=$(curl -sS --max-time 30 "https://sctapi.ftqq.com/${SERVERCHAN_SENDKEY}.send" \
+              --data-urlencode "title=${TITLE}" --data-urlencode "desp=${BODY}")
+            echo "Server酱响应: ${RESP:0:150}"
+          fi
+          if [ -n "$PUSHPLUS_TOKEN" ]; then
+            RESP=$(curl -sS -G --max-time 30 "https://www.pushplus.plus/send" \
+              --data-urlencode "token=${PUSHPLUS_TOKEN}" --data-urlencode "title=${TITLE}" \
+              --data-urlencode "content=${BODY}" --data-urlencode "template=txt")
+            echo "PushPlus响应: ${RESP:0:150}"
+          fi
+          if [ -z "$SERVERCHAN_SENDKEY" ] && [ -z "$PUSHPLUS_TOKEN" ]; then
+            echo "未配置微信推送Secret(SERVERCHAN_SENDKEY 或 PUSHPLUS_TOKEN), 跳过微信通知"
+          fi
+
+      - name: 邮件通知
+        if: always()
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: ${{ secrets.MAIL_HOST }}
+          server_port: ${{ secrets.MAIL_PORT || 465 }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: ${{ env.MAIL_TITLE }}
+          from: ${{ secrets.MAIL_FROM }}
+          to: ${{ secrets.MAIL_TO }}
+          body: file://mail_body.txt
