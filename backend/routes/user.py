@@ -42,6 +42,34 @@ def get_profile():
         'session_token': user.session_token
     })
 
+@user_bp.route('/session-resolve', methods=['GET'])
+def session_resolve():
+    """纯令牌解析身份: 导入备份会重建用户表(用户id可能变化),
+    前端401后凭会话令牌找回新id并续用登录态。凭令牌认证, 不看X-User-Id。"""
+    token = request.headers.get('X-Session-Token', '')
+    if not token:
+        return jsonify({'error': '登录状态已失效，请重新登录', 'code': 'SESSION_EXPIRED'}), 401
+    user = User.query.filter_by(session_token=token).first()
+    if not user:
+        return jsonify({'error': '账号信息已变更，请重新登录', 'code': 'SESSION_EXPIRED'}), 401
+
+    avatar_url = image_output_url('users', user.id, user.avatar_url)
+
+    return jsonify({
+        'user_id': user.id,
+        'openid': user.openid,
+        'nickname': user.nickname,
+        'avatar_url': avatar_url,
+        'cn': user.cn,
+        'coins': user.coins,
+        'is_admin': user.is_admin,
+        'is_superadmin': bool(user.is_superadmin),
+        'need_setup': bool(user.is_superadmin) and user.openid == 'dev_admin' and (user.password or '') == 'admin',
+        'rules_viewed': user.rules_viewed,
+        'notice_confirmed': bool(user.notice_confirmed),
+        'session_token': user.session_token
+    })
+
 @user_bp.route('/user/profile', methods=['PUT'])
 def update_profile():
     user_id = parse_user_id(request.headers.get('X-User-Id'))

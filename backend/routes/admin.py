@@ -1108,6 +1108,8 @@ def import_data():
         # 用户按备份的显式id重建, 保证bets等表中的user_id引用一致
         # (删除顺序按外键依赖: prizes/livestreams的creator_id与bets的user_id都指向users)
         from models import Prize as _Prize, Livestream as _Livestream
+        # 导入前快照会话令牌: 重建用户表会清空session_token, 同openid用户保留原令牌避免全站掉线
+        tokens_by_openid = {u.openid: u.session_token for u in User.query.all() if u.session_token}
         _Prize.query.delete()
         _Livestream.query.delete()
         Bet.query.delete()
@@ -1140,6 +1142,20 @@ def import_data():
                 db.session.add(imp)
                 users_by_openid[importer_openid] = imp
             imp.is_superadmin = True
+        # 恢复同openid用户的会话令牌(已登录浏览器不掉线); 导入者不在备份中则补发令牌随响应返回
+        for user in User.query.all():
+            tok = tokens_by_openid.get(user.openid)
+            if tok:
+                user.session_token = tok
+        importer_token = None
+        importer_user_id = None
+        if importer_openid:
+            imp = users_by_openid.get(importer_openid)
+            if imp and not imp.session_token:
+                imp.session_token = uuid.uuid4().hex
+            if imp:
+                importer_token = imp.session_token
+                importer_user_id = imp.id
         db.session.commit()
         teams_by_id = {t.id: t for t in Team.query.all()}
         teams_by_name = {}
@@ -1412,7 +1428,7 @@ def import_data():
                     "GREATEST((SELECT COALESCE(MAX(id), 0) FROM " + table + "), 1))"
                 ))
             db.session.commit()
-        return jsonify({'message': '导入成功', 'skipped_count': len(skipped), 'skipped': skipped[:20]})
+        return jsonify({'message': '导入成功', 'skipped_count': len(skipped), 'skipped': skipped[:20], 'session_token': importer_token, 'user_id': importer_user_id})
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

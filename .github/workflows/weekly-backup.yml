@@ -18,6 +18,7 @@ jobs:
           missing=""
           [ -z "${{ secrets.SITE_URL }}" ] && missing="$missing SITE_URL"
           [ -z "${{ secrets.BACKUP_TOKEN }}" ] && missing="$missing BACKUP_TOKEN"
+          [ -z "${{ secrets.BACKUP_PAT }}" ] && missing="$missing BACKUP_PAT"
           [ -n "$missing" ] && { echo "缺少Secrets:$missing - 请到 Settings → Secrets and variables → Actions 添加"; exit 1; }
           echo "Secrets已配置"
 
@@ -49,12 +50,6 @@ jobs:
           git add backups
           git commit -m "自动备份 ${DATE}" || echo "内容无变化，跳过提交"
           git push
-
-      - name: 检查备份仓库PAT
-        run: |
-          set -x
-          [ -z "${{ secrets.BACKUP_PAT }}" ] && { echo "缺少Secret: BACKUP_PAT"; exit 1; }
-          echo "PAT已配置"
 
       - name: 同步到PythonAnywhere备站
         env:

@@ -32,7 +32,7 @@ def create_app():
     # 会话校验: 登录态请求必须携带与账号当前令牌一致的 X-Session-Token。
     # 令牌在登录时签发, 账号信息变更(改昵称/密码/头像等)时轮换 ——
     # 发起变更的浏览器拿到新令牌继续在线, 其他浏览器的旧令牌在这里被401踢下线。
-    SESSION_PUBLIC_PREFIXES = ('/api/dev-login', '/api/dev-register', '/api/admin/login', '/api/img/', '/api/site-info')
+    SESSION_PUBLIC_PREFIXES = ('/api/dev-login', '/api/dev-register', '/api/admin/login', '/api/img/', '/api/site-info', '/api/session-resolve')
 
     @app.before_request
     def check_session_token():

@@ -80,6 +80,30 @@ async function api(url, method, data, extraHeaders) {
 
         }
 
+        // 导入备份会重建用户表(用户id可能变化): 凭令牌找回新身份后重试
+
+        if (currentUser && currentUser.session_token) {
+
+            try {
+
+                var r2 = await fetch(API_BASE + '/session-resolve', { headers: { 'X-Session-Token': currentUser.session_token } });
+
+                if (r2.ok) {
+
+                    var me = await r2.json();
+
+                    currentUser = me;
+
+                    localStorage.setItem('user', JSON.stringify(me));
+
+                    return api(url, method, data, extraHeaders);
+
+                }
+
+            } catch (e) {}
+
+        }
+
         forceLogout(json.error);
 
         throw new Error(json.error || '登录状态已失效');
@@ -4466,6 +4490,17 @@ async function importData() {
             try { result = await resp.json(); } catch (e) { throw new Error('\u670D\u52A1\u5668\u8FD4\u56DE\u9519\u8BEF (' + resp.status + ')\uFF0C\u8BF7\u786E\u8BA4\u5DF2\u62C9\u53D6\u6700\u65B0\u4EE3\u7801\u5E76\u91CD\u52A0Web\u5E94\u7528'); }
 
             if (!resp.ok) throw new Error(result.error || '\u5BFC\u5165\u5931\u8D25');
+
+            // 导入会重建用户表: 后端返回导入者续用的会话令牌和新用户id, 立即保存避免被登出
+            if (result.session_token || result.user_id) {
+
+                if (result.session_token) currentUser.session_token = result.session_token;
+
+                if (result.user_id) currentUser.user_id = result.user_id;
+
+                localStorage.setItem('user', JSON.stringify(currentUser));
+
+            }
 
             showToast('\u5BFC\u5165\u6210\u529F', 'success');
 
