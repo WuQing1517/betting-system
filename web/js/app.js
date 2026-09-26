@@ -588,7 +588,7 @@ function renderMiuiDtpPanel() {
 
     html += '<button onclick="miuiDtpClear()" style="font-size:12px;color:#86868b;background:#f2f3f5;border:none;border-radius:8px;padding:6px 14px;cursor:pointer">\u6e05\u9664</button>';
 
-    html += '<button onclick="miuiDtpCommit()" style="font-size:13px;color:#fff;background:#3478f6;border:none;border-radius:10px;padding:7px 22px;cursor:pointer;font-weight:600">\u786e\u5b9a</button></div>';
+    html += '<button onclick="miuiDtpCommit()" style="font-size:13px;color:#3478f6;background:rgba(255,255,255,0.62);border:1px solid rgba(255,255,255,0.8);border-radius:10px;padding:7px 22px;cursor:pointer;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,0.85),0 1px 3px rgba(0,0,0,0.04)">\u786e\u5b9a</button></div>';
 
     html += '</div>';
 
