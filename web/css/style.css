@@ -33,8 +33,8 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
 .admin-tabs .tab i { font-size: 20px; line-height: 1; transition: all 0.25s; }
 .admin-tabs .tab .tab-label { display: none; font-size: 10px; font-weight: 600; white-space: nowrap; }
-/* active胶囊: 近实底浅蓝(92%白+14%蓝罩), 背后内容影子彻底不可见, 胶囊内只有图标 */
-.admin-tabs .tab.active { color:#3478f6; background:linear-gradient(rgba(52,120,246,0.14), rgba(52,120,246,0.14)), rgba(255,255,255,0.92); }
+/* active态: 无任何底色胶囊, 选中只通过图标变蓝体现 */
+.admin-tabs .tab.active { color:#3478f6; background:transparent; }
 .admin-tabs .tab.active i { font-size: 20px; }
 .admin-tabs .tab.active .tab-label { display: none; }
 .admin-tabs .tab.active::after { display: none; }
@@ -235,8 +235,8 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 /* 底部导航栏 */
 .bottom-bar-item { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:5px 0; color:#86868b; font-size:10px; cursor:pointer; transition:all 0.25s; -webkit-tap-highlight-color:transparent; border-radius:18px; }
 .bottom-bar-item span { display: none; font-weight: 600; white-space: nowrap; }
-/* active胶囊: 近实底浅蓝(92%白+14%蓝罩), 背后内容影子彻底不可见, 胶囊内只有图标 */
-.bottom-bar-item.active { color:#3478f6; background:linear-gradient(rgba(52,120,246,0.14), rgba(52,120,246,0.14)), rgba(255,255,255,0.92); }
+/* active态: 无任何底色胶囊, 整条底栏是一整块玻璃, 选中只通过图标变蓝体现 */
+.bottom-bar-item.active { color:#3478f6; background:transparent; }
 .bottom-bar-item.active span { display: none; }
 .bottom-bar-item i { font-size:20px; line-height:1; }
 
