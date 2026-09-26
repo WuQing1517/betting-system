@@ -686,9 +686,9 @@ function miuiConfirm(msg) {
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:20px;line-height:1.5">' + msg + '</div>';
 
-        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
+        h += '<div style="display:flex;gap:10px;margin-top:8px">';
 
-        h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(false)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u53D6\u6D88</button>';
+        h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(false)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer">\u53D6\u6D88</button>';
 
         h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(true)" style="flex:1;color:#3478f6;font-size:16px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u786E\u5B9A</button>';
 
@@ -716,9 +716,9 @@ function miuiPrompt(msg, defaultVal) {
 
         h += '<input id="miuiPromptInput" type="text" value="' + (defaultVal || '') + '" style="width:100%;padding:12px;border:none;border-radius:10px;background:#f2f3f5;font-size:15px;box-sizing:border-box;outline:none;margin-bottom:16px">';
 
-        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
+        h += '<div style="display:flex;gap:10px;margin-top:8px">';
 
-        h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(null)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u53D6\u6D88</button>';
+        h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(null)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer">\u53D6\u6D88</button>';
 
         h += '<button class="miui-dialog-btn" onclick="closeMiuiDialog(document.getElementById(\'miuiPromptInput\').value)" style="flex:1;color:#3478f6;font-size:16px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u786E\u5B9A</button>';
 
@@ -786,9 +786,9 @@ function miuiPromptMulti(fields) {
 
         });
 
-        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5;margin-top:4px">';
+        h += '<div style="display:flex;gap:10px;margin-top:8px">';
 
-        h += '<button onclick="closeMiuiDialog(null)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u53D6\u6D88</button>';
+        h += '<button onclick="closeMiuiDialog(null)" style="flex:1;color:#86868b;font-size:16px;background:none;border:none;padding:12px;cursor:pointer">\u53D6\u6D88</button>';
 
         h += '<button id="miuiDialogOk" style="flex:1;color:#3478f6;font-size:16px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u786E\u5B9A</button>';
 
@@ -1008,13 +1008,13 @@ function maybeShowNotice() {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10004;display:flex;align-items:center;justify-content:center';
     overlay.classList.add('dl-overlay');
 
-    var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
+    var glass = 'width:85%;max-width:340px;padding:24px;box-sizing:border-box';
 
     var item = 'display:flex;align-items:flex-start;gap:9px;margin-bottom:10px';
 
     var dot = 'flex-shrink:0;margin-top:8px;width:6px;height:6px;border-radius:50%;background:#3478f6';
 
-    overlay.innerHTML = '<div style="' + glass + '">' +
+    overlay.innerHTML = '<div class="dl-glass" style="' + glass + '">' +
 
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">' +
 
@@ -1032,7 +1032,7 @@ function maybeShowNotice() {
 
         '</div>' +
 
-        '<button id="noticeOkBtn" class="admin-btn" style="width:100%;padding:12px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">\u6211\u5DF2\u77E5\u6653</button>' +
+        '<button id="noticeOkBtn" class="admin-btn" style="width:100%;padding:12px;border:none;border-radius:12px;color:#3478f6;font-size:15px;font-weight:600;cursor:pointer">\u6211\u5DF2\u77E5\u6653</button>' +
 
         '</div>';
 
@@ -1092,9 +1092,9 @@ async function checkBackupSiteNotice() {
         overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:10005;display:flex;align-items:center;justify-content:center';
     overlay.classList.add('dl-overlay');
 
-        var glass = 'background:rgba(255,255,255,0.95);border:0.5px solid rgba(255,255,255,0.7);border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25);padding:24px;width:85%;max-width:340px;box-sizing:border-box';
+        var glass = 'width:85%;max-width:340px;padding:24px;box-sizing:border-box';
 
-        overlay.innerHTML = '<div style="' + glass + '" onclick="event.stopPropagation()">' +
+        overlay.innerHTML = '<div class="dl-glass" style="' + glass + '" onclick="event.stopPropagation()">' +
 
             '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><i class="ri-error-warning-line" style="font-size:22px;color:#f59e0b"></i><span style="font-size:17px;font-weight:600;color:#1a1a1a">\u5907\u7528\u7AD9\u63D0\u793A</span></div>' +
 
@@ -1106,7 +1106,7 @@ async function checkBackupSiteNotice() {
 
             '<div style="margin-top:6px">\u7ADE\u731C\u64CD\u4F5C\u8BF7\u524D\u5F80\u4E3B\u7AD9\uFF1ACoin-IVL by wuqing</div></div>' +
 
-            '<a id="goMainSiteBtn" href="' + info.main_site_url + '" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;padding:12px;border-radius:12px;background:#3478f6;color:#fff;font-size:15px;font-weight:600;cursor:pointer">\u524D\u5F80\u4E3B\u7AD9\u7ADE\u731C</a>' +
+            '<a id="goMainSiteBtn" href="' + info.main_site_url + '" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-bottom:10px;padding:12px;border-radius:12px;color:#3478f6;font-size:15px;font-weight:600;cursor:pointer">\u524D\u5F80\u4E3B\u7AD9\u7ADE\u731C</a>' +
 
             '<button id="backupNoticeCloseBtn" style="width:100%;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer">\u5173\u95ED</button>' +
 
@@ -2838,9 +2838,9 @@ function showOTWinnerDialog() {
 
     h += '<div style="font-size:16px;font-weight:600;margin-bottom:16px">\u52A0\u8D5B\u5E73\u5C40\uFF0C\u8BF7\u9009\u62E9\u83B7\u80DC\u961F\u4F0D</div>';
 
-    h += '<button onclick="pickOTWinner(\'' + overlay._homeId + '\')" style="width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:none;background:#3478f6;color:#fff;font-size:15px;cursor:pointer">' + homeName + '</button>';
+    h += '<button onclick="pickOTWinner(\'' + overlay._homeId + '\')" style="width:100%;padding:12px;margin-bottom:8px;border-radius:10px;border:none;color:#3478f6;font-size:15px;cursor:pointer">' + homeName + '</button>';
 
-    h += '<button onclick="pickOTWinner(\'' + overlay._awayId + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:#3478f6;color:#fff;font-size:15px;cursor:pointer">' + awayName + '</button>';
+    h += '<button onclick="pickOTWinner(\'' + overlay._awayId + '\')" style="width:100%;padding:12px;border-radius:10px;border:none;color:#3478f6;font-size:15px;cursor:pointer">' + awayName + '</button>';
 
     h += '</div></div>';
 
@@ -3785,7 +3785,7 @@ function showEditProfileDialog() {
 
         '<button class="admin-btn" style="flex:1;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer" onclick="document.getElementById(\'editProfileOverlay\').remove()">\u53D6\u6D88</button>' +
 
-        '<button class="admin-btn" style="flex:2;padding:11px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer" onclick="saveProfileDialog()">\u4FDD\u5B58</button></div>' +
+        '<button class="admin-btn" style="flex:2;padding:11px;border:none;border-radius:12px;color:#3478f6;font-size:14px;font-weight:600;cursor:pointer" onclick="saveProfileDialog()">\u4FDD\u5B58</button></div>' +
 
         '</div>';
 
@@ -3856,7 +3856,7 @@ function showChangePasswordDialog() {
 
         '<button class="admin-btn" style="flex:1;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer" onclick="document.getElementById(\'chgPwdOverlay\').remove()">\u53D6\u6D88</button>' +
 
-        '<button class="admin-btn" style="flex:2;padding:11px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer" onclick="savePasswordDialog()">\u4FDD\u5B58</button></div>' +
+        '<button class="admin-btn" style="flex:2;padding:11px;border:none;border-radius:12px;color:#3478f6;font-size:14px;font-weight:600;cursor:pointer" onclick="savePasswordDialog()">\u4FDD\u5B58</button></div>' +
 
         '</div>';
 
@@ -4232,9 +4232,9 @@ async function onLivestreamLongPress(e, id) {
 
         h += '<div style="margin-bottom:16px"><div style="font-size:13px;color:#86868b;margin-bottom:6px;font-weight:500">\u94FE\u63A5</div><input id="lsEditUrl" type="text" style="width:100%;padding:11px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none"></div>';
 
-        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
+        h += '<div style="display:flex;gap:10px;margin-top:8px">';
 
-        h += '<button onclick="closeMiuiDialog(null)" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u5220\u9664</button>';
+        h += '<button onclick="closeMiuiDialog(null)" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u5220\u9664</button>';
 
         h += '<button id="miuiDialogOk" style="flex:1;color:#3478f6;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u4FDD\u5B58</button>';
 
@@ -4561,7 +4561,7 @@ function promptAdminPassword() {
             '<input id="consolePwd" type="password" placeholder="\u8BF7\u8F93\u5165\u7BA1\u7406\u5BC6\u7801" style="width:100%;padding:12px;border:none;border-radius:10px;background:#f2f3f5;font-size:14px;box-sizing:border-box;outline:none;margin-bottom:14px">' +
             '<div style="display:flex;gap:10px">' +
             '<button class="admin-btn" id="pwdCancelBtn" style="flex:1;padding:11px;border:none;border-radius:12px;background:#f2f3f5;font-size:14px;cursor:pointer">\u53D6\u6D88</button>' +
-            '<button class="admin-btn" id="pwdOkBtn" style="flex:2;padding:11px;border:none;border-radius:12px;background:#3478f6;color:#fff;font-size:14px;font-weight:600;cursor:pointer">\u786E\u8BA4</button></div>' +
+            '<button class="admin-btn" id="pwdOkBtn" style="flex:2;padding:11px;border:none;border-radius:12px;color:#3478f6;font-size:14px;font-weight:600;cursor:pointer">\u786E\u8BA4</button></div>' +
             '</div>';
         document.body.appendChild(overlay);
         var inp = document.getElementById('consolePwd');
@@ -4718,9 +4718,9 @@ async function adjustCoins(uid) {
 
         h += '</div>';
 
-        h += '<div style="display:flex;border-top:0.5px solid #f2f3f5">';
+        h += '<div style="display:flex;gap:10px;margin-top:8px">';
 
-        h += '<button onclick="var v=document.getElementById(\'coinInput\');closeMiuiDialog({action:\'subtract\',coins:v?parseInt(v.value):0})" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer;border-right:0.5px solid #f2f3f5">\u51CF\u5C11</button>';
+        h += '<button onclick="var v=document.getElementById(\'coinInput\');closeMiuiDialog({action:\'subtract\',coins:v?parseInt(v.value):0})" style="flex:1;color:#e74c3c;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u51CF\u5C11</button>';
 
         h += '<button onclick="var v=document.getElementById(\'coinInput\');closeMiuiDialog({action:\'add\',coins:v?parseInt(v.value):0})" style="flex:1;color:#34a853;font-size:15px;font-weight:500;background:none;border:none;padding:12px;cursor:pointer">\u589E\u52A0</button>';
 
