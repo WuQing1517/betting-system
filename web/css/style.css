@@ -4,30 +4,24 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .page.active { display: block; }
 
 /* ============================================================
-   HyperOS4 柔光玻璃体系 v6 — 三层统一配方
-   A. 悬浮透镜玻璃(chrome): 有内容从下方穿过, 真blur+SVG透镜边缘扭曲
+   iOS液态玻璃体系 v7 — 三层统一配方
+   A. 悬浮磨砂玻璃(chrome): 导航栏/悬浮底栏 — 一整块均质表面,
+      blur(24px)+saturate(180%)把背后内容抹成纯色块(不透出任何文字影子),
+      高透白渐变+顶部内高光+大圆角+悬浮软影; 无任何内层环/扭曲层
    B. 奶白面板玻璃(panel): 弹窗面板/下拉/日期面板, 自身不带blur
       (遮罩层已有blur(8px), 面板再套blur会在移动端把面板压进模糊层)
    C. 柔光白卡(card): 页面内容卡片, 左上柔光+细边+软影, 无blur
    控件(按钮/输入框)统一为白玻璃control配方, 颜色只出现在文字/图标
    ============================================================ */
 
-/* ---------- A. 悬浮透镜玻璃 ---------- */
-/* 配方: 左上柔光高光 + 高透白渐变 + 四向非对称亮边 + 内顶光 + 软影
-   中心区只做低模糊(1.5px)保持清晰; 边缘扭曲由 ::before 边缘环承载:
-   环内 backdrop-filter 引用 #miuiGlassLens 位移滤镜产生液态扭曲,
-   mask-composite 把环中心镂空 — 只有贴近边缘的内容被扭曲(不支持url()/mask的引擎自动无环回退) */
-.navbar { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:radial-gradient(130% 100% at 16% 0%, rgba(255,255,255,0.60), rgba(255,255,255,0) 55%), linear-gradient(135deg, rgba(255,255,255,0.50), rgba(255,255,255,0.36)); backdrop-filter:blur(2px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(2px) saturate(140%) brightness(1.05); border-top:1px solid rgba(255,255,255,0.60); border-left:1px solid rgba(255,255,255,0.40); border-right:1px solid rgba(255,255,255,0.20); border-bottom:1px solid rgba(255,255,255,0.10); box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.55), inset 0 -1px 0 0 rgba(255,255,255,0.10), 0 6px 24px 0 rgba(0,0,0,0.06); border-radius:0; color:#1a1a1a; position:sticky; top:0; z-index:100; }
+/* ---------- A. 悬浮磨砂玻璃(iOS液态玻璃) ---------- */
+.navbar { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:0; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); color:#1a1a1a; position:sticky; top:0; z-index:100; }
 
-/* 悬浮底栏(首页/排行榜/个人中心) — 与工作台底栏完全同几何: 同bottom/同宽/同padding/同圆角 (100vw保证滚动条出现与否都不改变宽度)
-   底色加浓(0.50→0.36)让背后内容成为淡影而非清晰文字, 模糊保持2px通透 */
-.float-glass { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:100; background:radial-gradient(130% 100% at 16% 0%, rgba(255,255,255,0.60), rgba(255,255,255,0) 55%), linear-gradient(135deg, rgba(255,255,255,0.50), rgba(255,255,255,0.36)); backdrop-filter:blur(2px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(2px) saturate(140%) brightness(1.05); border-top:1px solid rgba(255,255,255,0.60); border-left:1px solid rgba(255,255,255,0.40); border-right:1px solid rgba(255,255,255,0.20); border-bottom:1px solid rgba(255,255,255,0.10); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.55), inset 0 -1px 0 0 rgba(255,255,255,0.10), 0 6px 24px 0 rgba(0,0,0,0.06); }
-
-/* 悬浮玻璃的边缘扭曲环: 中心镂空, 仅边缘12px发生液态折射 */
-.navbar::before, .float-glass::before, .admin-tabs::before { content:''; position:absolute; inset:0; border-radius:inherit; padding:12px; backdrop-filter:url(#miuiGlassLens) blur(1px) saturate(160%); -webkit-backdrop-filter:url(#miuiGlassLens) blur(1px) saturate(160%); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none; }
+/* 悬浮底栏(首页/排行榜/个人中心) — 一整块均质玻璃; 与工作台底栏完全同几何 */
+.float-glass { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:100; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); }
 
 /* 工作台悬浮栏 — 与首页底栏完全同几何 */
-.admin-tabs { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); display:flex; width:min(430px,calc(100vw - 28px)); background:radial-gradient(130% 100% at 16% 0%, rgba(255,255,255,0.60), rgba(255,255,255,0) 55%), linear-gradient(135deg, rgba(255,255,255,0.50), rgba(255,255,255,0.36)); backdrop-filter:blur(2px) saturate(140%) brightness(1.05); -webkit-backdrop-filter:blur(2px) saturate(140%) brightness(1.05); border-top:1px solid rgba(255,255,255,0.60); border-left:1px solid rgba(255,255,255,0.40); border-right:1px solid rgba(255,255,255,0.20); border-bottom:1px solid rgba(255,255,255,0.10); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.55), inset 0 -1px 0 0 rgba(255,255,255,0.10), 0 6px 24px 0 rgba(0,0,0,0.06); padding:8px 12px; z-index:101; }
+.admin-tabs { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); display:flex; width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:101; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); }
 .admin-tabs .tab { flex: 1; }
 #adminContent { padding-bottom: 96px; }
 .admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }
