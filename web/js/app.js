@@ -534,7 +534,7 @@ function renderMiuiDtpPanel() {
 
     var navBtn = 'width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;color:#1a1a1a;background:#f2f3f5;font-style:normal';
 
-    var html = '<div id="miuiDtpPanel" style="position:fixed;z-index:10010;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:14px;width:280px;box-sizing:border-box;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
+    var html = '<div id="miuiDtpPanel" style="position:fixed;z-index:10010;background:radial-gradient(130% 100% at 16% 0%, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%),linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,255,255,0.88));border:1px solid rgba(255,255,255,0.6);border-radius:16px;box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85),0 8px 32px rgba(0,0,0,0.14);padding:14px;width:280px;box-sizing:border-box;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
 
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
 
@@ -1526,7 +1526,7 @@ async function loadRecentSchedule() {
 
                         var sColor = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
 
-                        allHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'' + (m.home_team||'').replace(/'/g,"\\'") + '\',\'' + (m.away_team||'').replace(/'/g,"\\'") + '\',\'' + (m.home_logo||'') + '\',\'' + (m.away_logo||'') + '\',\'' + (q.question_text||'').replace(/'/g,"\\'") + '\')">';
+                        allHtml += '<div class="soft-card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;margin-bottom:4px;cursor:pointer" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'' + (m.home_team||'').replace(/'/g,"\\'") + '\',\'' + (m.away_team||'').replace(/'/g,"\\'") + '\',\'' + (m.home_logo||'') + '\',\'' + (m.away_logo||'') + '\',\'' + (q.question_text||'').replace(/'/g,"\\'") + '\')">';
 
                         allHtml += '<div><span style="font-size:14px;font-weight:500;color:#1a1a1a">' + q.question_text + '</span></div>';
 
@@ -1610,7 +1610,7 @@ function timedRowHtml(q) {
 
     }
 
-    var h = '<div style="padding:10px 12px;background:#fff;border-radius:10px;margin:0 16px 4px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
+    var h = '<div class="soft-card" style="padding:10px 12px;margin:0 16px 4px;cursor:pointer;' + (q.status === 'completed' ? 'opacity:.6' : '') + '" onclick="loadBetPage(\'' + q.question_code + '\',\'' + q.status + '\',\'\',\'\',\'\',\'\',\'' + (q.question_text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')">';
 
     h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
 
@@ -1954,7 +1954,7 @@ function renderLeaderboard(entries, compId, compOpts) {
 
             var changeIcon = change > 0 ? '<span style="color:#4caf50">\u25B2' + change + '</span>' : change < 0 ? '<span style="color:#e74c3c">\u25BC' + Math.abs(change) + '</span>' : '<span style="color:#999">-</span>';
 
-            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.35);box-shadow:inset 0 1px 1px rgba(255,255,255,0.35),0 2px 8px rgba(0,0,0,0.04);border-radius:12px;margin-bottom:6px' + (isAdmin ? ';cursor:pointer' : '') + '"' + (isAdmin ? ' onclick="editLBEntry(' + e.team_id + ',' + compId + ')"' : '') + '>';
+            h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:' + bgColor + ';border:1px solid rgba(255,255,255,0.55);box-shadow:inset 0 1px 1px rgba(255,255,255,0.85),0 2px 8px rgba(0,0,0,0.05);border-radius:12px;margin-bottom:6px' + (isAdmin ? ';cursor:pointer' : '') + '"' + (isAdmin ? ' onclick="editLBEntry(' + e.team_id + ',' + compId + ')"' : '') + '>';
 
             h += '<span style="font-size:18px;font-weight:700;color:' + rankColor + ';width:24px;text-align:center">' + e.rank + '</span>';
 
@@ -3052,7 +3052,7 @@ function renderFullSchedule(allData) {
 
             h += '<div style="margin:0 16px 4px">';
 
-            h += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-radius:10px;margin-bottom:4px;cursor:pointer" onclick="openCompetition(' + data.id + ',\'' + m.match_code + '\')">';
+            h += '<div class="soft-card" style="display:flex;align-items:center;gap:8px;padding:10px 12px;margin-bottom:4px;cursor:pointer" onclick="openCompetition(' + data.id + ',\'' + m.match_code + '\')">';
 
             var hLogo = m.home_logo ? '<img src="' + m.home_logo + '" style="width:20px;height:20px;border-radius:5px;object-fit:contain;background:#f2f3f5">' : '';
 
@@ -3992,7 +3992,7 @@ async function showPrizes() {
 
                     var canEdit = currentUser && (p.creator_id === currentUser.user_id || currentUser.is_superadmin);
 
-                    h += '<div style="background:#fff;border-radius:14px;padding:12px;margin:0 16px 6px">';
+                    h += '<div class="soft-card" style="padding:12px;margin:0 16px 6px">';
 
                     h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
 
@@ -4164,7 +4164,7 @@ async function showLivestream() {
 
             var coverUrl = ls.cover_url || '';
 
-            h += '<div class="livestream-card" data-id="' + ls.id + '" style="background:#fff;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
+            h += '<div class="livestream-card soft-card" data-id="' + ls.id + '" style="overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="window.open(\'' + ls.url + '\',\'_blank\')" oncontextmenu="onLivestreamLongPress(event,' + ls.id + ')">';
 
             h += '<div style="height:160px;background:#f2f3f5;display:flex;align-items:center;justify-content:center">';
 
@@ -4218,7 +4218,7 @@ async function onLivestreamLongPress(e, id) {
 
         var h = '<div id="miuiDialog" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:10000;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)closeMiuiDialog(false)">';
 
-        h += '<div style="background:#fff;border-radius:16px;padding:24px 20px 16px;width:85%;max-width:340px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
+        h += '<div class="dl-glass" style="width:85%;max-width:340px;padding:24px 20px 16px;animation:miuiFadeIn 0.2s" onclick="event.stopPropagation()">';
 
         h += '<div style="font-size:16px;font-weight:500;color:#1a1a1a;text-align:center;margin-bottom:16px">\u7F16\u8F91\u76F4\u64AD</div>';
 
@@ -4621,7 +4621,7 @@ async function loadAdminUsers() {
 
             var isTargetSuper = u.is_superadmin;
 
-            h += '<div style="background:#fff;border-radius:14px;padding:14px;margin-bottom:8px">';
+            h += '<div class="soft-card" style="padding:14px;margin-bottom:8px">';
 
             h += '<div style="display:flex;justify-content:space-between;align-items:center">';
 
@@ -4760,7 +4760,7 @@ async function loadAdminTeams() {
 
             var logoUrl = t.logo_url || '';  // 相对地址(/api/img/...或/uploads/...)按当前站点解析, 不再拼接旧域名
 
-            h += '<div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">';
+            h += '<div class="soft-card" style="padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px">';
 
             if (logoUrl) h += '<img src="' + logoUrl + '" style="height:36px;width:36px;object-fit:contain;border-radius:8px;flex-shrink:0">';
 
@@ -5008,7 +5008,7 @@ function renderMatchList(data, cid) {
 
         if (df && String(m.day_number) !== df) return;
 
-        h += '<div id="matchcard_' + m.id + '" style="background:#fff;border-radius:12px;padding:12px;margin-bottom:6px">';
+        h += '<div id="matchcard_' + m.id + '" class="soft-card" style="padding:12px;margin-bottom:6px">';
 
         h += '<div style="display:flex;justify-content:space-between;align-items:center">';
 
@@ -5288,7 +5288,9 @@ async function addNewMatch(cid) {
 
     form.id = 'newMatchForm';
 
-    form.style.cssText = 'background:#fff;border-radius:14px;padding:16px;margin-top:10px;box-sizing:border-box';
+    form.className = 'soft-card';
+
+    form.style.cssText = 'padding:16px;margin-top:10px;box-sizing:border-box';
 
     var selStyle = 'flex:1 1 100px;min-width:80px;padding:10px;border:none;border-radius:10px;font-size:14px;background:#f2f3f5;box-sizing:border-box;-webkit-appearance:none';
 
@@ -5766,7 +5768,7 @@ function renderQuestionContent(data) {
 
             m.questions.forEach(function(q) { h += buildAdminQuestionCard(q, false); });
 
-            h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;background:#667eea;color:#fff" onclick="showAddQuestionDialog(' + m.id + ', \'' + (m.match_date || '') + '\')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
+            h += '<div style="margin-top:8px"><button class="admin-btn btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:4px;color:#3478f6" onclick="showAddQuestionDialog(' + m.id + ', \'' + (m.match_date || '') + '\')"><i class="ri-add-line"></i> \u6DFB\u52A0\u95EE\u9898</button></div>';
 
         });
 
@@ -6172,7 +6174,7 @@ function openSettleDialog(qid) {
 
         h += '<div style="padding:12px;margin:6px 0;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent" onclick="confirmSettle(' + qid + ',' + o.id + ')" onmouseover="this.style.borderColor=\'#81c784\'" onmouseout="this.style.borderColor=\'transparent\'">';
 
-        h += '<span style="font-size:14px">' + (o.option_text || '\u7A7A') + '</span> <span style="font-size:12px;color:#667eea">' + o.base_rate + '\u500D</span></div>';
+        h += '<span style="font-size:14px">' + (o.option_text || '\u7A7A') + '</span> <span style="font-size:12px;color:#3478f6">' + o.base_rate + '\u500D</span></div>';
 
     });
 
@@ -6226,7 +6228,7 @@ async function showBetDetail(qid) {
 
                 h += '<td style="padding:6px;border-top:1px solid #eee">' + b.option_text + '</td>';
 
-                h += '<td style="padding:6px;border-top:1px solid #eee;text-align:right;font-weight:bold;color:#667eea">' + b.coins + '</td></tr>';
+                h += '<td style="padding:6px;border-top:1px solid #eee;text-align:right;font-weight:bold;color:#3478f6">' + b.coins + '</td></tr>';
 
             });
 
