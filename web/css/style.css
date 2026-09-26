@@ -4,24 +4,34 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .page.active { display: block; }
 
 /* ============================================================
-   iOS液态玻璃体系 v7 — 三层统一配方
-   A. 悬浮磨砂玻璃(chrome): 导航栏/悬浮底栏 — 一整块均质表面,
-      blur(24px)+saturate(180%)把背后内容抹成纯色块(不透出任何文字影子),
-      高透白渐变+顶部内高光+大圆角+悬浮软影; 无任何内层环/扭曲层
+   iOS液态玻璃体系 v8 — 三层统一配方 (底栏参考 WeChat-LiquidGlass)
+   A. 悬浮玻璃(chrome): 轻blur(5px)+容器色垫底(白0.80→0.66),
+      backdrop-filter 叠加 #liquidLens 圆角矩形SDF位移滤镜 —
+      位移图中心为0.5灰(不扭), 仅边缘~24px内容发生平滑透镜弯曲;
+      不支持url()的引擎回退普通轻磨砂
    B. 奶白面板玻璃(panel): 弹窗面板/下拉/日期面板, 自身不带blur
       (遮罩层已有blur(8px), 面板再套blur会在移动端把面板压进模糊层)
    C. 柔光白卡(card): 页面内容卡片, 左上柔光+细边+软影, 无blur
    控件(按钮/输入框)统一为白玻璃control配方, 颜色只出现在文字/图标
    ============================================================ */
 
-/* ---------- A. 悬浮磨砂玻璃(iOS液态玻璃) ---------- */
-.navbar { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:0; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); color:#1a1a1a; position:sticky; top:0; z-index:100; }
+/* ---------- A. 悬浮玻璃(iOS液态玻璃) ---------- */
+.navbar { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.66)); backdrop-filter:blur(5px) saturate(150%); -webkit-backdrop-filter:blur(5px) saturate(150%); border:1px solid rgba(255,255,255,0.70); border-radius:0; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.90), 0 8px 32px rgba(0,0,0,0.10); color:#1a1a1a; position:sticky; top:0; z-index:100; }
 
-/* 悬浮底栏(首页/排行榜/个人中心) — 一整块均质玻璃; 与工作台底栏完全同几何 */
-.float-glass { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:100; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); }
+/* 悬浮底栏(首页/排行榜/个人中心) — 一整块玻璃; 与工作台底栏完全同几何;
+   折射带只在玻璃边缘~24px(位移图实现), 内部干净只有图标和液滴 */
+.float-glass { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:100; background:linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.66)); backdrop-filter:blur(5px) saturate(150%); -webkit-backdrop-filter:blur(5px) saturate(150%); backdrop-filter:blur(5px) saturate(150%) url(#liquidLens); border:1px solid rgba(255,255,255,0.70); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.90), 0 8px 32px rgba(0,0,0,0.10); }
 
 /* 工作台悬浮栏 — 与首页底栏完全同几何 */
-.admin-tabs { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); display:flex; width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:101; background:linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.52)); backdrop-filter:blur(24px) saturate(180%); -webkit-backdrop-filter:blur(24px) saturate(180%); border:1px solid rgba(255,255,255,0.65); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.85), inset 0 -1px 0 0 rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.12); }
+.admin-tabs { position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50vw; transform:translateX(-50%); display:flex; width:min(430px,calc(100vw - 28px)); padding:8px 12px; z-index:101; background:linear-gradient(180deg, rgba(255,255,255,0.80), rgba(255,255,255,0.66)); backdrop-filter:blur(5px) saturate(150%); -webkit-backdrop-filter:blur(5px) saturate(150%); backdrop-filter:blur(5px) saturate(150%) url(#liquidLens); border:1px solid rgba(255,255,255,0.70); border-radius:26px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.90), 0 8px 32px rgba(0,0,0,0.10); }
+
+/* 液滴选中指示器(参考WeChat-LiquidGlass): 白玻璃液滴滑动+回弹到当前标签 */
+.lg-droplet { position:absolute; left:0; top:5px; bottom:5px; width:0; border-radius:999px; background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82)); box-shadow:0 2px 10px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.95); transition:transform 0.5s cubic-bezier(0.3,1.4,0.4,1), width 0.5s cubic-bezier(0.3,1.4,0.4,1); pointer-events:none; z-index:0; }
+.bottom-bar-item, .admin-tabs .tab { position:relative; z-index:1; }
+.bottom-bar-item i { display:inline-block; transition:transform 0.25s; }
+.admin-tabs .tab i { display:inline-block; }
+/* 选中标签图标放大1.1倍(参考: 焦点标签放大1.1x) */
+.bottom-bar-item.active i, .admin-tabs .tab.active i { transform:scale(1.1); }
 .admin-tabs .tab { flex: 1; }
 #adminContent { padding-bottom: 96px; }
 .admin-tabs .tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 0; border-radius: 16px; color: #86868b; cursor: pointer; transition: all 0.25s; background: transparent; position: relative; font-size: inherit; font-weight: inherit; text-align: center; }

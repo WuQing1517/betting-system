@@ -136,7 +136,36 @@ function showPage(name) {
 
     if (bb) bb.style.display = (name === 'home' || name === 'leaderboard' || name === 'profile') ? 'flex' : 'none';
 
+    if (bb && bb.style.display === 'flex') lgDropletMove(bb);
+
 }
+
+
+
+// 液滴选中指示器(参考WeChat-LiquidGlass): 把白玻璃液滴定位到当前选中标签下方
+function lgDropletMove(bar) {
+
+    if (!bar) return;
+
+    var d = bar.querySelector('.lg-droplet');
+
+    var it = bar.querySelector('.bottom-bar-item.active') || bar.querySelector('.tab.active');
+
+    if (!d || !it || !it.offsetWidth) return;
+
+    d.style.width = it.offsetWidth + 'px';
+
+    d.style.transform = 'translateX(' + it.offsetLeft + 'px)';
+
+}
+
+window.addEventListener('resize', function() {
+
+    lgDropletMove(document.getElementById('bottomBar'));
+
+    lgDropletMove(document.querySelector('.admin-tabs'));
+
+});
 
 
 
@@ -145,6 +174,8 @@ function bottomTabClick(tab, el) {
     document.querySelectorAll('.bottom-bar-item').forEach(function(item) { item.classList.remove('active'); });
 
     el.classList.add('active');
+
+    lgDropletMove(el.parentElement);
 
     if (tab === 'home') { initHomePage(); }
 
@@ -174,17 +205,23 @@ function goBack() {
 
     if (bb) bb.style.display = (prev === 'home' || prev === 'leaderboard' || prev === 'profile') ? 'flex' : 'none';
 
+    if (bb && bb.style.display === 'flex') lgDropletMove(bb);
+
     if (prev === 'home') refreshHomeData();
 
     // Update bottom bar active state
 
     document.querySelectorAll('.bottom-bar-item').forEach(function(item) { item.classList.remove('active'); });
 
-    if (prev === 'home') document.querySelector('.bottom-bar-item:nth-child(1)').classList.add('active');
+    var tabIdx = prev === 'home' ? 0 : prev === 'leaderboard' ? 1 : prev === 'profile' ? 2 : -1;
 
-    else if (prev === 'leaderboard') document.querySelector('.bottom-bar-item:nth-child(2)').classList.add('active');
+    if (tabIdx >= 0) {
 
-    else if (prev === 'profile') document.querySelector('.bottom-bar-item:nth-child(3)').classList.add('active');
+        var bb2 = document.getElementById('bottomBar');
+
+        if (bb2) { bb2.querySelectorAll('.bottom-bar-item')[tabIdx].classList.add('active'); lgDropletMove(bb2); }
+
+    }
 
 }
 
@@ -1203,7 +1240,7 @@ function initHomePage() {
 
     var bb = document.getElementById('bottomBar');
 
-    if (bb) { bb.style.display = 'flex'; document.querySelectorAll('.bottom-bar-item').forEach(function(item) { item.classList.remove('active'); }); document.querySelector('.bottom-bar-item:nth-child(1)').classList.add('active'); }
+    if (bb) { bb.style.display = 'flex'; document.querySelectorAll('.bottom-bar-item').forEach(function(item) { item.classList.remove('active'); }); bb.querySelectorAll('.bottom-bar-item')[0].classList.add('active'); lgDropletMove(bb); }
 
 }
 
@@ -4543,6 +4580,8 @@ function switchAdminTab(tab, event) {
     else if (tab === 'questions') loadAdminQuestions();
 
     else if (tab === 'logs') loadAdminLogs();
+
+    lgDropletMove(document.querySelector('.admin-tabs'));
 
 }
 

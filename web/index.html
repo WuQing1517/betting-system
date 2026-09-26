@@ -4,10 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin_V_Q</title>
-    <link rel="stylesheet" href="css/style.css?v=20260926h">
+    <link rel="stylesheet" href="css/style.css?v=20260926i">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 <body>
+    <!-- iOS液态玻璃折射滤镜(参考WeChat-LiquidGlass的圆角矩形SDF透镜):
+         位移图为自定义SVG渐变 — 中心0.5灰(不扭曲), 四边~24px带宽内沿法线平滑弯曲;
+         仅Chromium生效(支持backdrop-filter:url()), 其他引擎回退普通轻磨砂 -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <filter id="liquidLens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+            <feImage preserveAspectRatio="none" x="0" y="0" width="100%" height="100%" result="map" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='v' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='rgb(128,51,128)'/%3E%3Cstop offset='0.24' stop-color='rgb(128,96,128)'/%3E%3Cstop offset='0.48' stop-color='rgb(128,128,128)'/%3E%3Cstop offset='0.52' stop-color='rgb(128,128,128)'/%3E%3Cstop offset='0.76' stop-color='rgb(128,160,128)'/%3E%3Cstop offset='1' stop-color='rgb(128,205,128)'/%3E%3C/linearGradient%3E%3ClinearGradient id='l' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='rgb(51,128,128)'/%3E%3Cstop offset='0.24' stop-color='rgb(96,128,128)'/%3E%3Cstop offset='1' stop-color='rgb(128,128,128)'/%3E%3C/linearGradient%3E%3ClinearGradient id='r' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='rgb(128,128,128)'/%3E%3Cstop offset='0.76' stop-color='rgb(160,128,128)'/%3E%3Cstop offset='1' stop-color='rgb(205,128,128)'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='200' height='40' fill='url(%23v)'/%3E%3Crect width='12' height='40' fill='url(%23l)'/%3E%3Crect x='188' width='12' height='40' fill='url(%23r)'/%3E%3C/svg%3E"/>
+            <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
     <div id="authPage" class="page active">
         <div class="auth-box">
             <h1>Coin_V_Q</h1>
@@ -89,7 +98,7 @@
         <div style="height:60px"></div>
     </div>
 
-    <div id="bottomBar" class="float-glass" style="display:none">
+    <div id="bottomBar" class="float-glass" style="display:none"><span class="lg-droplet"></span>
         <div class="bottom-bar-item" onclick="bottomTabClick('home',this)"><i class="ri-home-5-line"></i><span>首页</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('leaderboard',this)"><i class="ri-trophy-line"></i><span>排行榜</span></div>
         <div class="bottom-bar-item" onclick="bottomTabClick('profile',this)"><i class="ri-user-3-line"></i><span>个人中心</span></div>
@@ -165,7 +174,7 @@
             <span class="nav-title">用户</span>
             <span id="adminNavRight" style="display:flex;gap:8px"></span>
         </nav>
-        <div class="admin-tabs">
+        <div class="admin-tabs"><span class="lg-droplet"></span>
             <span class="tab active" onclick="switchAdminTab('users', event)"><i class="ri-user-smile-line"></i><span class="tab-label">用户</span></span>
             <span class="tab" onclick="switchAdminTab('teams', event)"><i class="ri-team-line"></i><span class="tab-label">队伍</span></span>
             <span class="tab" onclick="switchAdminTab('matches', event)"><i class="ri-calendar-event-line"></i><span class="tab-label">赛程</span></span>
@@ -302,6 +311,6 @@
     </div>
 
     <script src="js/xlsx.full.min.js"></script>
-    <script src="js/app.js?v=20260926d"></script>
+    <script src="js/app.js?v=20260926i"></script>
 </body>
 </html>
