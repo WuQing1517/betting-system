@@ -560,6 +560,30 @@ def delete_match(match_id):
     db.session.commit()
     return jsonify({'message': 'Match deleted'})
 
+@admin_bp.route('/matches/batch-delete', methods=['POST'])
+@admin_required
+def batch_delete_matches():
+    """批量删除比赛（同时删除关联的问题、选项和投注）"""
+    data = request.get_json() or {}
+    ids = data.get('ids')
+    if not isinstance(ids, list) or not ids:
+        return jsonify({'error': 'ids不能为空'}), 400
+
+    count = 0
+    for mid in ids:
+        match = Match.query.get(mid)
+        if not match:
+            continue
+        questions = Question.query.filter_by(match_id=match.id).all()
+        for q in questions:
+            Option.query.filter_by(question_id=q.id).delete()
+            Bet.query.filter_by(question_id=q.id).delete()
+            db.session.delete(q)
+        db.session.delete(match)
+        count += 1
+    db.session.commit()
+    return jsonify({'message': 'Batch delete done', 'count': count})
+
 @admin_bp.route('/matches/<int:match_id>/status', methods=['PUT'])
 @admin_required
 def update_match_status(match_id):

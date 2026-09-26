@@ -4999,6 +4999,14 @@ async function onMatchCompChange() {
 
         h += '<div style="display:flex;gap:8px;margin-bottom:8px"><div id="matchWeekFilter"></div><div id="matchDayFilter"></div></div>';
 
+        h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+
+        h += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1a1a1a;cursor:pointer;user-select:none;-webkit-user-select:none"><input type="checkbox" id="matchSelectAll" onchange="matchSelectAllToggle(this.checked)" style="width:18px;height:18px;accent-color:#3478f6;cursor:pointer">\u5168\u9009</label>';
+
+        h += '<button id="matchBatchDelBtn" class="admin-btn btn-danger" style="display:none;padding:7px 14px;font-size:13px;font-weight:600" onclick="batchDeleteMatchesWeb()">\u6279\u91CF\u5220\u9664(<span id="matchBatchCount">0</span>)</button>';
+
+        h += '</div>';
+
         h += '<div id="matchListContent"></div>';
 
         h += '<button class="admin-btn btn-success" onclick="addNewMatch(' + cid + ')" style="width:100%;margin-top:8px;padding:12px;border-radius:12px;font-size:15px">\u2795 \u624B\u52A8\u6DFB\u52A0\u6BD4\u8D5B</button>';
@@ -5051,6 +5059,10 @@ function renderMatchList(data, cid) {
 
         h += '<div style="display:flex;justify-content:space-between;align-items:center">';
 
+        h += '<div style="display:flex;align-items:center;gap:10px;min-width:0">';
+
+        h += '<input type="checkbox" class="match-batch-cb" data-mid="' + m.id + '" onchange="matchSelChanged()" style="width:18px;height:18px;accent-color:#3478f6;cursor:pointer;flex-shrink:0">';
+
         h += '<div><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + (m.home_team || '?') + ' vs ' + (m.away_team || '?') + '</div>';
 
         h += '<div style="font-size:11px;color:#86868b;margin-top:2px">';
@@ -5059,7 +5071,7 @@ function renderMatchList(data, cid) {
 
         var wdNames = ['','\u5468\u4E00','\u5468\u4E8C','\u5468\u4E09','\u5468\u56DB','\u5468\u4E94','\u5468\u516D','\u5468\u65E5'];
 
-        h += 'W' + m.week_number + ' ' + (wdNames[m.day_number] || 'D' + m.day_number) + ' M' + m.match_number + '</div></div>';
+        h += 'W' + m.week_number + ' ' + (wdNames[m.day_number] || 'D' + m.day_number) + ' M' + m.match_number + '</div></div></div>';
 
         h += '<div style="display:flex;gap:4px;flex-shrink:0">';
 
@@ -5074,6 +5086,56 @@ function renderMatchList(data, cid) {
     if (!h) h = '<div style="padding:20px;text-align:center;color:#86868b">\u65E0\u5339\u914D\u6BD4\u8D5B</div>';
 
     document.getElementById('matchListContent').innerHTML = h;
+
+    matchSelChanged();
+
+}
+
+function matchSelChanged() {
+
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('#matchListContent .match-batch-cb'));
+
+    var sel = boxes.filter(function(cb) { return cb.checked; });
+
+    var btn = document.getElementById('matchBatchDelBtn');
+
+    if (btn) btn.style.display = sel.length ? 'inline-block' : 'none';
+
+    var cnt = document.getElementById('matchBatchCount');
+
+    if (cnt) cnt.textContent = sel.length;
+
+    var all = document.getElementById('matchSelectAll');
+
+    if (all) { all.checked = boxes.length > 0 && sel.length === boxes.length; all.indeterminate = sel.length > 0 && sel.length < boxes.length; }
+
+}
+
+function matchSelectAllToggle(on) {
+
+    document.querySelectorAll('#matchListContent .match-batch-cb').forEach(function(cb) { cb.checked = on; });
+
+    matchSelChanged();
+
+}
+
+async function batchDeleteMatchesWeb() {
+
+    var ids = Array.prototype.slice.call(document.querySelectorAll('#matchListContent .match-batch-cb')).filter(function(cb) { return cb.checked; }).map(function(cb) { return parseInt(cb.dataset.mid); });
+
+    if (!ids.length) return;
+
+    if (!(await miuiConfirm('\u786E\u5B9A\u6279\u91CF\u5220\u9664\u9009\u4E2D\u7684 ' + ids.length + ' \u573A\u6BD4\u8D5B\uFF1F\n\u5176\u4E0B\u6240\u6709\u95EE\u9898\u548C\u6295\u6CE8\u5C06\u4E00\u5E76\u5220\u9664'))) return;
+
+    try {
+
+        var r = await api('/admin/matches/batch-delete', 'POST', { ids: ids });
+
+        showToast('\u5DF2\u5220\u9664 ' + (r.count || ids.length) + ' \u573A\u6BD4\u8D5B', 'success');
+
+        onMatchCompChange();
+
+    } catch (e) { showToast(e.message, 'error'); }
 
 }
 
@@ -5195,27 +5257,17 @@ async function editStartDate(cid, currentVal) {
 
 function downloadMatchTemplate() {
 
-    var wb = XLSX.utils.book_new();
+    // 模板改为服务端静态文件下载, 不再浏览器端生成(部分环境生成的文件打不开)
 
-    var ws = XLSX.utils.aoa_to_sheet([
-
-        ['\u5468\u6570', '\u661F\u671F\u51E0', '\u573A\u6B21', '\u4E3B\u573A\u961F\u4F0D', '\u5BA2\u573A\u961F\u4F0D'],
-
-        [1, '\u5468\u4E94', 1, 'TE', 'MRC'],
-
-        [1, '\u5468\u516D', 1, 'FPX.ZQ', 'GR']
-
-    ]);
-
-    XLSX.utils.book_append_sheet(wb, ws, '\u8D5B\u7A0B');
-
-    XLSX.writeFile(wb, '\u8D5B\u7A0B\u683C\u5F0F.xlsx');
+    location.href = '/match-template.xlsx';
 
 }
 
 
 
 var WD_MAP = {'\u5468\u4E00':1,'\u5468\u4E8C':2,'\u5468\u4E09':3,'\u5468\u56DB':4,'\u5468\u4E94':5,'\u5468\u516D':6,'\u5468\u65E5':7,
+
+    '\u661F\u671F\u4E00':1,'\u661F\u671F\u4E8C':2,'\u661F\u671F\u4E09':3,'\u661F\u671F\u56DB':4,'\u661F\u671F\u4E94':5,'\u661F\u671F\u516D':6,'\u661F\u671F\u65E5':7,'\u661F\u671F\u5929':7,
 
     '1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'D1':1,'D2':2,'D3':3,'D4':4,'D5':5,'D6':6,'D7':7,
 
@@ -5397,7 +5449,7 @@ async function deleteMatchWeb(mid) {
 
     if (!(await miuiConfirm('\u786E\u5B9A\u5220\u9664\uFF1F'))) return;
 
-    try { await api('/admin/matches/' + mid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); var el = document.getElementById('matchcard_' + mid); if (el) el.remove(); }
+    try { await api('/admin/matches/' + mid, 'DELETE'); showToast('\u5220\u9664\u6210\u529F', 'success'); var el = document.getElementById('matchcard_' + mid); if (el) el.remove(); matchSelChanged(); }
 
     catch (e) { showToast(e.message, 'error'); }
 
