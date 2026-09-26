@@ -25,9 +25,11 @@ body { font-family: -apple-system, 'MiSans', 'PingFang SC', 'Helvetica Neue', sa
 .back-btn { cursor: pointer; font-size: 26px; color: #1a1a1a; font-weight: 400; display: inline-flex; align-items: center; -webkit-text-stroke: 1px currentColor; }
 
 /* 非首页导航栏居中 */
-.navbar-center { justify-content: center; }
+.navbar-center { justify-content: center; position: relative; }
 .navbar-center .nav-title { text-align: center; width: 100%; }
 .navbar-center .back-btn { position: absolute; left: 16px; z-index: 1; }
+/* 右侧操作区绝对定位, 不挤占标题的居中 */
+.navbar-center #adminNavRight { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); z-index: 1; }
 
 /* 悬浮底栏(首页/排行榜/个人中心) — 一整块玻璃; 与工作台底栏完全同几何;
    折射带只在玻璃边缘~24px(位移图实现), 内部干净只有图标和液滴 */
