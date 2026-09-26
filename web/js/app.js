@@ -3009,6 +3009,12 @@ async function loadFullSchedule() {
 
         var comps = await api('/competitions');
 
+        // 全部赛程页只显示默认赛程(未设默认则回退显示全部赛事)
+
+        var defComps = comps.filter(function(c) { return c.is_default; });
+
+        if (defComps.length > 0) comps = defComps;
+
         var filterHtml = '<div id="scheduleFilterArea"><div class="filter-bar">';
 
         filterHtml += '<div id="schWeekFilter"></div><div id="schDayFilter"></div>';

@@ -76,6 +76,12 @@ def create_app():
     def image_file(filename):
         return send_from_directory(os.path.join(WEB_FOLDER, 'images'), filename)
 
+    # 赛程模板下载(静态文件, 避免浏览器端生成xlsx的兼容性问题)
+    @app.route('/match-template.xlsx')
+    def match_template_file():
+        return send_from_directory(WEB_FOLDER, 'match-template.xlsx',
+                                   download_name='赛程格式.xlsx', as_attachment=True)
+
     # 创建数据库表 + 自动迁移
     with app.app_context():
         db.create_all()
