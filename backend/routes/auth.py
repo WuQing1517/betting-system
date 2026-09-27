@@ -246,8 +246,17 @@ def admin_toggle_admin(user_id):
 
     db.session.commit()
 
+    if is_admin_change:
+        return jsonify({
+            'message': '已设置为管理员' if data['is_admin'] else '已取消管理员',
+            'user_id': user.id,
+            'is_admin': user.is_admin
+        })
+
     return jsonify({
-        'message': '已设置为管理员' if data['is_admin'] else '已取消管理员',
+        'message': 'OK',
         'user_id': user.id,
+        'is_debug': bool(user.is_debug),
+        'is_superadmin': bool(user.is_superadmin),
         'is_admin': user.is_admin
     })
