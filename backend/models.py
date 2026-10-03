@@ -106,6 +106,7 @@ class Question(db.Model):
     match_id = db.Column(db.Integer, db.ForeignKey('matches.id'))
     question_text = db.Column(db.Text)
     correct_option_id = db.Column(db.Integer)
+    correct_option_ids = db.Column(db.Text)  # 多正确选项: JSON数组字符串, 结算时全部视为正确(旧数据为空则用correct_option_id)
     status = db.Column(db.String(32), default='active')  # match题: active, completed; timed题另有 pending(未开盘), closed(已封盘/手动提前封)
     # 限时竞猜字段(仅 question_type='timed' 时有值): 北京时间墙钟字符串 YYYY-MM-DD HH:MM:SS
     question_type = db.Column(db.String(32), default='match')

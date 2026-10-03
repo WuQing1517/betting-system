@@ -4,6 +4,7 @@ from config import Config
 from functools import wraps
 from datetime import timedelta
 import base64
+import json
 import os
 import uuid
 
@@ -753,31 +754,46 @@ def update_question(question_id):
 @admin_bp.route('/questions/<int:question_id>/answer', methods=['PUT'])
 @admin_required
 def set_correct_answer(question_id):
-    """设置正确答案"""
+    """设置正确答案(支持多选: option_ids数组, 兼容旧option_id单值)"""
     from routes.betting import log_operation
     question = Question.query.get(question_id)
     if not question:
         return jsonify({'error': '问题不存在在'}), 404
 
-    data = request.get_json()
-    option_id = data.get('option_id')
-    log_operation(int(request.headers.get('X-User-Id')), '设置答案', f'题目{question.question_code} 选项{option_id}')
+    if question.status == 'completed':
+        return jsonify({'error': '该问题已结算, 如需重新结算请先重置'}), 400
 
-    if not option_id:
-        return jsonify({'error': '缺少option_id参数'}), 400
+    data = request.get_json() or {}
+    option_ids = data.get('option_ids')
+    if not option_ids and data.get('option_id'):
+        option_ids = [data.get('option_id')]
+    if not isinstance(option_ids, list) or not option_ids:
+        return jsonify({'error': '缺少option_ids参数'}), 400
 
-    option = Option.query.get(option_id)
-    if not option or option.question_id != question_id:
-        return jsonify({'error': '选项无效'}), 400
+    # 去重保序
+    seen, clean_ids = set(), []
+    for oid in option_ids:
+        if oid not in seen:
+            seen.add(oid)
+            clean_ids.append(oid)
 
-    question.correct_option_id = option_id
+    for oid in clean_ids:
+        option = Option.query.get(oid)
+        if not option or option.question_id != question_id:
+            return jsonify({'error': '选项无效'}), 400
+
+    log_operation(int(request.headers.get('X-User-Id')), '设置答案', f'题目{question.question_code} 正确选项{clean_ids}')
+
+    question.correct_option_id = clean_ids[0]
+    question.correct_option_ids = json.dumps(clean_ids)
     question.status = 'completed'
 
-    settle_bets(question_id, option_id)
+    for oid in clean_ids:
+        settle_bets(question_id, oid)
 
     db.session.commit()
 
-    print(f'[SETTLE] qid={question_id} option_id={option_id} settled OK')
+    print(f'[SETTLE] qid={question_id} correct_options={clean_ids} settled OK')
 
     # 检查该比赛是否所有问题都已结算
     match = Match.query.get(question.match_id)
@@ -801,21 +817,31 @@ def reset_question(question_id):
     if question.status != 'completed':
         return jsonify({'error': 'Question not settled'}), 400
 
-    # 退回所有赢家的奖金
-    if question.correct_option_id:
-        total_coins = sum(o.total_coins for o in question.options)
-        correct_option = Option.query.get(question.correct_option_id)
-        if correct_option and correct_option.total_coins > 0:
+    # 退回所有赢家的奖金 (多正确选项: 逐个回退; 旧数据兜底correct_option_id)
+    try:
+        correct_ids = json.loads(question.correct_option_ids) if question.correct_option_ids else []
+    except Exception:
+        correct_ids = []
+    if not correct_ids and question.correct_option_id:
+        correct_ids = [question.correct_option_id]
+
+    total_coins = sum(o.total_coins for o in question.options)
+    for oid in correct_ids:
+        correct_option = Option.query.get(oid)
+        if not correct_option:
+            continue
+        if correct_option.total_coins > 0:
             actual_rate = correct_option.base_rate * (total_coins / correct_option.total_coins)
         else:
-            actual_rate = correct_option.base_rate if correct_option else 2.0
+            actual_rate = correct_option.base_rate
 
-        winning_bets = Bet.query.filter_by(question_id=question_id, option_id=question.correct_option_id).all()
+        winning_bets = Bet.query.filter_by(question_id=question_id, option_id=oid).all()
         for bet in winning_bets:
             user = User.query.get(bet.user_id)
-            if user:
-                winnings = int(bet.coins * actual_rate)
-                user.coins -= winnings
+            if user and user.is_debug:
+                continue  # 调试账号结算时未发币, 回退时也不能扣
+            winnings = int(bet.coins * actual_rate)
+            user.coins -= winnings
 
     # 退回所有投注本金并删除投注记录
     all_bets = Bet.query.filter_by(question_id=question_id).all()
@@ -834,6 +860,7 @@ def reset_question(question_id):
 
     # 重置问题状态
     question.correct_option_id = None
+    question.correct_option_ids = None
     question.status = 'active'
 
     match = Match.query.get(question.match_id)

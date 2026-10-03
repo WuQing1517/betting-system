@@ -147,7 +147,7 @@ def get_competition_full(competition_id):
                 user_bet = all_bets.get((q.id, o.id), 0)
                 options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
             user_total_bet = sum(x['user_bet'] for x in options_data)
-            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
+            questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'correct_option_ids': (json.loads(q.correct_option_ids) if q.correct_option_ids else ([] if not q.correct_option_id else [q.correct_option_id])), 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
         matches_data.append({'id': m.id, 'match_code': m.match_code, 'week_number': m.week_number, 'day_number': m.day_number, 'match_number': m.match_number, 'home_team': m.home_team, 'away_team': m.away_team, 'home_logo': make_logo(team_logos.get(m.home_team)), 'away_logo': make_logo(team_logos.get(m.away_team)), 'match_date': match_date_str, 'match_weekday': match_weekday, 'status': m.status, 'questions': questions_data})
     if status_changed:
         db.session.commit()
@@ -184,7 +184,7 @@ def get_match(match_code):
             user_bet = all_bets.get((q.id, o.id), 0)
             options_data.append({'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': user_bet})
         user_total_bet = sum(x['user_bet'] for x in options_data)
-        questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
+        questions_data.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'correct_option_ids': (json.loads(q.correct_option_ids) if q.correct_option_ids else ([] if not q.correct_option_id else [q.correct_option_id])), 'total_coins': total_coins, 'user_total_bet': user_total_bet, 'max_selections': q.max_selections or 1, 'close_time': q.close_time, 'options': options_data})
     if status_changed:
         db.session.commit()
     return jsonify({'id': match.id, 'match_code': match.match_code, 'week_number': match.week_number, 'day_number': match.day_number, 'match_number': match.match_number, 'home_team': match.home_team, 'away_team': match.away_team, 'status': match.status, 'questions': questions_data})
@@ -216,7 +216,7 @@ def get_timed_questions():
     result = []
     for q in questions:
         options_data = [{'id': o.id, 'option_text': o.option_text, 'base_rate': o.base_rate, 'total_coins': o.total_coins, 'user_bet': all_bets.get((q.id, o.id), 0)} for o in options_by_question.get(q.id, [])]
-        result.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'total_coins': sum(o['total_coins'] for o in options_data), 'user_total_bet': sum(o['user_bet'] for o in options_data), 'max_selections': q.max_selections or 1, 'open_time': q.open_time, 'close_time': q.close_time, 'options': options_data})
+        result.append({'id': q.id, 'question_code': q.question_code, 'question_text': q.question_text, 'status': q.status, 'correct_option_id': q.correct_option_id, 'correct_option_ids': (json.loads(q.correct_option_ids) if q.correct_option_ids else ([] if not q.correct_option_id else [q.correct_option_id])), 'total_coins': sum(o['total_coins'] for o in options_data), 'user_total_bet': sum(o['user_bet'] for o in options_data), 'max_selections': q.max_selections or 1, 'open_time': q.open_time, 'close_time': q.close_time, 'options': options_data})
     return jsonify(result)
 
 @betting_bp.route('/questions/<question_code>', methods=['GET'])

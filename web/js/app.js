@@ -169,6 +169,21 @@ window.addEventListener('resize', function() {
 
 
 
+// 多正确选项判断: 结算可标记多个正确答案, correct_option_ids为JSON数组(旧数据空则退correct_option_id)
+
+function isCorrectOption(q, oid) {
+
+    if (Array.isArray(q.correct_option_ids)) return q.correct_option_ids.indexOf(oid) >= 0;
+
+    return q.correct_option_id === oid;
+
+}
+
+function questionHasCorrect(q) {
+
+    return Array.isArray(q.correct_option_ids) ? q.correct_option_ids.length > 0 : !!q.correct_option_id;
+
+}
 function bottomTabClick(tab, el) {
 
     document.querySelectorAll('.bottom-bar-item').forEach(function(item) { item.classList.remove('active'); });
@@ -1639,11 +1654,11 @@ function timedRowHtml(q) {
 
     var sub = '<i class="ri-time-line" style="font-size:12px"></i> ' + timedWindow(q);
 
-    if (q.status === 'completed' && q.correct_option_id) {
+    if (q.status === 'completed' && questionHasCorrect(q)) {
 
-        var co = q.options.filter(function(o) { return o.id === q.correct_option_id; })[0];
+        var coNames = q.options.filter(function(o) { return isCorrectOption(q, o.id); }).map(function(o) { return o.option_text || '\u7A7A'; }).join('\u3001');
 
-        if (co) sub += ' \u00B7 <span style="color:#34a853">\u7B54\u6848: ' + (co.option_text || '\u7A7A') + '</span>';
+        if (coNames) sub += ' \u00B7 <span style="color:#34a853">\u7B54案: ' + coNames + '</span>';
 
     }
 
@@ -3285,7 +3300,7 @@ function renderQuestions(matches) {
 
             var sColor = q.status === 'active' ? '#34a853' : q.status === 'closed' ? '#f57c00' : '#86868b';
 
-            var cardBg = q.status === 'active' ? '#e8f4fd' : q.status === 'closed' ? '#fff8e1' : q.correct_option_id ? '#e8f7ed' : '#fff0ed';
+            var cardBg = q.status === 'active' ? '#e8f4fd' : q.status === 'closed' ? '#fff8e1' : questionHasCorrect(q) ? '#e8f7ed' : '#fff0ed';
 
             html += '<div class="question-card" style="background:' + cardBg + '" onclick="loadBetPage(\'' + q.question_code + '\', \'' + q.status + '\', \'' + (m.home_team || '').replace(/'/g, "\\'") + '\', \'' + (m.away_team || '').replace(/'/g, "\\'") + '\', \'' + (m.home_logo || '') + '\', \'' + (m.away_logo || '') + '\', \'' + (q.question_text || '').replace(/'/g, "\\'") + '\')">';
 
@@ -3307,9 +3322,9 @@ function renderQuestions(matches) {
 
                 if (q.status === 'active') tb = '#e8f4fd';
 
-                else if (q.correct_option_id && o.id === q.correct_option_id) tb = '#c8e6c9';
+                else if (isCorrectOption(q, o.id)) tb = '#c8e6c9';
 
-                else if (q.correct_option_id) tb = '#ffcdd2';
+                else if (questionHasCorrect(q)) tb = '#ffcdd2';
 
                 html += '<span class="option-tag" style="background:' + tb + '">' + (o.option_text || '\u7A7A') + ' <span class="option-rate">' + o.base_rate + '\u500D</span></span>';
 
@@ -3393,7 +3408,7 @@ async function loadBetPage(code, status, homeTeam, awayTeam, homeLogo, awayLogo,
 
             var userBet = o.user_bet || 0;
 
-            var ob = isActive ? '#f2f3f5' : isCompleted && q.correct_option_id === o.id ? '#e8f7ed' : isCompleted ? '#fff0ed' : '#f2f3f5';
+            var ob = isActive ? '#f2f3f5' : isCompleted && isCorrectOption(q, o.id) ? '#e8f7ed' : isCompleted && questionHasCorrect(q) ? '#fff0ed' : '#f2f3f5';
 
             html += '<div class="option-item" style="background:' + ob + ';border-radius:14px;margin:0 16px 8px;padding:14px">';
 
@@ -5746,9 +5761,9 @@ function buildAdminQuestionCard(q, isTimed) {
 
         if (q.status === 'active') ob = '#e8f4fd';
 
-        else if (q.correct_option_id && o.id === q.correct_option_id) ob = '#e8f7ed';
+        else if (isCorrectOption(q, o.id)) ob = '#e8f7ed';
 
-        else if (q.correct_option_id) ob = '#fff0ed';
+        else if (questionHasCorrect(q)) ob = '#fff0ed';
 
         h += '<div id="optrow_' + o.id + '" style="display:flex;align-items:center;gap:6px;margin:4px 0;padding:4px 8px;border-radius:8px;background:' + ob + '">';
 
@@ -6259,21 +6274,27 @@ function openSettleDialog(qid) {
 
     if (!q) return;
 
+    window._settleIds = [];
+
     var h = '<div id="settleOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center" class="dl-overlay" onclick="if(event.target===this)this.remove()">';
 
     h += '<div class="dl-glass" style="width:90%;max-width:400px;padding:20px">';
 
-    h += '<div style="font-size:16px;font-weight:bold;margin-bottom:12px">\u9009\u62E9\u6B63\u786E\u7B54\u6848</div>';
+    h += '<div style="font-size:16px;font-weight:bold;margin-bottom:8px">\u9009\u62e9\u6b63\u786e\u7b54\u6848</div>';
 
-    h += '<div style="font-size:13px;color:#666;margin-bottom:12px">' + q.question_text + '</div>';
+    h += '<div style="font-size:13px;color:#666;margin-bottom:10px">' + q.question_text + '</div>';
+
+    h += '<div style="font-size:12px;color:#86868b;margin-bottom:6px">\u70b9\u51fb\u9009\u9879\u6807\u8bb0\u4e3a\u6b63\u786e\u7b54\u6848\uff0c\u53ef\u591a\u9009</div>';
 
     q.options.forEach(function(o) {
 
-        h += '<div style="padding:12px;margin:6px 0;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent" onclick="confirmSettle(' + qid + ',' + o.id + ')" onmouseover="this.style.borderColor=\'#81c784\'" onmouseout="this.style.borderColor=\'transparent\'">';
+        h += '<div id="settle_opt_' + o.id + '" style="padding:12px;margin:6px 0;background:#f8f9fa;border-radius:8px;cursor:pointer;border:2px solid transparent" onclick="toggleSettleOption(' + o.id + ')">';
 
-        h += '<span style="font-size:14px">' + (o.option_text || '\u7A7A') + '</span> <span style="font-size:12px;color:#3478f6">' + o.base_rate + '\u500D</span></div>';
+        h += '<span style="font-size:14px">' + (o.option_text || '\u7a7a') + '</span> <span style="font-size:12px;color:#3478f6">' + o.base_rate + '\u500d</span></div>';
 
     });
+
+    h += '<button id="settleGoBtn" class="admin-btn" style="width:100%;margin-top:12px;padding:11px;font-size:14px;font-weight:600;color:#3478f6;opacity:0.5" onclick="confirmSettleGo(' + qid + ')">\u786e\u8ba4\u7ed3\u7b97</button>';
 
     h += '</div></div>';
 
@@ -6283,13 +6304,40 @@ function openSettleDialog(qid) {
 
 
 
-async function confirmSettle(qid, oid) {
+function toggleSettleOption(oid) {
 
-    if (!(await miuiConfirm('\u786E\u5B9A\u7ED3\u7B97\uFF1F'))) return;
+    if (!window._settleIds) window._settleIds = [];
+
+    var idx = window._settleIds.indexOf(oid);
+
+    var el = document.getElementById('settle_opt_' + oid);
+
+    if (idx >= 0) { window._settleIds.splice(idx, 1); el.style.background = '#f8f9fa'; el.style.borderColor = 'transparent'; }
+
+    else { window._settleIds.push(oid); el.style.background = '#e8f7ed'; el.style.borderColor = '#34a853'; }
+
+    var btn = document.getElementById('settleGoBtn');
+
+    var n = window._settleIds.length;
+
+    btn.textContent = '\u786e\u8ba4\u7ed3\u7b97' + (n ? '(' + n + '\u4e2a\u6b63\u786e\u9009\u9879)' : '');
+
+    btn.style.opacity = n ? '1' : '0.5';
+
+}
+
+
+async function confirmSettleGo(qid) {
+
+    var ids = (window._settleIds || []).slice();
+
+    if (!ids.length) return;
+
+    if (!(await miuiConfirm('\u786e\u5b9a\u7ed3\u7b97\uff1f\u5171 ' + ids.length + ' \u4e2a\u6b63\u786e\u9009\u9879\uff0c\u5176\u4e0b\u6295\u6ce8\u5c06\u6309\u500d\u7387\u53d1\u653e'))) return;
 
     var ov = document.getElementById('settleOverlay'); if (ov) ov.remove();
 
-    try { await api('/admin/questions/' + qid + '/answer', 'PUT', { option_id: oid }); showToast('\u7ED3\u7B97\u6210\u529F', 'success'); refreshQuestionRow(qid); }
+    try { await api('/admin/questions/' + qid + '/answer', 'PUT', { option_ids: ids }); showToast('\u7ed3\u7b97\u6210\u529f', 'success'); refreshQuestionRow(qid); }
 
     catch (e) { showToast(e.message, 'error'); }
 

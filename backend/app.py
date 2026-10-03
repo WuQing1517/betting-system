@@ -116,6 +116,7 @@ def create_app():
         add_column_if_missing('questions', 'open_time', 'VARCHAR(32)')
         add_column_if_missing('questions', 'close_time', 'VARCHAR(32)')
         add_column_if_missing('questions', 'max_selections', 'INTEGER DEFAULT 1')
+        add_column_if_missing('questions', 'correct_option_ids', 'TEXT')
         add_column_if_missing('competitions', 'is_default',
                               'BOOLEAN DEFAULT 0' if engine.dialect.name == 'sqlite' else 'BOOLEAN DEFAULT FALSE')
 
