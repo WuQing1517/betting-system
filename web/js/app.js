@@ -2,6 +2,31 @@ var API_BASE = window.location.origin + '/api';
 
 var currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
+// 站点角色: 备用站(SITE_ROLE=backup)把界面上所有Coin_V_Q统一替换为"竞猜备站"(主站不替换)
+(async function() {
+
+    try {
+
+        var res = await fetch(API_BASE + '/site-info');
+
+        var info = await res.json();
+
+        if (info && info.role === 'backup') {
+
+            document.title = '竞猜备站';
+
+            document.querySelectorAll('h1, .nav-title, div, span').forEach(function(el) {
+
+                if (!el.children.length && el.textContent.trim() === 'Coin_V_Q') el.textContent = '竞猜备站';
+
+            });
+
+        }
+
+    } catch (e) {}
+
+})();
+
 var currentPage = 'auth';
 
 var pageHistory = [];
