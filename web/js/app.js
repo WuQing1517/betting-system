@@ -4022,79 +4022,143 @@ function showAbout() {
 
 // ========== 竞猜奖品页 ==========
 
-async function showPrizes() {
+// 竞猜奖品: 默认仅显示当前默认赛事, 右上角"往期"入口查看其余赛事的奖品
+var prizesView = 'default';
+
+async function showPrizes(view) {
+
+    if (view) prizesView = view;
 
     showPage('prizes');
 
     try {
 
-        var comps = await api('/competitions');
+        var comps = await api('/competitions?all=1');
+
+        var defaultComp = comps.find(function(c) { return c.is_default; }) || comps[0] || null;
+
+        // 顶栏标题与右上角入口随视图切换
+        var navTitle = document.querySelector('#prizesPage .nav-title');
+
+        var navRight = document.getElementById('prizesNavRight');
+
+        if (prizesView === 'archive') {
+
+            if (navTitle) navTitle.textContent = '\u5F80\u671F\u5956\u54C1';
+
+            if (navRight) navRight.innerHTML = '<span onclick="showPrizes(\'default\')" style="cursor:pointer;display:flex;align-items:center;gap:3px;font-size:14px;color:#3478f6"><i class="ri-arrow-go-back-line"></i> \u5F53\u524D\u8D5B\u4E8B</span>';
+
+        } else {
+
+            prizesView = 'default';
+
+            if (navTitle) navTitle.textContent = '\u7ADE\u731C\u5956\u54C1';
+
+            if (navRight) navRight.innerHTML = '<span onclick="showPrizes(\'archive\')" style="cursor:pointer;display:flex;align-items:center;gap:3px;font-size:14px;color:#3478f6"><i class="ri-history-line"></i> \u5F80\u671F</span>';
+
+        }
 
         var h = '';
 
         if (comps.length === 0) { h = '<div style="padding:40px;text-align:center;color:#86868b">\u6682\u65E0\u7ADE\u731C\u8D5B\u4E8B</div>'; }
 
-        else {
+        else if (prizesView === 'default') {
 
+            // 默认视图: 仅当前默认赛事的奖品
             h += '<div style="padding:12px 16px"><button class="admin-btn btn-success" style="display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;font-size:13px" onclick="addUserPrize()"><i class="ri-gift-line"></i> \u63D0\u4F9B\u5956\u54C1</button></div>';
 
-            for (var ci = 0; ci < comps.length; ci++) {
+            if (defaultComp) {
 
-                var prizes = await api('/prizes?competition_id=' + comps[ci].id);
+                var dPrizes = await api('/prizes?competition_id=' + defaultComp.id);
 
-                if (prizes.length === 0) continue;
+                if (dPrizes.length > 0) {
 
-                h += '<div style="padding:8px 16px 4px;font-size:13px;font-weight:600;color:#86868b">' + comps[ci].name + '</div>';
+                    h += '<div style="padding:8px 16px 4px;font-size:13px;font-weight:600;color:#86868b">' + defaultComp.name + '</div>';
 
-                prizes.forEach(function(p) {
+                    dPrizes.forEach(function(p) { h += renderPrizeCard(p); });
 
-                    var canEdit = currentUser && (p.creator_id === currentUser.user_id || currentUser.is_superadmin);
+                } else {
 
-                    h += '<div class="soft-card" style="padding:12px;margin:0 16px 6px">';
+                    h += '<div style="padding:40px;text-align:center;color:#86868b">\u5F53\u524D\u8D5B\u4E8B\u6682\u65E0\u5956\u54C1</div>';
 
-                    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
-
-                    h += '<div style="flex:1"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + p.name + '</div>';
-
-                    h += '<div style="font-size:12px;color:#86868b;margin-top:3px">';
-
-                    if (p.quantity) h += '\u4EFD\u6570: ' + p.quantity;
-
-                    if (p.condition) h += ' | \u6761\u4EF6: ' + p.condition;
-
-                    if (p.provider) h += ' | \u63D0\u4F9B: ' + p.provider;
-
-                    h += '</div>';
-
-                    if (p.notes) h += '<div style="font-size:12px;color:#86868b;margin-top:2px">\u5907\u6CE8: ' + p.notes + '</div>';
-
-                    h += '</div>';
-
-                    if (canEdit) {
-
-                        h += '<div style="display:flex;gap:6px;flex-shrink:0">';
-
-                        h += '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="editUserPrize(' + p.id + ')"><i class="ri-edit-line"></i></button>';
-
-                        h += '<button class="admin-btn btn-danger" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteUserPrize(' + p.id + ')"><i class="ri-delete-bin-line"></i></button>';
-
-                        h += '</div>';
-
-                    }
-
-                    h += '</div></div>';
-
-                });
+                }
 
             }
 
-            if (!h.includes('padding:8px 16px 4px')) h += '<div style="padding:40px;text-align:center;color:#86868b">\u6682\u65E0\u5956\u54C1</div>';
+        } else {
+
+            // 往期视图: 除默认赛事外的全部赛事(含已完结), 按赛事分组展示
+            var others = comps.filter(function(c) { return !defaultComp || c.id !== defaultComp.id; });
+
+            var hasAny = false;
+
+            for (var oi = 0; oi < others.length; oi++) {
+
+                var prizes = await api('/prizes?competition_id=' + others[oi].id);
+
+                if (prizes.length === 0) continue;
+
+                hasAny = true;
+
+                h += '<div style="padding:8px 16px 4px;font-size:13px;font-weight:600;color:#86868b">' + others[oi].name + (others[oi].status === 'completed' ? ' <span style="font-size:11px;color:#86868b;background:#f2f3f5;padding:2px 6px;border-radius:4px">\u5DF2\u7ED3\u675F</span>' : '') + '</div>';
+
+                prizes.forEach(function(p) { h += renderPrizeCard(p); });
+
+            }
+
+            if (!hasAny) h = '<div style="padding:12px 16px"><button class="admin-btn btn-success" style="display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:10px;font-size:13px" onclick="addUserPrize()"><i class="ri-gift-line"></i> \u63D0\u4F9B\u5956\u54C1</button></div><div style="padding:40px;text-align:center;color:#86868b">\u6682\u65E0\u5F80\u671F\u5956\u54C1</div>';
 
         }
 
         document.getElementById('prizesPageContent').innerHTML = h;
 
     } catch (e) {}
+
+}
+
+
+
+// 奖品卡片(默认/往期两视图共用), 编辑删除权限与原逻辑一致
+
+function renderPrizeCard(p) {
+
+    var canEdit = currentUser && (p.creator_id === currentUser.user_id || currentUser.is_superadmin);
+
+    var h = '<div class="soft-card" style="padding:12px;margin:0 16px 6px">';
+
+    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+
+    h += '<div style="flex:1"><div style="font-size:15px;font-weight:500;color:#1a1a1a">' + p.name + '</div>';
+
+    h += '<div style="font-size:12px;color:#86868b;margin-top:3px">';
+
+    if (p.quantity) h += '\u4EFD\u6570: ' + p.quantity;
+
+    if (p.condition) h += ' | \u6761\u4EF6: ' + p.condition;
+
+    if (p.provider) h += ' | \u63D0\u4F9B: ' + p.provider;
+
+    h += '</div>';
+
+    if (p.notes) h += '<div style="font-size:12px;color:#86868b;margin-top:2px">\u5907\u6CE8: ' + p.notes + '</div>';
+
+    h += '</div>';
+
+    if (canEdit) {
+
+        h += '<div style="display:flex;gap:6px;flex-shrink:0">';
+
+        h += '<button class="admin-btn btn-sm" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="editUserPrize(' + p.id + ')"><i class="ri-edit-line"></i></button>';
+
+        h += '<button class="admin-btn btn-danger" style="font-size:16px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center" onclick="deleteUserPrize(' + p.id + ')"><i class="ri-delete-bin-line"></i></button>';
+
+        h += '</div>';
+
+    }
+
+    h += '</div></div>';
+
+    return h;
 
 }
 

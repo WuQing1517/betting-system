@@ -36,7 +36,11 @@ betting_bp = Blueprint('betting', __name__)
 
 @betting_bp.route('/competitions', methods=['GET'])
 def get_competitions():
-    competitions = Competition.query.filter_by(status='active').all()
+    # all=1 返回全部赛事(含completed, 供奖品页"往期赛事"视图); 默认仅active
+    if request.args.get('all'):
+        competitions = Competition.query.order_by(Competition.id.desc()).all()
+    else:
+        competitions = Competition.query.filter_by(status='active').all()
     return jsonify([{'id': c.id, 'name': c.name, 'year': c.year, 'season': c.season, 'status': c.status, 'start_date': c.start_date.isoformat() if c.start_date else None, 'is_default': bool(c.is_default)} for c in competitions])
 
 @betting_bp.route('/teams', methods=['GET'])
